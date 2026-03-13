@@ -232,6 +232,20 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 .dcv{font-size:12.5px;font-weight:500;color:var(--text)}
 .cbar{width:32px;height:4px;border-radius:3px;background:var(--border2);overflow:hidden;display:inline-block}
 .cfill{height:100%;border-radius:3px}
+
+/* ── JOURNAL CARDS ── */
+.j-cards{display:flex;flex-direction:column;gap:8px;padding:2px 0}
+.j-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;border-radius:var(--rl);padding:12px 14px;cursor:pointer;transition:all .15s}
+.j-card:hover{border-color:var(--accent-bd);box-shadow:var(--sh)}
+.j-card.row-win{border-left-color:var(--green)}
+.j-card.row-loss{border-left-color:var(--red)}
+.j-card.row-be{border-left-color:var(--amber)}
+.j-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.j-card-row{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4px 14px;align-items:baseline}
+.j-card-lbl{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.j-card-val{font-size:12.5px;color:var(--text2)}
+/* imgModal */
+#imgModal{align-items:center;justify-content:center;background:rgba(0,0,0,.88);padding:20px}
 .swatches{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 .swatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .14s}
 .swatch.sel{border-color:var(--text);transform:scale(1.2)}
@@ -448,9 +462,30 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
     </div>
   </div>
 </div>
+<!-- EDIT START CAPITAL MODAL -->
+<div class="overlay" id="editCapModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><span class="modal-title">Modifier le capital</span><button class="btn-ghost" onclick="closeModal('editCapModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Capital de départ ($)</label><input type="number" id="editCapVal" placeholder="Ex: 10000"/></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)">
+        <button class="btn btn-secondary" onclick="closeModal('editCapModal')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveEditCap()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- DETAIL MODAL -->
 <div class="overlay" id="detailModal">
   <div class="modal" style="max-width:700px"><div class="modal-header"><div id="detailHead"></div><button class="btn-ghost" onclick="closeModal('detailModal')">✕</button></div><div class="modal-body" id="detailBody"></div></div>
+</div>
+<!-- IMAGE PREVIEW MODAL -->
+<div class="overlay" id="imgModal" onclick="if(event.target===this)closeModal('imgModal')">
+  <div style="max-width:90vw;max-height:90vh;position:relative">
+    <button class="btn-ghost" style="position:absolute;top:-36px;right:0;color:white;font-size:18px;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px" onclick="closeModal('imgModal')">✕</button>
+    <img id="imgModalSrc" src="" style="max-width:90vw;max-height:85vh;border-radius:12px;object-fit:contain;display:block"/>
+    <div id="imgModalLabel" style="text-align:center;margin-top:10px;font-size:12px;color:rgba(255,255,255,.6)"></div>
+  </div>
 </div>
 <div id="toast"></div>
 
@@ -469,6 +504,7 @@ const SESSIONS=['Londres','New York','Asie','Overlap Lon/NY','Pré-marché'];
 const ETATS=['Calme','Confiant','Stressé','Impatient','Focalisé','Fatigue'];
 const STRUCTURES=['BOS haussier','BOS baissier','ChoCH haussier','ChoCH baissier','Range','Tendance','Autre'];
 const RESULTATS=['Win','Loss','Breakeven'];
+const LIQUIDITES=['Inducement','EQL (Equal Lows)','EQH (Equal Highs)','BSL (Buy Side Liq.)','SSL (Sell Side Liq.)','PDH (Prev. Day High)','PDL (Prev. Day Low)','PWH (Prev. Week High)','PWL (Prev. Week Low)','PMH (Prev. Month High)','PML (Prev. Month Low)','London High','London Low','Asia High','Asia Low','Autre'];
 const ACC_COLORS=['#F97316','#10B981','#2563EB','#8B5CF6','#EC4899','#EAB308','#14B8A6','#64748B'];
 const SH=['ID','Compte','Date','Heure','Session','Instrument','Structure','Liquidité','Structure Solide','Montant Risqué','Capital','Résultat','RR','État','Confiance','Pourquoi Entrer','Doute/Hésitation'];
 
@@ -476,7 +512,8 @@ let DB=loadLocalDB(),curPage='dashboard',dashFilter='all';
 let jFilters={compte:'',session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0];
-let editId=null,ss=null,tRR=0,tConf=5,tScr='';
+let editId=null,ss=null,tRR=0,tConf=5,tScrAvant='',tScrApres='';
+let editCapId=null;
 let charts={};
 
 function loadLocalDB(){try{const d=localStorage.getItem(KEY);return d?JSON.parse(d):defDB();}catch{return defDB();}}
@@ -591,38 +628,68 @@ function getFT(){return DB.trades.filter(t=>{const f=jFilters;if(f.compte&&t.com
 function renderJTable(){
   const trades=getFT();
   if(!trades.length){document.getElementById('jTable').innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajoutez un trade ou modifiez les filtres</p></div>';return;}
-  let h='<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Compte</th><th>Session</th><th>Instrument</th><th>Structure</th><th>Résultat</th><th>RR</th><th>Capital</th><th>Conf.</th><th style="width:72px"></th></tr></thead><tbody>';
+  // Cards on mobile, table on desktop
+  let h=`
+  <div class="j-cards">`;
   trades.forEach(t=>{
     const ac=DB.accounts.find(a=>a.name===t.compte);
     const rr=parseFloat(t.rr);
     const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':'';
     const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':'be'}">${t.resultat}</span>`:'—';
-    const cp=(t.confiance/10)*100;
-    const cc=t.confiance>=7?'var(--green)':t.confiance>=4?'var(--accent)':'var(--red)';
-    h+=`<tr class="tr-data ${cls}" onclick="openDetail('${t.id}')">
-      <td><span style="font-family:'DM Mono',monospace;font-size:11px">${fmtD(t.date)}</span><br><span style="font-size:10.5px;color:var(--text3)">${t.heure||''}</span></td>
-      <td><div style="display:flex;align-items:center;gap:5px">${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}<span style="font-size:12px">${esc(t.compte||'—')}</span></div></td>
-      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${esc(t.session||'—')}</td>
-      <td><span style="font-weight:600;font-family:'DM Mono',monospace;font-size:12px">${esc(t.instrument||'—')}</span></td>
-      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:12px">${esc(t.structure||'—')}</td>
-      <td>${bdg}</td>
-      <td><span style="font-family:'DM Mono',monospace;font-size:12.5px;font-weight:600;color:${rr>2?'var(--green)':rr>0?'var(--text)':'var(--text3)'}">${t.rr?fmtN(t.rr,1)+'R':'—'}</span></td>
-      <td><span style="font-family:'DM Mono',monospace;font-size:12px">${t.capital?'$'+parseFloat(t.capital).toLocaleString():'—'}</span></td>
-      <td><div style="display:flex;align-items:center;gap:4px"><div class="cbar"><div class="cfill" style="width:${cp}%;background:${cc}"></div></div><span style="font-size:10.5px;color:var(--text3);font-family:'DM Mono',monospace">${t.confiance}</span></div></td>
-      <td onclick="event.stopPropagation()"><div style="display:flex;gap:2px;justify-content:flex-end"><button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button><button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button></div></td>
-    </tr>`;
+    const gp=parseFloat(t.gainPerte)||0;
+    const gpStr=t.gainPerte?(gp>=0?`<span style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px;font-weight:600">+$${Math.abs(gp).toFixed(2)}</span>`:`<span style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px;font-weight:600">-$${Math.abs(gp).toFixed(2)}</span>`):'—';
+    h+=`<div class="j-card ${cls}" onclick="openDetail('${t.id}')">
+      <div class="j-card-top">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${ac?`<span style="width:8px;height:8px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}
+          <span style="font-weight:700;font-family:'DM Mono',monospace;font-size:13px">${esc(t.instrument||'—')}</span>
+          ${bdg}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${fmtD(t.date)} ${t.heure||''}</span>
+          <div onclick="event.stopPropagation()" style="display:flex;gap:2px"><button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button><button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button></div>
+        </div>
+      </div>
+      <div class="j-card-row">
+        <span class="j-card-lbl">Compte</span><span class="j-card-val">${esc(t.compte||'—')}</span>
+        <span class="j-card-lbl">Session</span><span class="j-card-val">${esc(t.session||'—')}</span>
+        <span class="j-card-lbl">RR</span><span class="j-card-val" style="font-family:'DM Mono',monospace;color:${rr>2?'var(--green)':rr>0?'var(--text)':'var(--text3)'}">${t.rr?fmtN(t.rr,1)+'R':'—'}</span>
+        <span class="j-card-lbl">Gain/Perte</span><span class="j-card-val">${gpStr}</span>
+      </div>
+    </div>`;
   });
-  h+='</tbody></table></div>';
+  h+=`</div>`;
   document.getElementById('jTable').innerHTML=h;
 }
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
-function openNew(){editId=null;ss=null;tRR=0;tConf=5;tScr='';document.getElementById('tmTitle').textContent='Nouveau trade';buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',structure:'',liquidite:'',structureSolide:null,montantRisque:'',capital:'',resultat:'',rr:'',etat:'',confiance:5,pourquoiEntrer:'',douteHesitation:'',screenshot:''});document.getElementById('tradeModal').classList.add('open');}
-function openEdit(id){const t=DB.trades.find(t=>t.id===id);if(!t)return;editId=id;ss=t.structureSolide;tRR=parseFloat(t.rr)||0;tConf=t.confiance||5;tScr=t.screenshot||'';document.getElementById('tmTitle').textContent='Modifier le trade';buildForm(t);document.getElementById('tradeModal').classList.add('open');}
+function openNew(){editId=null;ss=null;tRR=0;tConf=5;tScrAvant='';tScrApres='';document.getElementById('tmTitle').textContent='Nouveau trade';buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',structure:'',liquidite:'',structureSolide:null,montantRisque:'',gainPerte:'',resultat:'',rr:'',etat:'',confiance:5,pourquoiEntrer:'',douteHesitation:'',screenshotAvant:'',screenshotApres:''});document.getElementById('tradeModal').classList.add('open');}
+function openEdit(id){const t=DB.trades.find(t=>t.id===id);if(!t)return;editId=id;ss=t.structureSolide;tRR=parseFloat(t.rr)||0;tConf=t.confiance||5;tScrAvant=t.screenshotAvant||t.screenshot||'';tScrApres=t.screenshotApres||'';document.getElementById('tmTitle').textContent='Modifier le trade';buildForm(t);document.getElementById('tradeModal').classList.add('open');}
+
+function scrBlock(idPrefix,label,url){
+  const isUrl=url&&(url.startsWith('http')||url.startsWith('//'));
+  const isData=url&&url.startsWith('data:');
+  const hasImg=isUrl||isData;
+  return `<div style="flex:1;min-width:0">
+    <div style="font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">${label}</div>
+    ${hasImg?`<div style="position:relative;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--bg2)">
+      <img src="${url}" style="width:100%;height:110px;object-fit:cover;cursor:pointer;display:block" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${label}')" onerror="this.parentElement.innerHTML='<div style=\\'padding:12px;font-size:11px;color:var(--red)\\'>Image inaccessible</div>'"/>
+      <div style="position:absolute;top:4px;right:4px;display:flex;gap:3px">
+        <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${label}')">🔍</button>
+        <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px;color:var(--red)" onclick="clearScrField('${idPrefix}')">✕</button>
+      </div>
+    </div>`:`<div style="display:flex;flex-direction:column;gap:6px">
+      <input id="${idPrefix}_url" type="url" placeholder="https://www.tradingview.com/…" value="" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-family:inherit;outline:none;color:var(--text);background:var(--surface)" oninput="previewScrUrl('${idPrefix}')"/>
+      <div id="${idPrefix}_prev" style="display:none"></div>
+    </div>`}
+  </div>`;
+}
+
 function buildForm(t){
-  tScr=t.screenshot||'';tRR=parseFloat(t.rr)||0;tConf=t.confiance||5;ss=t.structureSolide;
+  tScrAvant=t.screenshotAvant||t.screenshot||'';tScrApres=t.screenshotApres||'';
+  tRR=parseFloat(t.rr)||0;tConf=t.confiance||5;ss=t.structureSolide;
   const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${t.compte===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
-  const scrHtml=tScr?`<div><img src="${tScr}" style="width:100%;max-height:180px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border)"/></div><button class="btn btn-secondary btn-sm" style="margin-top:7px" onclick="clearScr()">Supprimer</button>`:`<label class="scr-zone" for="fileIn">📷 <span>Cliquer pour ajouter une capture</span></label><input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleImg(this)"/>`;
+  const liqOpts=LIQUIDITES.map(l=>`<option value="${l}" ${t.liquidite===l?'selected':''}>${l}</option>`).join('');
   document.getElementById('tmBody').innerHTML=`
     <div class="sdiv"><span>Informations générales</span></div>
     <div class="form-grid-3">
@@ -636,7 +703,7 @@ function buildForm(t){
     <div class="sdiv"><span>Analyse & Setup</span></div>
     <div class="form-grid">
       <div class="field"><label>Structure</label><select id="f_st"><option value="">Sélectionner</option>${STRUCTURES.map(s=>`<option ${t.structure===s?'selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="field"><label>Liquidité à prendre</label><input id="f_l" value="${esc(t.liquidite)}" placeholder="Ex: BSL sur 1.0850"/></div>
+      <div class="field"><label>Liquidité à prendre</label><select id="f_l"><option value="">Sélectionner</option>${liqOpts}</select></div>
     </div>
     <div class="field form-full" style="margin-top:12px"><label>Structure solide ?</label>
       <div class="toggle-group" style="margin-top:4px">
@@ -648,36 +715,57 @@ function buildForm(t){
     <div class="field" style="margin-top:10px"><label>Doute ou hésitation</label><textarea id="f_dh" placeholder="Qu'est-ce qui t'a fait hésiter ?">${esc(t.douteHesitation)}</textarea></div>
     <div class="sdiv"><span>Gestion & Résultat</span></div>
     <div class="form-grid-3">
-      <div class="field"><label>Montant risqué ($)</label><input type="number" id="f_m" value="${t.montantRisque}" placeholder="0.00"/></div>
-      <div class="field"><label>Capital ($)</label><input type="number" id="f_cap" value="${t.capital}" placeholder="0.00"/></div>
+      <div class="field"><label>Montant risqué ($)</label><input type="number" id="f_m" value="${t.montantRisque||''}" placeholder="0.00"/></div>
+      <div class="field"><label>Gain / Perte ($)</label><input type="number" id="f_gp" value="${t.gainPerte||''}" placeholder="0.00" step="0.01"/></div>
       <div class="field"><label>Résultat</label><select id="f_r"><option value="">Sélectionner</option>${RESULTATS.map(r=>`<option ${t.resultat===r?'selected':''}>${r}</option>`).join('')}</select></div>
       <div class="field form-full"><label>Risk/Reward (RR)</label>
         <div class="slider-wrap" style="margin-top:4px">
           <input type="range" min="0" max="10" step="0.1" value="${tRR}" id="rrRange" oninput="updRR(this.value)"/>
           <span class="slider-val" id="rrVal">${fmtN(tRR,1)}R</span>
-          <input type="number" id="f_rr" value="${t.rr}" step="0.1" style="width:70px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:inherit" oninput="updRRi(this.value)" placeholder="0.0"/>
+          <input type="number" id="f_rr" value="${t.rr||''}" step="0.1" style="width:70px;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:inherit" oninput="updRRi(this.value)" placeholder="0.0"/>
         </div>
       </div>
     </div>
     <div class="field" style="margin-top:12px"><label>Confiance — <span id="cVal">${tConf}</span>/10</label>
       <div class="slider-wrap" style="margin-top:4px"><input type="range" min="1" max="10" step="1" value="${tConf}" id="confR" oninput="updConf(this.value)"/><span class="slider-val" id="cDisp">${tConf}</span></div>
     </div>
-    <div class="sdiv"><span>Capture d'écran</span></div>
-    <div id="scrSec">${scrHtml}</div>
+    <div class="sdiv"><span>Captures d'écran (liens TradingView)</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap" id="scrSec">
+      ${scrBlock('scr_av','Avant le trade',tScrAvant)}
+      ${scrBlock('scr_ap','Après le trade',tScrApres)}
+    </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid var(--border2)">
       <button class="btn btn-secondary" onclick="closeModal('tradeModal')">Annuler</button>
       <button class="btn btn-primary" onclick="saveTrade()">Enregistrer</button>
     </div>`;
 }
-function togSS(v){ss=ss===v?null:v;document.getElementById('ssY').className='toggle-btn'+(ss===true?' ay':'');document.getElementById('ssN').className='toggle-btn'+(ss===false?' an':'');}
-function updRR(v){tRR=parseFloat(v);document.getElementById('rrVal').textContent=fmtN(v,1)+'R';document.getElementById('f_rr').value=fmtN(v,1);}
-function updRRi(v){tRR=parseFloat(v)||0;document.getElementById('rrVal').textContent=fmtN(v,1)+'R';document.getElementById('rrRange').value=Math.min(10,Math.max(0,tRR));}
-function updConf(v){tConf=parseInt(v);document.getElementById('cVal').textContent=v;document.getElementById('cDisp').textContent=v;}
-function clearScr(){tScr='';document.getElementById('scrSec').innerHTML=`<label class="scr-zone" for="fileIn">📷 <span>Cliquer pour ajouter une capture</span></label><input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleImg(this)"/>`;}
-function handleImg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{tScr=ev.target.result;document.getElementById('scrSec').innerHTML=`<div><img src="${tScr}" style="width:100%;max-height:180px;object-fit:contain;border-radius:var(--r);border:1px solid var(--border)"/></div><button class="btn btn-secondary btn-sm" style="margin-top:7px" onclick="clearScr()">Supprimer</button>`;};r.readAsDataURL(f);}
+
+function previewScrUrl(pfx){
+  const url=document.getElementById(pfx+'_url').value.trim();
+  const prev=document.getElementById(pfx+'_prev');
+  if(!url){prev.style.display='none';return;}
+  prev.style.display='block';
+  prev.innerHTML=`<img src="${url}" style="width:100%;height:90px;object-fit:cover;border-radius:var(--r);border:1px solid var(--border);cursor:pointer" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','Aperçu')" onerror="this.style.display='none'"/>`;
+}
+function clearScrField(pfx){
+  if(pfx==='scr_av')tScrAvant='';
+  else tScrApres='';
+  // re-render just the screenshot section
+  document.getElementById('scrSec').innerHTML=scrBlock('scr_av','Avant le trade',tScrAvant)+scrBlock('scr_ap','Après le trade',tScrApres);
+}
+function openImgPreview(url,label){
+  document.getElementById('imgModalSrc').src=url;
+  document.getElementById('imgModalLabel').textContent=label;
+  document.getElementById('imgModal').classList.add('open');
+}
 
 async function saveTrade(){
-  const t={id:editId||Date.now().toString(),compte:document.getElementById('f_c').value,date:document.getElementById('f_d').value,heure:document.getElementById('f_h').value,session:document.getElementById('f_s').value,instrument:document.getElementById('f_i').value,structure:document.getElementById('f_st').value,liquidite:document.getElementById('f_l').value,structureSolide:ss,montantRisque:document.getElementById('f_m').value,capital:document.getElementById('f_cap').value,resultat:document.getElementById('f_r').value,rr:document.getElementById('f_rr').value,etat:document.getElementById('f_e').value,confiance:tConf,pourquoiEntrer:document.getElementById('f_p').value,douteHesitation:document.getElementById('f_dh').value,screenshot:tScr};
+  // Récupère les URLs saisies si pas encore validées par preview
+  const avEl=document.getElementById('scr_av_url');
+  const apEl=document.getElementById('scr_ap_url');
+  if(avEl&&avEl.value.trim())tScrAvant=avEl.value.trim();
+  if(apEl&&apEl.value.trim())tScrApres=apEl.value.trim();
+  const t={id:editId||Date.now().toString(),compte:document.getElementById('f_c').value,date:document.getElementById('f_d').value,heure:document.getElementById('f_h').value,session:document.getElementById('f_s').value,instrument:document.getElementById('f_i').value,structure:document.getElementById('f_st').value,liquidite:document.getElementById('f_l').value,structureSolide:ss,montantRisque:document.getElementById('f_m').value,gainPerte:document.getElementById('f_gp').value,resultat:document.getElementById('f_r').value,rr:document.getElementById('f_rr').value,etat:document.getElementById('f_e').value,confiance:tConf,pourquoiEntrer:document.getElementById('f_p').value,douteHesitation:document.getElementById('f_dh').value,screenshotAvant:tScrAvant,screenshotApres:tScrApres};
   if(editId){const i=DB.trades.findIndex(x=>x.id===editId);if(i>=0)DB.trades[i]=t;}else DB.trades.unshift(t);
   saveDB();closeModal('tradeModal');toast('Enregistrement…','info');
   await sbUpsertTrade(t);
@@ -696,11 +784,21 @@ function openDetail(id){
   const t=DB.trades.find(t=>t.id===id);if(!t)return;
   const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':'be'}">${t.resultat}</span>`:'';
   document.getElementById('detailHead').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="modal-title">${esc(t.instrument||'Trade')} — ${fmtD(t.date)}</span>${bdg}</div>`;
-  const cells=[['Compte',t.compte],['Session',t.session],['Heure',t.heure],['Structure',t.structure],['Liquidité',t.liquidite],['Struct. solide',t.structureSolide==null?'—':t.structureSolide?'✓ Oui':'✗ Non'],['Montant risqué',t.montantRisque?`$${t.montantRisque}`:'—'],['Capital',t.capital?`$${t.capital}`:'—'],['RR',t.rr?`${fmtN(t.rr,2)}R`:'—'],['État',t.etat],['Confiance',`${t.confiance}/10`]];
+  const gp=parseFloat(t.gainPerte)||0;
+  const gpStr=t.gainPerte?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
+  const cells=[['Compte',t.compte],['Session',t.session],['Heure',t.heure],['Structure',t.structure],['Liquidité',t.liquidite],['Struct. solide',t.structureSolide==null?'—':t.structureSolide?'✓ Oui':'✗ Non'],['Montant risqué',t.montantRisque?`$${t.montantRisque}`:'—'],['Gain / Perte',gpStr],['RR',t.rr?`${fmtN(t.rr,2)}R`:'—'],['État',t.etat],['Confiance',`${t.confiance}/10`]];
   let h=`<div class="detail-grid">${cells.map(([l,v])=>`<div class="dc"><div class="dcl">${l}</div><div class="dcv">${esc(v||'—')}</div></div>`).join('')}</div>`;
   if(t.pourquoiEntrer)h+=`<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Pourquoi entrer</div><p style="font-size:13px;line-height:1.6;background:var(--bg2);padding:11px 13px;border-radius:var(--r)">${esc(t.pourquoiEntrer)}</p></div>`;
   if(t.douteHesitation)h+=`<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Doute / Hésitation</div><p style="font-size:13px;line-height:1.6;background:var(--bg2);padding:11px 13px;border-radius:var(--r)">${esc(t.douteHesitation)}</p></div>`;
-  if(t.screenshot)h+=`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Capture d'écran</div><img src="${t.screenshot}" style="width:100%;border-radius:var(--r);border:1px solid var(--border)"/></div>`;
+  // Screenshots
+  const scrAvant=t.screenshotAvant||t.screenshot||'';
+  const scrApres=t.screenshotApres||'';
+  if(scrAvant||scrApres){
+    h+=`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px">Captures d'écran</div><div style="display:flex;gap:9px;flex-wrap:wrap">`;
+    if(scrAvant)h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">Avant</div><img src="${scrAvant}" style="width:100%;border-radius:var(--r);border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${scrAvant.replace(/'/g,"\\'")}','Avant le trade')" onerror="this.style.opacity='.3'"/></div>`;
+    if(scrApres)h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">Après</div><img src="${scrApres}" style="width:100%;border-radius:var(--r);border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${scrApres.replace(/'/g,"\\'")}','Après le trade')" onerror="this.style.opacity='.3'"/></div>`;
+    h+=`</div></div>`;
+  }
   h+=`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)"><button class="btn btn-secondary" onclick="closeModal('detailModal');openEdit('${t.id}')">✎ Modifier</button><button class="btn btn-secondary" onclick="closeModal('detailModal')">Fermer</button></div>`;
   document.getElementById('detailBody').innerHTML=h;
   document.getElementById('detailModal').classList.add('open');
@@ -845,15 +943,21 @@ function renderAccounts(){
   DB.accounts.forEach(acc=>{
     const at=DB.trades.filter(t=>t.compte===acc.name);
     const s=stats(at);
-    const lc=at.filter(t=>t.capital).sort((a,b)=>b.date.localeCompare(a.date))[0]?.capital;
-    const pp=acc.startCapital&&lc?((parseFloat(lc)-parseFloat(acc.startCapital))/parseFloat(acc.startCapital)*100).toFixed(1):null;
+    const totalPnl=at.reduce((sum,t)=>{const gp=parseFloat(t.gainPerte);return sum+(isNaN(gp)?0:gp);},0);
+    const pp=acc.startCapital&&totalPnl!==0?(totalPnl/parseFloat(acc.startCapital)*100).toFixed(1):null;
     h+=`<div class="acc-card" style="border-color:${acc.color}50"><div class="acc-bar" style="background:linear-gradient(90deg,${acc.color},${acc.color}50)"></div>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
-        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">${esc(acc.name)}</div>${acc.startCapital?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Départ : <span style="font-family:'DM Mono',monospace;font-weight:500">$${parseFloat(acc.startCapital).toLocaleString()}</span></div>`:''}</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">${esc(acc.name)}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+            ${acc.startCapital?`<div style="font-size:11px;color:var(--text3)">Départ : <span style="font-family:'DM Mono',monospace;font-weight:500">$${parseFloat(acc.startCapital).toLocaleString()}</span></div>`:'<div style="font-size:11px;color:var(--text3)">Départ non défini</div>'}
+            <button class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:10px" onclick="openEditCap(${acc.id})">✎</button>
+          </div>
+        </div>
         <button class="btn-ghost" style="color:var(--red)" onclick="delAcc(${acc.id})" title="Supprimer">🗑</button>
       </div>
-      ${pp?`<div class="pnl-badge" style="background:${parseFloat(pp)>=0?'var(--green-bg)':'var(--red-bg)'};border:1px solid ${parseFloat(pp)>=0?'var(--green-bd)':'var(--red-bd)'};color:${parseFloat(pp)>=0?'var(--green)':'var(--red)'}">${parseFloat(pp)>=0?'+':''}${pp}%</div>`:''}
-      <div class="acc-sg">${[['Trades',s.total],['Win rate',s.winRate+'%'],['RR moyen',fmtN(s.avgRR,2)+'R'],['Capital',lc?'$'+parseFloat(lc).toLocaleString():'—']].map(([l,v])=>`<div class="acc-sb"><div class="acc-sl">${l}</div><div class="acc-sv">${v}</div></div>`).join('')}</div>
+      ${pp!==null?`<div class="pnl-badge" style="background:${parseFloat(pp)>=0?'var(--green-bg)':'var(--red-bg)'};border:1px solid ${parseFloat(pp)>=0?'var(--green-bd)':'var(--red-bd)'};color:${parseFloat(pp)>=0?'var(--green)':'var(--red)'}">${parseFloat(pp)>=0?'+':''}${pp}% P&L</div>`:''}
+      <div class="acc-sg">${[['Trades',s.total],['Win rate',s.winRate+'%'],['RR moyen',fmtN(s.avgRR,2)+'R'],['P&L total',(totalPnl>=0?'+':'')+totalPnl.toFixed(2)+'$']].map(([l,v])=>`<div class="acc-sb"><div class="acc-sl">${l}</div><div class="acc-sv">${v}</div></div>`).join('')}</div>
     </div>`;
   });
   h+=`<div class="acc-card" style="border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;cursor:pointer;background:var(--bg2)" onclick="openAccModal()">
@@ -867,6 +971,8 @@ function openAccModal(){selColor=ACC_COLORS[0];document.getElementById('accName'
 function buildSwatches(){document.getElementById('accSwatches').innerHTML=ACC_COLORS.map(c=>`<div class="swatch ${c===selColor?'sel':''}" style="background:${c}" onclick="selC('${c}')"></div>`).join('');}
 function selC(c){selColor=c;buildSwatches();}
 function saveAccount(){const n=document.getElementById('accName').value.trim();if(!n)return;DB.accounts.push({id:Date.now(),name:n,startCapital:parseFloat(document.getElementById('accCapital').value)||0,color:selColor});saveDB();closeModal('accModal');renderAccounts();toast('Compte créé','success');}
+function openEditCap(id){editCapId=id;const acc=DB.accounts.find(a=>a.id===id);if(!acc)return;document.getElementById('editCapVal').value=acc.startCapital||'';document.getElementById('editCapModal').classList.add('open');}
+function saveEditCap(){const acc=DB.accounts.find(a=>a.id===editCapId);if(!acc)return;acc.startCapital=parseFloat(document.getElementById('editCapVal').value)||0;saveDB();closeModal('editCapModal');renderAccounts();toast('Capital mis à jour','success');}
 
 // ── RULES ─────────────────────────────────────────────────────────────────
 function renderRules(){renderRTab();renderCTab();}
