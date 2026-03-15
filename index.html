@@ -139,10 +139,10 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 .cal-nav{display:flex;align-items:center;gap:6px}
 .cal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;text-transform:capitalize;min-width:180px}
 .cal-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cal-hrow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+.cal-hrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:6px}
 .cal-dl{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:3px 0;letter-spacing:.6px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cal-day{min-height:80px;border:1px solid var(--border2);border-radius:8px;padding:6px 7px;background:var(--surface);transition:border-color .14s}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-day{min-height:80px;border:1px solid var(--border2);border-radius:8px;padding:6px 7px;background:var(--surface);transition:border-color .14s;overflow:hidden;word-break:break-all}
 .cal-day.other{background:var(--bg);opacity:.35}
 .cal-day.today{border-color:var(--accent);background:var(--accent-bg)}
 .cal-day.hast{background:var(--surface2);cursor:pointer}
@@ -150,7 +150,7 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 .cal-date{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:3px}
 .cal-day.today .cal-date{color:var(--accent)}
 .cal-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin:1px}
-.cal-pnl{font-size:10px;font-weight:700;font-family:'DM Mono',monospace;margin-top:2px}
+.cal-pnl{font-size:9.5px;font-weight:700;font-family:'DM Mono',monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .cal-count{font-size:9.5px;color:var(--text3);margin-top:1px}
 .cal-week-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 18px}
 .cal-summary-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
@@ -255,6 +255,8 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
   .acc-grid{grid-template-columns:repeat(2,1fr)}
   .cal-month-stats{grid-template-columns:repeat(2,1fr)}
   .cf-summary{grid-template-columns:repeat(2,1fr)}
+  .cal-layout{gap:12px}
+  .cal-layout #calSummary{width:280px}
 }
 @media(max-width:900px){
   :root{--sidebar:220px}
@@ -281,16 +283,20 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
   .charts-row{grid-template-columns:1fr}
   .charts-grid{grid-template-columns:1fr}
   .acc-pills{gap:5px}
-  .filter-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px;-webkit-overflow-scrolling:touch}
-  .filter-bar select,.filter-bar input[type=date]{flex-shrink:0}
-  .filter-bar>div[style*="margin-left:auto"]{flex-shrink:0;margin-left:0!important;width:100%;order:99}
-  .j-card-row{grid-template-columns:auto 1fr;gap:3px 10px}
+  .filter-bar{flex-wrap:wrap;gap:6px}
+  .filter-bar select,.filter-bar input[type=date]{flex:1;min-width:120px;max-width:calc(50% - 3px)}
+  .filter-bar>div[style*="margin-left:auto"]{margin-left:0!important;width:100%;order:99;display:flex;gap:6px}
+  .filter-bar>div[style*="margin-left:auto"] .btn{flex:1;justify-content:center}
+  .j-card-row{grid-template-columns:auto 1fr auto 1fr;gap:3px 8px}
   .cal-layout{flex-direction:column}
   .cal-layout #calSummary{width:100%!important}
   .cal-hrow,.cal-grid{gap:3px}
-  .cal-day{min-height:64px;padding:5px}
+  .cal-day{min-height:68px;padding:5px 4px}
+  .cal-date{font-size:10.5px}
   .cal-month-stats{grid-template-columns:repeat(2,1fr)}
   .cal-toolbar{flex-direction:column;align-items:flex-start;gap:8px}
+  .cal-layout{flex-direction:column}
+  .cal-layout #calSummary{width:100%!important;flex-shrink:unset}
   /* Cashflow responsive: hide table, show cards */
   .cf-table-wrap{display:none}
   .cf-cards{display:flex}
@@ -309,6 +315,9 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
   .tab{white-space:nowrap}
   .inline-add{flex-direction:column}
   .inline-add input{width:100%}
+  /* Journal filter responsive */
+  .filter-bar .btn-ghost.btn-sm{width:100%;justify-content:center;order:98}
+  .filter-bar input[type=date]{min-width:130px}
 }
 @media(max-width:480px){
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -316,14 +325,16 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
   .stat-value{font-size:18px}
   .stat-label{font-size:9.5px}
   .page-title{font-size:16px}
-  .cal-day{min-height:48px;padding:3px}
-  .cal-date{font-size:9.5px}
-  .cal-pnl{font-size:9px}
+  .cal-day{min-height:46px;padding:2px 3px}
+  .cal-date{font-size:9px}
+  .cal-pnl{font-size:8.5px}
   .cal-count{display:none}
+  .cal-dot{width:4px;height:4px;margin:0px}
+  .cal-hrow,.cal-grid{gap:2px}
   .cf-summary{grid-template-columns:1fr}
   .cf-sum-val{font-size:18px}
   .j-card{padding:10px 11px}
-  .j-card-row{grid-template-columns:auto 1fr}
+  .j-card-row{grid-template-columns:auto 1fr;gap:2px 8px}
   .acc-sg{grid-template-columns:1fr 1fr}
   .detail-grid{grid-template-columns:1fr}
   .filter-bar select,.filter-bar input[type=date]{font-size:11px;padding:5px 7px}
@@ -421,12 +432,14 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 
     <!-- JOURNAL -->
     <div id="page-journal" class="page">
+      <div class="acc-pills" id="jAccPills" style="margin-bottom:10px"></div>
       <div class="filter-bar" id="jFilters"></div>
       <div class="table-wrap"><div id="jTable"></div></div>
     </div>
 
     <!-- CALENDAR -->
     <div id="page-calendar" class="page">
+      <div class="acc-pills" id="calAccPills" style="margin-bottom:12px"></div>
       <div class="cal-layout">
         <div class="card" style="padding:22px;flex:1;min-width:0" id="calCard"></div>
         <div id="calSummary" style="width:340px;flex-shrink:0"></div>
@@ -435,6 +448,7 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 
     <!-- CASHFLOW -->
     <div id="page-cashflow" class="page">
+      <div class="acc-pills" id="cfAccPills" style="margin-bottom:12px"></div>
       <div class="cf-summary" id="cfSummary"></div>
       <div class="filter-bar" id="cfFilters"></div>
       <!-- Desktop table -->
@@ -638,9 +652,10 @@ const LIQUIDITES=['Inducement','EQL (Equal Lows)','EQH (Equal Highs)','BSL (Buy 
 const ACC_COLORS=['#F97316','#10B981','#2563EB','#8B5CF6','#EC4899','#EAB308','#14B8A6','#64748B'];
 const SH=['ID','Compte','Date','Heure','Session','Instrument','Structure','Liquidité','Structure Solide','Montant Risqué','Gain/Perte','Capital','Résultat','RR','État','Confiance','Pourquoi Entrer','Doute/Hésitation'];
 
-let DB=loadLocalDB(),curPage='dashboard',dashFilter='all';
-let jFilters={compte:'',session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};
-let cfFilters={compte:'',type:''};
+let DB=loadLocalDB(),curPage='dashboard';
+let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new Set(['all']),cfAccFilters=new Set(['all']);
+let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};
+let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0];
 let editId=null,ss=null,tConf=5,tScrAvant='',tScrApres='';
@@ -775,7 +790,7 @@ function showPage(p){
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash(){
   renderPills();
-  const f=dashFilter==='all'?DB.trades:DB.trades.filter(t=>t.compte===dashFilter);
+  const f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
   const s=stats(f);window._dashF=f;
   const statDefs=[
     {l:'Total trades',v:s.total,sub:`${s.wins}W · ${s.losses}L · ${s.be}BE`,i:'📊',c:'',dk:'all'},
@@ -795,19 +810,30 @@ function onStatCard(el){
   else openTradeListModal(window._dashF.filter(t=>t.resultat===dk),dk==='Win'?'Trades gagnants':'Trades perdants');
 }
 function renderPills(){
+  const allSel=dashFilters.has('all');
   let h=`<span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-right:4px">Compte :</span>`;
-  h+=`<button class="acc-pill ${dashFilter==='all'?'active':''}" style="${dashFilter==='all'?'background:var(--text);border-color:var(--text)':''}" onclick="setDF('all')">Tous</button>`;
-  DB.accounts.forEach(a=>{const ok=dashFilter===a.name;h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="setDF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleDF('all')">Tous</button>`;
+  DB.accounts.forEach(a=>{const ok=!allSel&&dashFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleDF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
   document.getElementById('dashPills').innerHTML=h;
 }
-function setDF(f){dashFilter=f;renderDash();}
+function toggleDF(name){
+  if(name==='all'){dashFilters=new Set(['all']);}
+  else{
+    dashFilters.delete('all');
+    if(dashFilters.has(name))dashFilters.delete(name);
+    else dashFilters.add(name);
+    if(dashFilters.size===0)dashFilters=new Set(['all']);
+  }
+  renderDash();
+}
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function mkBar(id,labels,data,colors,onClickFn){
   dc(id);
   charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,onClick:onClickFn||null,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`${v.parsed.y}%`}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#A8948A'},border:{display:false}},y:{grid:{color:'#EDE4D8'},ticks:{font:{size:10},color:'#A8948A',callback:v=>`${v}%`},border:{display:false},max:100}}}});
 }
 function renderCharts(f){
-  const acc=DB.accounts.find(a=>a.name===dashFilter);
+  const singleAcc=!dashFilters.has('all')&&dashFilters.size===1?[...dashFilters][0]:null;
+  const acc=singleAcc?DB.accounts.find(a=>a.name===singleAcc):null;
   const ac=acc?.color||'#F97316';
   dc('cCapital');
   const cd=[...f].filter(t=>t.capital&&t.date).sort((a,b)=>a.date.localeCompare(b.date));
@@ -857,14 +883,47 @@ function openTradeListModal(trades,title){
 }
 
 // ── JOURNAL ───────────────────────────────────────────────────────────────
-function renderJournal(){renderJFilters();renderJTable();}
+function renderJournal(){renderJAccPills();renderJFilters();renderJTable();}
+function renderJAccPills(){
+  const allSel=jAccFilters.has('all');
+  let h=`<span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-right:4px">Compte :</span>`;
+  h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleJAF('all')">Tous</button>`;
+  DB.accounts.forEach(a=>{const ok=!allSel&&jAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleJAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  document.getElementById('jAccPills').innerHTML=h;
+}
+function toggleJAF(name){
+  if(name==='all'){jAccFilters=new Set(['all']);}
+  else{
+    jAccFilters.delete('all');
+    if(jAccFilters.has(name))jAccFilters.delete(name);
+    else jAccFilters.add(name);
+    if(jAccFilters.size===0)jAccFilters=new Set(['all']);
+  }
+  renderJournal();
+}
+function renderJAccPills(){
+  const allSel=jAccFilters.has('all');
+  let h=`<span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-right:4px">Compte :</span>`;
+  h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleJAF('all')">Tous</button>`;
+  DB.accounts.forEach(a=>{const ok=!allSel&&jAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleJAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  const el=document.getElementById('jAccPills');
+  if(el)el.innerHTML=h;
+}
+function toggleJAF(name){
+  if(name==='all'){jAccFilters=new Set(['all']);}
+  else{
+    jAccFilters.delete('all');
+    if(jAccFilters.has(name))jAccFilters.delete(name);
+    else jAccFilters.add(name);
+    if(jAccFilters.size===0)jAccFilters=new Set(['all']);
+  }
+  renderJournal();
+}
 function renderJFilters(){
-  const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${jFilters.compte===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
   const so=SESSIONS.map(s=>`<option value="${s}" ${jFilters.session===s?'selected':''}>${s}</option>`).join('');
   const io=DB.instruments.map(i=>`<option value="${i}" ${jFilters.instrument===i?'selected':''}>${i}</option>`).join('');
   const ro=RESULTATS.map(r=>`<option value="${r}" ${jFilters.resultat===r?'selected':''}>${r}</option>`).join('');
   document.getElementById('jFilters').innerHTML=`
-    <select onchange="setJF('compte',this.value)"><option value="">Tous comptes</option>${ao}</select>
     <select onchange="setJF('session',this.value)"><option value="">Toutes sessions</option>${so}</select>
     <select onchange="setJF('instrument',this.value)"><option value="">Tous instruments</option>${io}</select>
     <select onchange="setJF('resultat',this.value)"><option value="">Tous résultats</option>${ro}</select>
@@ -877,8 +936,8 @@ function renderJFilters(){
     </div>`;
 }
 function setJF(k,v){jFilters[k]=v;renderJournal();}
-function resetJF(){jFilters={compte:'',session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};renderJournal();}
-function getFT(){return DB.trades.filter(t=>{const f=jFilters;if(f.compte&&t.compte!==f.compte)return false;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
+function resetJF(){jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};renderJournal();}
+function getFT(){return DB.trades.filter(t=>{if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
 
 function renderJTable(){
   const trades=getFT();
@@ -1101,8 +1160,9 @@ function openDetail(id){
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────
-function getCalTrades(){return calFilter==='all'?DB.trades:DB.trades.filter(t=>t.compte===calFilter);}
+function getCalTrades(){return calAccFilters.has('all')?DB.trades:DB.trades.filter(t=>calAccFilters.has(t.compte));}
 function renderCal(){
+  renderCalAccPills();
   const allTrades=getCalTrades();
   const bd={};allTrades.forEach(t=>{if(!t.date)return;if(!bd[t.date])bd[t.date]=[];bd[t.date].push(t);});
   const fd=(new Date(calY,calM,1).getDay()+6)%7,dim=new Date(calY,calM+1,0).getDate(),pd=new Date(calY,calM,0).getDate();
@@ -1112,9 +1172,7 @@ function renderCal(){
   while(cells.length%7!==0)cells.push({d:cells.length-fd-dim+1,cur:false});
   const td=new Date();
   const mn=new Date(calY,calM,1).toLocaleString('fr-FR',{month:'long',year:'numeric'});
-  const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${calFilter===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
-  const calSel=`<select style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-family:inherit;color:var(--text2);background:var(--surface);outline:none;cursor:pointer" onchange="setCalFilter(this.value)"><option value="all" ${calFilter==='all'?'selected':''}>Tous les comptes</option>${ao}</select>`;
-  let h=`<div class="cal-toolbar"><div style="display:flex;align-items:center;gap:10px"><div class="cal-nav"><button class="btn btn-secondary btn-sm" onclick="calNav(-1)">‹</button><button class="btn btn-secondary btn-sm" onclick="calToday()">Aujourd'hui</button><button class="btn btn-secondary btn-sm" onclick="calNav(1)">›</button></div><div class="cal-title">${mn}</div></div><div class="cal-filters">${calSel}</div></div>`;
+  let h=`<div class="cal-toolbar"><div style="display:flex;align-items:center;gap:10px"><div class="cal-nav"><button class="btn btn-secondary btn-sm" onclick="calNav(-1)">‹</button><button class="btn btn-secondary btn-sm" onclick="calToday()">Aujourd'hui</button><button class="btn btn-secondary btn-sm" onclick="calNav(1)">›</button></div><div class="cal-title">${mn}</div></div></div>`;
   h+=`<div class="cal-hrow">${['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>`<div class="cal-dl">${d}</div>`).join('')}</div><div class="cal-grid">`;
   cells.forEach(c=>{
     if(!c.cur){h+=`<div class="cal-day other"><div class="cal-date">${c.d}</div></div>`;return;}
@@ -1128,6 +1186,24 @@ function renderCal(){
   h+='</div>';
   document.getElementById('calCard').innerHTML=h;
   renderCalSummary(allTrades,bd);
+}
+function renderCalAccPills(){
+  const allSel=calAccFilters.has('all');
+  let h=`<span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-right:4px">Compte :</span>`;
+  h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleCAF('all')">Tous</button>`;
+  DB.accounts.forEach(a=>{const ok=!allSel&&calAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  const el=document.getElementById('calAccPills');
+  if(el)el.innerHTML=h;
+}
+function toggleCAF(name){
+  if(name==='all'){calAccFilters=new Set(['all']);}
+  else{
+    calAccFilters.delete('all');
+    if(calAccFilters.has(name))calAccFilters.delete(name);
+    else calAccFilters.add(name);
+    if(calAccFilters.size===0)calAccFilters=new Set(['all']);
+  }
+  renderCal();
 }
 function setCalFilter(v){calFilter=v;renderCal();}
 function calNav(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
@@ -1229,14 +1305,33 @@ async function delCF(id){
   toast('Mouvement supprimé','info');
   if(curPage==='cashflow')renderCashflow();
 }
+function renderCFAccPills(){
+  const allSel=cfAccFilters.has('all');
+  let h=`<span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-right:4px">Compte :</span>`;
+  h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleCFAF('all')">Tous</button>`;
+  DB.accounts.forEach(a=>{const ok=!allSel&&cfAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCFAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  const el=document.getElementById('cfAccPills');
+  if(el)el.innerHTML=h;
+}
+function toggleCFAF(name){
+  if(name==='all'){cfAccFilters=new Set(['all']);}
+  else{
+    cfAccFilters.delete('all');
+    if(cfAccFilters.has(name))cfAccFilters.delete(name);
+    else cfAccFilters.add(name);
+    if(cfAccFilters.size===0)cfAccFilters=new Set(['all']);
+  }
+  renderCashflow();
+}
 function getCFFiltered(){
   return(DB.cashflow||[]).filter(c=>{
-    if(cfFilters.compte&&c.compte!==cfFilters.compte)return false;
+    if(!cfAccFilters.has('all')&&!cfAccFilters.has(c.compte))return false;
     if(cfFilters.type&&c.type!==cfFilters.type)return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date));
 }
 function renderCashflow(){
+  renderCFAccPills();
   if(!DB.cashflow)DB.cashflow=[];
   const all=DB.cashflow;
   const totalDepots=all.filter(c=>c.type==='depot').reduce((s,c)=>s+(c.montantUSD||0),0);
@@ -1249,9 +1344,7 @@ function renderCashflow(){
     <div class="cf-sum-card"><div class="cf-sum-lbl">Solde net USD</div><div class="cf-sum-val" style="color:${totalPayouts-totalDepots>=0?'var(--green)':'var(--red)'}">${totalPayouts-totalDepots>=0?'+':''}$${Math.abs(totalPayouts-totalDepots).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="cf-sum-sub">Payouts − Dépôts</div></div>
     <div class="cf-sum-card"><div class="cf-sum-lbl">Solde net MUR</div><div class="cf-sum-val" style="color:${totalPayoutsMUR-totalDepotsMUR>=0?'var(--green)':'var(--red)'};font-size:18px">${totalPayoutsMUR-totalDepotsMUR>=0?'+':''}₨ ${Math.abs(totalPayoutsMUR-totalDepotsMUR).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="cf-sum-sub">Payouts − Dépôts</div></div>`;
   // Filters
-  const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${cfFilters.compte===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
   document.getElementById('cfFilters').innerHTML=`
-    <select onchange="setCFF('compte',this.value)"><option value="">Tous les comptes</option>${ao}</select>
     <select onchange="setCFF('type',this.value)">
       <option value="">Tous les types</option>
       <option value="depot" ${cfFilters.type==='depot'?'selected':''}>Dépôts</option>
@@ -1311,7 +1404,7 @@ function renderCashflow(){
   }).join('');
 }
 function setCFF(k,v){cfFilters[k]=v;renderCashflow();}
-function resetCFF(){cfFilters={compte:'',type:''};renderCashflow();}
+function resetCFF(){cfFilters={type:''};renderCashflow();}
 
 // ── ACCOUNTS ──────────────────────────────────────────────────────────────
 function renderAccounts(){
