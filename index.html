@@ -82,7 +82,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .chart-hint{font-size:10px;color:var(--text3);margin-left:6px;font-weight:400}
 .ch{position:relative;width:100%;height:180px}
 .ch-sm{position:relative;width:100%;height:150px}
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}
+@media(max-width:768px){.ch{height:150px}.ch-sm{height:130px}}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh);max-width:100%}
+#dashEnCours .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
 th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--border2);vertical-align:middle}
@@ -841,41 +843,66 @@ function renderEnCours(f){
   if(!el)return;
   const encours=(f||DB.trades).filter(t=>t.resultat==='En cours').sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));
   if(!encours.length){el.innerHTML='';return;}
-  let h=`<div class="table-wrap" style="margin-top:0">
+  const isMobile=window.innerWidth<=768;
+  let h=`<div class="table-wrap" style="margin-top:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:9px">
         <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 8px var(--blue);flex-shrink:0;animation:pulse 2s ease-in-out infinite"></div>
         <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">Trades en cours</span>
         <span style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd);border-radius:20px;font-size:11px;font-weight:700;padding:1px 8px">${encours.length}</span>
       </div>
-    </div>
-    <table style="width:100%;border-collapse:collapse">
+    </div>`;
+  if(isMobile){
+    // Mobile: simple stacked rows
+    h+=`<div style="display:flex;flex-direction:column">`;
+    encours.forEach(t=>{
+      const ac=DB.accounts.find(a=>a.name===t.compte);
+      const mr=t.montantRisque?'$'+parseFloat(t.montantRisque).toFixed(2):'—';
+      h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border2);cursor:pointer;gap:10px" onclick="openDetail('${t.id}')">
+        <div style="display:flex;align-items:center;gap:7px;min-width:0">
+          ${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}
+          <span style="font-weight:700;font-family:'DM Mono',monospace;font-size:13px;flex-shrink:0">${esc(t.instrument||'—')}</span>
+          <span style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmtD(t.date)}${t.heure?' '+t.heure:''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text)">${mr}</span>
+          <div onclick="event.stopPropagation()" style="display:flex;gap:0">
+            <button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button>
+            <button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+  } else {
+    // Desktop: full table
+    h+=`<table style="width:100%;border-collapse:collapse;min-width:540px">
       <thead><tr>
         <th>Instrument</th><th>Date / Heure</th><th>Session</th><th>Compte</th><th>Structure</th><th>Risque</th><th></th>
       </tr></thead>
       <tbody>`;
-  encours.forEach(t=>{
-    const ac=DB.accounts.find(a=>a.name===t.compte);
-    const mr=t.montantRisque?'$'+parseFloat(t.montantRisque).toFixed(2):'—';
-    h+=`<tr class="tr-data" onclick="openDetail('${t.id}')">
-      <td>
-        <div style="display:flex;align-items:center;gap:7px">
+    encours.forEach(t=>{
+      const ac=DB.accounts.find(a=>a.name===t.compte);
+      const mr=t.montantRisque?'$'+parseFloat(t.montantRisque).toFixed(2):'—';
+      h+=`<tr class="tr-data" onclick="openDetail('${t.id}')">
+        <td><div style="display:flex;align-items:center;gap:7px">
           ${ac?`<span style="width:8px;height:8px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}
           <span style="font-weight:700;font-family:'DM Mono',monospace;font-size:13px">${esc(t.instrument||'—')}</span>
-        </div>
-      </td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${fmtD(t.date)}${t.heure?' '+t.heure:''}</td>
-      <td style="color:var(--text2);font-size:12px">${esc(t.session||'—')}</td>
-      <td style="font-size:12px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.compte||'—')}</td>
-      <td style="font-size:12px;color:var(--text2)">${esc(t.structure||'—')}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text)">${mr}</td>
-      <td onclick="event.stopPropagation()" style="white-space:nowrap">
-        <button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button>
-        <button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
-      </td>
-    </tr>`;
-  });
-  h+=`</tbody></table></div>`;
+        </div></td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${fmtD(t.date)}${t.heure?' '+t.heure:''}</td>
+        <td style="color:var(--text2);font-size:12px">${esc(t.session||'—')}</td>
+        <td style="font-size:12px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.compte||'—')}</td>
+        <td style="font-size:12px;color:var(--text2)">${esc(t.structure||'—')}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text)">${mr}</td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button>
+          <button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
+        </td>
+      </tr>`;
+    });
+    h+=`</tbody></table>`;
+  }
+  h+=`</div>`;
   el.innerHTML=h;
 }
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
