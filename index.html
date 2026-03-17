@@ -91,10 +91,13 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
 .row-win td:first-child{border-left:3px solid var(--green)}
 .row-loss td:first-child{border-left:3px solid var(--red)}
 .row-be td:first-child{border-left:3px solid var(--amber)}
+.row-encours td:first-child{border-left:3px solid var(--blue)}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .badge-win{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .badge-loss{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
 .badge-be{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.badge-encours{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .badge-depot{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .badge-payout{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
 /* ── OVERLAY / MODAL ── no click-outside close */
@@ -428,6 +431,7 @@ tr.tr-data:hover td{background:#FFF8F4;cursor:pointer}
         <div class="card" style="cursor:pointer"><div class="chart-title">Par structure <span class="chart-hint">↖ cliquer</span></div><div class="ch-sm"><canvas id="cStr"></canvas></div></div>
         <div class="card" style="cursor:pointer"><div class="chart-title">Distribution W/L/BE <span class="chart-hint">↖ cliquer</span></div><div class="ch-sm"><canvas id="cDist"></canvas></div></div>
       </div>
+      <div id="dashEnCours" style="margin-top:14px"></div>
     </div>
 
     <!-- JOURNAL -->
@@ -647,7 +651,7 @@ const KEY='tradelog_v3';
 const SESSIONS=['Londres','New York','Asie','Overlap Lon/NY','Pré-marché'];
 const ETATS=['Calme','Confiant','Stressé','Impatient','Focalisé','Fatigue'];
 const STRUCTURES=['BOS haussier','BOS baissier','ChoCH haussier','ChoCH baissier','Range','Tendance','Autre'];
-const RESULTATS=['Win','Loss','Breakeven'];
+const RESULTATS=['Win','Loss','Breakeven','En cours'];
 const LIQUIDITES=['Inducement','EQL (Equal Lows)','EQH (Equal Highs)','BSL (Buy Side Liq.)','SSL (Sell Side Liq.)','PDH (Prev. Day High)','PDL (Prev. Day Low)','PWH (Prev. Week High)','PWL (Prev. Week Low)','PMH (Prev. Month High)','PML (Prev. Month Low)','London High','London Low','Asia High','Asia Low','Autre'];
 const ACC_COLORS=['#F97316','#10B981','#2563EB','#8B5CF6','#EC4899','#EAB308','#14B8A6','#64748B'];
 const SH=['ID','Compte','Date','Heure','Session','Instrument','Structure','Liquidité','Structure Solide','Montant Risqué','Gain/Perte','Capital','Résultat','RR','État','Confiance','Pourquoi Entrer','Doute/Hésitation'];
@@ -668,6 +672,10 @@ function loadLocalDB(){
     const db=d?JSON.parse(d):defDB();
     if(db.accounts)db.accounts=db.accounts.map(a=>({...a,id:String(a.id)}));
     if(!db.cashflow)db.cashflow=[];
+    // Merge any new default instruments not yet in the stored list
+    const defaultInstrs=['EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','EURCAD','GBPJPY','EURJPY','XAUUSD'];
+    if(!db.instruments)db.instruments=defaultInstrs;
+    else defaultInstrs.forEach(i=>{if(!db.instruments.includes(i))db.instruments.push(i);});
     return db;
   }catch{return defDB();}
 }
@@ -679,7 +687,7 @@ function defDB(){
       {id:'2',name:'Prop Firm',startCapital:50000,color:'#10B981'}
     ],
     cashflow:[],
-    instruments:['EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','EURCAD','GBPJPY','XAUUSD'],
+    instruments:['EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','EURCAD','GBPJPY','EURJPY','XAUUSD'],
     rules:[
       {id:1,text:"Ne jamais trader sans confluence de structure"},
       {id:2,text:"Attendre la liquidité avant d'entrer"},
@@ -721,14 +729,15 @@ function calcPnl(t){
 
 function stats(trades){
   if(!trades.length)return{total:0,wins:0,losses:0,be:0,winRate:0,avgRR:0,pnl:0};
-  const w=trades.filter(t=>t.resultat==='Win').length;
-  const l=trades.filter(t=>t.resultat==='Loss').length;
-  const b=trades.filter(t=>t.resultat==='Breakeven').length;
-  // RR is computed only for trades with valid data
-  const rrTrades=trades.map(t=>calcRR(t)).filter(r=>r!==null&&isFinite(r));
+  const closed=trades.filter(t=>t.resultat!=='En cours');
+  const w=closed.filter(t=>t.resultat==='Win').length;
+  const l=closed.filter(t=>t.resultat==='Loss').length;
+  const b=closed.filter(t=>t.resultat==='Breakeven').length;
+  // RR computed only for closed trades with valid data
+  const rrTrades=closed.map(t=>calcRR(t)).filter(r=>r!==null&&isFinite(r));
   const avgRR=rrTrades.length?rrTrades.reduce((s,r)=>s+r,0)/rrTrades.length:0;
-  const pnl=trades.reduce((s,t)=>s+calcPnl(t),0);
-  return{total:trades.length,wins:w,losses:l,be:b,winRate:trades.length?Math.round(w/trades.length*100):0,avgRR,pnl};
+  const pnl=closed.reduce((s,t)=>s+calcPnl(t),0);
+  return{total:closed.length,wins:w,losses:l,be:b,winRate:closed.length?Math.round(w/closed.length*100):0,avgRR,pnl};
 }
 
 function toast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
@@ -803,6 +812,7 @@ function renderDash(){
     return `<div class="stat-card"${click}><div class="stat-icon">${x.i}</div><div class="stat-label">${x.l}</div><div class="stat-value ${x.c}">${x.v}</div><div class="stat-delta">${x.sub}</div></div>`;
   }).join('');
   renderCharts(f);
+  renderEnCours(f);
 }
 function onStatCard(el){
   const dk=el.dataset.dk;if(!window._dashF)return;
@@ -826,6 +836,48 @@ function toggleDF(name){
   }
   renderDash();
 }
+function renderEnCours(f){
+  const el=document.getElementById('dashEnCours');
+  if(!el)return;
+  const encours=(f||DB.trades).filter(t=>t.resultat==='En cours').sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));
+  if(!encours.length){el.innerHTML='';return;}
+  let h=`<div class="table-wrap" style="margin-top:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 8px var(--blue);flex-shrink:0;animation:pulse 2s ease-in-out infinite"></div>
+        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">Trades en cours</span>
+        <span style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd);border-radius:20px;font-size:11px;font-weight:700;padding:1px 8px">${encours.length}</span>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th>Instrument</th><th>Date / Heure</th><th>Session</th><th>Compte</th><th>Structure</th><th>Risque</th><th></th>
+      </tr></thead>
+      <tbody>`;
+  encours.forEach(t=>{
+    const ac=DB.accounts.find(a=>a.name===t.compte);
+    const mr=t.montantRisque?'$'+parseFloat(t.montantRisque).toFixed(2):'—';
+    h+=`<tr class="tr-data" onclick="openDetail('${t.id}')">
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          ${ac?`<span style="width:8px;height:8px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}
+          <span style="font-weight:700;font-family:'DM Mono',monospace;font-size:13px">${esc(t.instrument||'—')}</span>
+        </div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${fmtD(t.date)}${t.heure?' '+t.heure:''}</td>
+      <td style="color:var(--text2);font-size:12px">${esc(t.session||'—')}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.compte||'—')}</td>
+      <td style="font-size:12px;color:var(--text2)">${esc(t.structure||'—')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text)">${mr}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">
+        <button class="btn-ghost" onclick="openEdit('${t.id}')" title="Modifier">✎</button>
+        <button class="btn-ghost" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  el.innerHTML=h;
+}
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function mkBar(id,labels,data,colors,onClickFn){
   dc(id);
@@ -836,10 +888,23 @@ function renderCharts(f){
   const acc=singleAcc?DB.accounts.find(a=>a.name===singleAcc):null;
   const ac=acc?.color||'#F97316';
   dc('cCapital');
-  const cd=[...f].filter(t=>t.capital&&t.date).sort((a,b)=>a.date.localeCompare(b.date));
-  const cl=cd.map(t=>fmtD(t.date)),cv=cd.map(t=>parseFloat(t.capital));
-  if(acc?.startCapital&&cv.length){cl.unshift('Départ');cv.unshift(parseFloat(acc.startCapital));}
-  charts['cCapital']=new Chart(document.getElementById('cCapital').getContext('2d'),{type:'line',data:{labels:cl,datasets:[{data:cv,borderColor:ac,borderWidth:2,tension:0.3,pointRadius:0,pointHoverRadius:4,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`$${v.parsed.y.toLocaleString()}`}}},scales:{x:{grid:{color:'#EDE4D8'},ticks:{font:{size:10},color:'#A8948A'},border:{display:false}},y:{grid:{color:'#EDE4D8'},ticks:{font:{size:10},color:'#A8948A',callback:v=>`$${v.toLocaleString()}`},border:{display:false}}}}});
+  // Build capital curve from gainPerte accumulation (ignores "En cours" trades)
+  const closedF=[...f].filter(t=>t.resultat!=='En cours'&&t.gainPerte!==''&&t.gainPerte!==undefined&&!isNaN(parseFloat(t.gainPerte))&&t.date)
+    .sort((a,b)=>a.date.localeCompare(b.date)||((a.heure||'').localeCompare(b.heure||'')));
+  const cl=[],cv=[];
+  if(acc&&acc.startCapital){
+    // Single account: start from startCapital, accumulate gainPerte
+    let running=parseFloat(acc.startCapital);
+    cl.push('Départ');cv.push(running);
+    closedF.forEach(t=>{running+=parseFloat(t.gainPerte);cl.push(fmtD(t.date));cv.push(parseFloat(running.toFixed(2)));});
+  } else {
+    // All accounts: show cumulative P&L from 0
+    let running=0;
+    cl.push('Départ');cv.push(0);
+    closedF.forEach(t=>{running+=parseFloat(t.gainPerte);cl.push(fmtD(t.date));cv.push(parseFloat(running.toFixed(2)));});
+  }
+  const capColor=cv.length>1&&cv[cv.length-1]>=cv[0]?'#16A34A':'#DC2626';
+  charts['cCapital']=new Chart(document.getElementById('cCapital').getContext('2d'),{type:'line',data:{labels:cl,datasets:[{data:cv,borderColor:capColor,borderWidth:2,tension:0.3,pointRadius:0,pointHoverRadius:4,fill:true,backgroundColor:capColor==='#16A34A'?'rgba(22,163,74,.08)':'rgba(220,38,38,.06)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`$${v.parsed.y.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`}}},scales:{x:{grid:{color:'#EDE4D8'},ticks:{font:{size:10},color:'#A8948A',maxTicksLimit:8},border:{display:false}},y:{grid:{color:'#EDE4D8'},ticks:{font:{size:10},color:'#A8948A',callback:v=>`$${v.toLocaleString()}`},border:{display:false}}}}});
   const sm={};f.forEach(t=>{if(!t.session)return;if(!sm[t.session])sm[t.session]={w:0,n:0};sm[t.session].n++;if(t.resultat==='Win')sm[t.session].w++;});
   const smKeys=Object.keys(sm);
   mkBar('cSession',smKeys.map(s=>s.length>10?s.slice(0,10)+'…':s),smKeys.map(k=>sm[k].n?Math.round(sm[k].w/sm[k].n*100):0),['#F97316','#10B981','#2563EB','#8B5CF6','#EC4899'],(e,els)=>{if(!els.length)return;openTradeListModal(f.filter(t=>t.session===smKeys[els[0].index]),`Session — ${smKeys[els[0].index]}`);});
@@ -864,7 +929,7 @@ function openTradeListModal(trades,title){
     <div class="dc"><div class="dcl">P&L</div><div class="dcv" style="color:${s.pnl>=0?'var(--green)':'var(--red)'};font-family:'DM Mono',monospace">${s.pnl>=0?'+':''}${s.pnl.toFixed(2)}$</div></div>
   </div>`;
   trades.slice(0,30).forEach(t=>{
-    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':'be'}">${t.resultat}</span>`:'';
+    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:'';
     const ac=DB.accounts.find(a=>a.name===t.compte);
     const rr=calcRR(t);
     h+=`<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border2);cursor:pointer" onclick="closeModal('detailModal');openDetail('${t.id}')">
@@ -946,8 +1011,8 @@ function renderJTable(){
   trades.forEach(t=>{
     const ac=DB.accounts.find(a=>a.name===t.compte);
     const rr=calcRR(t);
-    const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':'';
-    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':'be'}">${t.resultat}</span>`:'—';
+    const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':t.resultat==='En cours'?'row-encours':'';
+    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:'—';
     const gp=parseFloat(t.gainPerte)||0;
     // Show gain/perte instead of montantRisque
     const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''
@@ -1098,7 +1163,10 @@ async function saveTrade(){
   const mrVal=parseFloat(montantRisque);
   const rr=(!isNaN(gpVal)&&!isNaN(mrVal)&&mrVal!==0)?gpVal/mrVal:null;
 
+  // Preserve fields not in the form (e.g. capital) from the existing trade
+  const existing=editId?DB.trades.find(x=>x.id===editId):null;
   const t={
+    ...(existing||{}),
     id:editId||Date.now().toString(),
     compte:document.getElementById('f_c').value,
     date:document.getElementById('f_d').value,
@@ -1136,7 +1204,7 @@ async function delTrade(id){
 // ── DETAIL MODAL ──────────────────────────────────────────────────────────
 function openDetail(id){
   const t=DB.trades.find(t=>t.id===id);if(!t)return;
-  const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':'be'}">${t.resultat}</span>`:'';
+  const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:'';
   document.getElementById('detailHead').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="modal-title">${esc(t.instrument||'Trade')} — ${fmtD(t.date)}</span>${bdg}</div>`;
   const gp=parseFloat(t.gainPerte)||0;
   const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
