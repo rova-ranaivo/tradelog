@@ -163,7 +163,7 @@ body.sidebar-light .logo-icon{/* keep gold gradient */}
 .page-sub{font-size:11.5px;color:var(--text4);margin-top:1px;font-weight:400}
 
 /* ─── CONTENT ───────────────────────────────────────────────────── */
-.page-content{padding:24px 28px 80px;flex:1}
+.page-content{padding:18px 24px 80px;flex:1}
 .page{display:none}.page.active{display:block}
 
 /* ─── BUTTONS ───────────────────────────────────────────────────── */
@@ -357,7 +357,7 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
 }
 
 /* ─── FILTER BAR ─────────────────────────────────────────────────── */
-.filter-bar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filter-bar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .filter-bar select,.filter-bar input[type=date]{
   padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;
   font-size:12px;color:var(--text2);background:var(--surface);outline:none;cursor:pointer;
@@ -372,7 +372,7 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
 }
 
 /* ─── ACCOUNT PILLS ──────────────────────────────────────────────── */
-.acc-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.acc-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .acc-pill{
   padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:500;
   cursor:pointer;border:1.5px solid var(--border);background:var(--surface);
@@ -490,21 +490,45 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
 .prog-bar{height:3px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:7px}
 .prog-fill{height:100%;border-radius:3px;transition:width .35s}
 
-/* ─── JOURNAL CARDS ──────────────────────────────────────────────── */
-.j-cards{display:flex;flex-direction:column;gap:5px;padding:2px 0}
-.j-card{
-  background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;
-  border-radius:var(--rl);padding:12px 14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)
+/* ─── JOURNAL LIST (JIRA BACKLOG STYLE) ──────────────────────────── */
+.jl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh)}
+.jl-cols{grid-template-columns:56px 1fr 108px 130px 82px 70px 96px 58px}
+.jl-head{display:grid;align-items:center;background:var(--surface3);border-bottom:1px solid var(--border);padding:0 2px}
+.jl-head.jl-cols{grid-template-columns:56px 1fr 108px 130px 82px 70px 96px 58px}
+.jl-hcell{padding:7px 9px;font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
+.jl-row{display:grid;align-items:center;border-bottom:1px solid var(--border2);cursor:pointer;transition:background .1s;border-left:3px solid transparent;padding:0 2px}
+.jl-row.jl-cols{grid-template-columns:56px 1fr 108px 130px 82px 70px 96px 58px}
+.jl-row:last-child{border-bottom:none}
+.jl-row:hover{background:var(--surface2)}
+.jl-row.row-win{border-left-color:var(--green)}
+.jl-row.row-loss{border-left-color:var(--red)}
+.jl-row.row-be{border-left-color:var(--amber)}
+.jl-row.row-encours{border-left-color:var(--blue)}
+.jl-cell{padding:5px 9px;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.jl-thumb-cell{padding:4px 5px;display:flex;align-items:center;justify-content:center}
+.j-thumb{width:48px;height:32px;border-radius:4px;overflow:hidden;background:var(--surface3);border:1px solid var(--border2);flex-shrink:0;cursor:pointer;transition:border-color .12s}
+.j-thumb:hover{border-color:var(--accent-bd)}
+.j-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.j-thumb-empty{width:48px;height:32px;border-radius:4px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;opacity:.5}
+.jl-instr{display:flex;align-items:center;gap:5px;overflow:hidden;min-width:0}
+.jl-actions{padding:3px 5px;display:flex;align-items:center;gap:1px;opacity:0;transition:opacity .12s}
+.jl-row:hover .jl-actions{opacity:1}
+
+/* ─── JOURNAL SUMMARY BAR ────────────────────────────────────────── */
+.j-summary{display:flex;align-items:stretch;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:8px;overflow:hidden;box-shadow:var(--sh)}
+.j-sum-item{flex:1;padding:9px 14px;border-right:1px solid var(--border2);min-width:0}
+.j-sum-item:last-child{border-right:none}
+.j-sum-lbl{font-size:9px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;white-space:nowrap}
+.j-sum-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;letter-spacing:-.5px;line-height:1;color:var(--text)}
+.j-sum-sub{font-size:10px;color:var(--text4);margin-top:3px}
+
+/* Journal responsive hide helpers */
+.jl-hide-sm,.jl-hide-md,.jl-hide-xs{display:initial}
+
+@media(max-width:900px){
+  .jl-head.jl-cols,.jl-row.jl-cols{grid-template-columns:48px 1fr 108px 0 0 66px 88px 52px}
+  .jl-hide-sm{display:none!important}
 }
-.j-card:hover{box-shadow:var(--shl);transform:translateY(-1px)}
-.j-card.row-win{border-left-color:var(--green)}
-.j-card.row-loss{border-left-color:var(--red)}
-.j-card.row-be{border-left-color:var(--amber)}
-.j-card.row-encours{border-left-color:var(--blue)}
-.j-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap}
-.j-card-row{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4px 14px;align-items:baseline}
-.j-card-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-.j-card-val{font-size:12.5px;color:var(--text2)}
 
 /* ─── CASHFLOW ───────────────────────────────────────────────────── */
 .cf-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -669,7 +693,7 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
   .cal-month-stats{grid-template-columns:repeat(2,1fr)}
   .cf-summary{grid-template-columns:repeat(2,1fr)}
   .cal-summary-panel{width:260px}
-  #dashMetricsRow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #dashMetricsRow{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   .dash-bottom{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
   .dash-bottom>:last-child{grid-column:1/-1}
 }
@@ -700,9 +724,20 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
   .acc-pills{gap:5px}
   .filter-bar{flex-wrap:wrap;gap:6px}
   .filter-bar select,.filter-bar input[type=date]{flex:1;min-width:120px;max-width:calc(50% - 3px)}
+  .filter-bar select:first-child{max-width:100%;flex-basis:100%}
   .filter-bar>div[style*="margin-left:auto"]{margin-left:0!important;width:100%;order:99;display:flex;gap:6px}
   .filter-bar>div[style*="margin-left:auto"] .btn{flex:1;justify-content:center}
-  .j-card-row{grid-template-columns:auto 1fr auto 1fr;gap:3px 8px}
+  .filter-bar .btn-ghost.btn-sm{width:100%;justify-content:center;order:98}
+  /* Journal table — masquer date à 768px */
+  .jl-head.jl-cols,.jl-row.jl-cols{grid-template-columns:44px 1fr 0 0 0 62px 84px 48px}
+  .jl-hide-md{display:none!important}
+  .jl-actions{opacity:1}
+  /* Summary bar — 2×2 grid (5e item masqué → 4 items en 2 lignes) */
+  .j-summary{display:grid;grid-template-columns:1fr 1fr}
+  .j-sum-item{border-right:none;border-bottom:1px solid var(--border2)}
+  .j-sum-item:nth-child(odd){border-right:1px solid var(--border2)}
+  .j-sum-item:last-child{display:none}
+  .j-sum-item:nth-child(3),.j-sum-item:nth-child(4){border-bottom:none}
   .cal-hrow,.cal-grid{gap:2px}
   .cal-day{min-height:64px;padding:5px 4px}
   .cal-date{font-size:10px}
@@ -724,7 +759,6 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
   .tab{white-space:nowrap}
   .inline-add{flex-direction:column}
   .inline-add input{width:100%}
-  .filter-bar .btn-ghost.btn-sm{width:100%;justify-content:center;order:98}
   #fab{bottom:16px;right:16px;width:48px;height:48px}
   #dashMetricsRow{grid-template-columns:repeat(2,minmax(0,1fr))}
   .dash-bottom{grid-template-columns:1fr!important}
@@ -741,10 +775,16 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
   .cal-dot{width:4px;height:4px;margin:0px}
   .cf-summary{grid-template-columns:1fr}
   .cf-sum-val{font-size:17px}
-  .j-card{padding:10px 11px}
-  .j-card-row{grid-template-columns:auto 1fr;gap:2px 8px}
   .detail-grid{grid-template-columns:1fr}
   .filter-bar select,.filter-bar input[type=date]{font-size:11px;padding:5px 7px}
+  /* Journal table — ultra-compact: thumbnail + RR masqués */
+  .jl-head.jl-cols,.jl-row.jl-cols{grid-template-columns:0 1fr 0 0 0 0 76px 42px}
+  .jl-hide-xs{display:none!important}
+  .jl-cell{padding:5px 7px}
+  .jl-hcell{padding:6px 7px}
+  /* Summary bar — 2×2 réduit */
+  .j-sum-val{font-size:14px}
+  .j-sum-item{padding:8px 10px}
   #toast{bottom:70px;right:12px;left:12px;min-width:unset}
   .btn{padding:7px 12px;font-size:12px}
 }
@@ -862,11 +902,14 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
-      <div class="acc-pills" id="dashPills"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+        <div class="acc-pills" id="dashPills" style="margin-bottom:0"></div>
+        <div id="dashFilterBar"></div>
+      </div>
       <div class="stats-grid" id="dashStats"></div>
       <div class="charts-grid">
         <div class="card">
-          <div class="chart-title">Courbe de capital</div>
+          <div class="chart-title" style="display:flex;align-items:baseline;justify-content:space-between">Courbe de capital<span id="capitalSubtitle" style="font-size:11px;font-weight:400;color:var(--text4);text-transform:none;letter-spacing:0"></span></div>
           <div class="ch"><canvas id="cCapital"></canvas></div>
         </div>
         <div class="card" style="cursor:pointer">
@@ -906,6 +949,7 @@ tr.tr-data:hover td{background:var(--surface3);cursor:pointer}
     <div id="page-journal" class="page">
       <div class="acc-pills" id="jAccPills" style="margin-bottom:10px"></div>
       <div class="filter-bar" id="jFilters"></div>
+      <div id="jSummary"></div>
       <div id="jTable"></div>
     </div>
 
@@ -1165,7 +1209,8 @@ const SH=['ID','Compte','Date','Heure','Session','Instrument','Structure','Liqui
 
 let DB=loadLocalDB(),curPage='dashboard';
 let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new Set(['all']),cfAccFilters=new Set(['all']);
-let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:''};
+let dashPeriod='all';
+let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week'};
 let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0];
@@ -1255,6 +1300,11 @@ document.addEventListener('keydown',function(e){
     });
   }
 });
+// Click outside modal to close (all except tradeModal — risque de fermeture accidentelle)
+['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+});
 
 // ── REFRESH ───────────────────────────────────────────────────────────────
 async function refreshApp(){
@@ -1301,23 +1351,39 @@ function showPage(p){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
+function renderDashFilter(){
+  const el=document.getElementById('dashFilterBar');if(!el)return;
+  const periods=[
+    {v:'today',l:"Aujourd'hui"},{v:'week',l:'Cette semaine'},
+    {v:'month',l:'Mois en cours'},{v:'lastmonth',l:'Mois dernier'},
+    {v:'3months',l:'3 derniers mois'},{v:'year',l:'Cette année'},
+    {v:'all',l:'Tout afficher'},
+  ];
+  const po=periods.map(p=>`<option value="${p.v}" ${dashPeriod===p.v?'selected':''}>${p.l}</option>`).join('');
+  el.innerHTML=`<select onchange="setDashPeriod(this.value)" style="font-weight:500;color:var(--accent);border-color:var(--accent-bd);background:var(--accent-bg);padding:5px 10px;border-radius:7px;border:1.5px solid var(--accent-bd);font-size:12px;font-family:inherit;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none">${po}</select>`;
+}
+function setDashPeriod(v){dashPeriod=v;renderDash();}
+
 function renderDash(){
-  renderPills();
-  const f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
+  renderPills();renderDashFilter();
+  let f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
+  if(dashPeriod!=='all'){const r=getPeriodRange(dashPeriod);if(r.from)f=f.filter(t=>t.date>=r.from);if(r.to)f=f.filter(t=>t.date<=r.to);}
   const s=stats(f);window._dashF=f;
   const statDefs=[
     {l:'Total trades',v:s.total,sub:`${s.wins}W · ${s.losses}L · ${s.be}BE`,icon:'◈',c:'',dk:'all'},
-    {l:'Win rate',v:`${s.winRate}%`,sub:`Sur ${s.total} trades`,icon:'◎',c:s.winRate>=50?'green':'red',dk:'Win'},
-    {l:'RR Moyen',v:`${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,sub:'Moyenne sur trades fermés',icon:'≡',c:'gold',dk:''},
-    {l:'P&L total',v:s.pnl>=0?`+$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:`-$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`,sub:'Somme gains/pertes',icon:'$',c:s.pnl>=0?'green':'red',dk:''}
+    {l:'Win rate',v:`${s.winRate}%`,sub:`${s.wins} gagnants sur ${s.total}`,icon:'◎',c:s.winRate>=60?'green':s.winRate>=40?'':'red',dk:'Win',bar:s.winRate,barCol:s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'},
+    {l:'RR Moyen',v:`${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,sub:'Moyenne trades fermés',icon:'≡',c:s.avgRR>=1?'green':s.avgRR>=0?'gold':'red',dk:''},
+    {l:'P&L total',v:s.pnl>=0?`+$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:`-$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`,sub:'Gains nets réalisés',icon:'$',c:s.pnl>=0?'green':'red',dk:''}
   ];
   document.getElementById('dashStats').innerHTML=statDefs.map(x=>{
     const click=x.dk?` onclick="onStatCard(this)" data-dk="${x.dk}" style="cursor:pointer"`:'';
+    const progressBar=x.bar!==undefined?`<div style="margin-top:9px;height:3px;background:var(--border2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(x.bar,100)}%;height:100%;background:${x.barCol};border-radius:3px;transition:width .4s"></div></div>`:'';
     return `<div class="stat-card ${x.c}"${click}>
       <div class="stat-icon">${x.icon}</div>
       <div class="stat-label">${x.l}</div>
       <div class="stat-value ${x.c}">${x.v}</div>
       <div class="stat-delta">${x.sub}</div>
+      ${progressBar}
     </div>`;
   }).join('');
   renderCharts(f);
@@ -1511,6 +1577,14 @@ function renderCharts(f){
   }
   const isUp=cv.length>1&&cv[cv.length-1]>=cv[0];
   const lineColor=isUp?'#2D7A4F':'#C0392B';
+  // Subtitle: net P&L + % change
+  const sub=document.getElementById('capitalSubtitle');
+  if(sub&&cv.length>1){
+    const start=cv[0],end=cv[cv.length-1],delta=end-start;
+    const pct=start!==0?((delta/Math.abs(start))*100):0;
+    const col=delta>=0?'var(--green)':'var(--red)';
+    sub.innerHTML=`<span style="color:${col};font-weight:600">${delta>=0?'+':''}$${Math.abs(delta).toFixed(2)}</span><span style="color:var(--text4);margin-left:5px">${pct>=0?'+':''}${pct.toFixed(1)}%</span>`;
+  }else if(sub){sub.textContent='';}
 
   const grad=ctx.createLinearGradient(0,0,0,180);
   grad.addColorStop(0,isUp?'rgba(45,122,79,.14)':'rgba(192,57,43,.10)');
@@ -1658,19 +1732,27 @@ function renderDashBottom(f,s){
   const wr=closed.length?(wins.length/closed.length):0;
   const expectancy=closed.length?(wr*avgWin-(1-wr)*avgLoss):0;
 
+  // Consistency : % jours tradés qui sont positifs
+  const dayMap={};closed.forEach(t=>{if(!t.date)return;if(!dayMap[t.date])dayMap[t.date]=0;dayMap[t.date]+=(parseFloat(t.gainPerte)||0);});
+  const tradedDays=Object.keys(dayMap);
+  const posDays=tradedDays.filter(d=>dayMap[d]>0).length;
+  const consistency=tradedDays.length?Math.round(posDays/tradedDays.length*100):0;
+
   const mRow=document.getElementById('dashMetricsRow');
   if(!mRow)return;
+  mRow.style.gridTemplateColumns='repeat(5,minmax(0,1fr))';
   const mDefs=[
     {l:'Profit Factor',v:pf>0?fmtN(pf,2):'—',c:pf>=1.5?'green':pf>=1?'gold':'red',hint:'Gains bruts / Pertes brutes'},
-    {l:'Gain moyen',v:avgWin>0?`+$${fmtN(avgWin,2)}`:'—',c:'green',hint:'Moyenne des trades gagnants'},
-    {l:'Perte moyenne',v:avgLoss>0?`-$${fmtN(avgLoss,2)}`:'—',c:'red',hint:'Moyenne des trades perdants'},
-    {l:'Espérance',v:expectancy!==0?`${expectancy>=0?'+':''}$${fmtN(expectancy,2)}`:'—',c:expectancy>=0?'green':'red',hint:'Par trade en moyenne'}
+    {l:'Gain moyen',v:avgWin>0?`+$${fmtN(avgWin,2)}`:'—',c:'green',hint:'/ trade gagnant'},
+    {l:'Perte moyenne',v:avgLoss>0?`-$${fmtN(avgLoss,2)}`:'—',c:'red',hint:'/ trade perdant'},
+    {l:'Espérance',v:expectancy!==0?`${expectancy>=0?'+':''}$${fmtN(expectancy,2)}`:'—',c:expectancy>=0?'green':'red',hint:'Par trade en moyenne'},
+    {l:'Consistance',v:tradedDays.length?`${consistency}%`:'—',c:consistency>=60?'green':consistency>=40?'gold':'red',hint:`${posDays} j+ / ${tradedDays.length} j tradés`},
   ];
   mRow.innerHTML=mDefs.map(m=>`
-    <div class="card" style="padding:14px 16px;position:relative;overflow:hidden">
+    <div class="stat-card ${m.c}" style="padding:13px 15px">
       <div class="stat-label">${m.l}</div>
-      <div class="stat-value ${m.c}" style="font-size:20px;margin-top:4px">${m.v}</div>
-      <div class="stat-delta" style="margin-top:4px">${m.hint}</div>
+      <div class="stat-value ${m.c}" style="font-size:19px;margin-top:4px">${m.v}</div>
+      <div class="stat-delta" style="margin-top:3px">${m.hint}</div>
     </div>`).join('');
 
   // ── Streak card
@@ -1696,22 +1778,29 @@ function renderDashBottom(f,s){
       else break;
     }
     const streakCol=cType==='Win'?'var(--green)':cType==='Loss'?'var(--red)':'var(--amber)';
+    const last20=sorted.slice(-20);
+    const dotsHtml=last20.length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px">${last20.map(t=>{
+      const col=t.resultat==='Win'?'var(--green)':t.resultat==='Loss'?'var(--red)':'var(--amber)';
+      const lbl=`${t.resultat} — ${t.instrument||'?'} ${fmtD(t.date)}`;
+      return `<div title="${lbl}" onclick="openDetail('${t.id}')" style="width:13px;height:13px;border-radius:2px;background:${col};cursor:pointer;flex-shrink:0;opacity:.85;transition:opacity .1s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.85'"></div>`;
+    }).join('')}</div>`:'';
     sc.innerHTML=`
-      <div class="chart-title">Streaks</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="background:var(--surface3);border-radius:9px;padding:14px;text-align:center">
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Série actuelle</div>
-          <div style="font-size:32px;font-weight:600;font-family:'DM Mono',monospace;color:${streakCol};line-height:1">${cStreak || '—'}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">${cType||''}</div>
+      <div class="chart-title">Streaks <span class="chart-hint">20 derniers</span></div>
+      ${dotsHtml}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:var(--surface3);border-radius:9px;padding:12px;text-align:center">
+          <div style="font-size:9.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Série actuelle</div>
+          <div style="font-size:28px;font-weight:600;font-family:'DM Mono',monospace;color:${streakCol};line-height:1">${cStreak||'—'}</div>
+          <div style="font-size:11px;color:${streakCol};margin-top:3px;font-weight:500">${cType||''}</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:9.5px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Best Win</div>
-            <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">${best||0}</div>
+          <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Best Win</div>
+            <div style="font-size:20px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">${best||0}</div>
           </div>
-          <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:9.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Trades fermés</div>
-            <div style="font-size:22px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${closed.length}</div>
+          <div style="background:var(--surface3);border-radius:8px;padding:9px;text-align:center">
+            <div style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Fermés</div>
+            <div style="font-size:20px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${closed.length}</div>
           </div>
         </div>
       </div>`;
@@ -1854,15 +1943,29 @@ function getWeekRange(){
   const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return{from:fmt(mon),to:fmt(sun)};
 }
+function getPeriodRange(p){
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const now=new Date();
+  if(p==='today')return{from:fmt(now),to:fmt(now)};
+  if(p==='week')return getWeekRange();
+  if(p==='month'){return{from:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`,to:fmt(now)};}
+  if(p==='lastmonth'){const f=new Date(now.getFullYear(),now.getMonth()-1,1),t=new Date(now.getFullYear(),now.getMonth(),0);return{from:fmt(f),to:fmt(t)};}
+  if(p==='3months'){const f=new Date(now);f.setMonth(f.getMonth()-3);return{from:fmt(f),to:fmt(now)};}
+  if(p==='year')return{from:`${now.getFullYear()}-01-01`,to:fmt(now)};
+  return{from:'',to:''};// 'all'
+}
+function setJPeriod(v){
+  jFilters.period=v;
+  if(v!=='custom'){const r=getPeriodRange(v);jFilters.dateFrom=r.from;jFilters.dateTo=r.to;}
+  renderJournal();
+}
 
 function renderJournal(){
-  // Default to current week if no date filters set
-  if(!jFilters.dateFrom&&!jFilters.dateTo){
-    const w=getWeekRange();
-    jFilters.dateFrom=w.from;
-    jFilters.dateTo=w.to;
+  if(!jFilters.dateFrom&&!jFilters.dateTo&&jFilters.period!=='custom'){
+    const r=getPeriodRange(jFilters.period||'week');
+    jFilters.dateFrom=r.from;jFilters.dateTo=r.to;
   }
-  renderJAccPills();renderJFilters();renderJTable();
+  renderJAccPills();renderJFilters();renderJSummary();renderJTable();
 }
 function renderJAccPills(){
   const allSel=jAccFilters.has('all');
@@ -1880,64 +1983,134 @@ function renderJFilters(){
   const so=SESSIONS.map(s=>`<option value="${s}" ${jFilters.session===s?'selected':''}>${s}</option>`).join('');
   const io=DB.instruments.map(i=>`<option value="${i}" ${jFilters.instrument===i?'selected':''}>${i}</option>`).join('');
   const ro=RESULTATS.map(r=>`<option value="${r}" ${jFilters.resultat===r?'selected':''}>${r}</option>`).join('');
-  const w=getWeekRange();
-  const isWeekFilter=jFilters.dateFrom===w.from&&jFilters.dateTo===w.to;
-  const weekBadge=isWeekFilter?`<span class="filter-week-badge">📅 Cette semaine</span>`:'';
+  const periods=[
+    {v:'today',l:"Aujourd'hui"},
+    {v:'week',l:'Cette semaine'},
+    {v:'month',l:'Mois en cours'},
+    {v:'lastmonth',l:'Mois dernier'},
+    {v:'3months',l:'3 derniers mois'},
+    {v:'year',l:'Cette année'},
+    {v:'all',l:'Tout afficher'},
+    {v:'custom',l:'Personnalisé'},
+  ];
+  const po=periods.map(p=>`<option value="${p.v}" ${jFilters.period===p.v?'selected':''}>${p.l}</option>`).join('');
+  const isCustom=jFilters.period==='custom';
   document.getElementById('jFilters').innerHTML=`
-    ${weekBadge}
+    <select onchange="setJPeriod(this.value)" style="font-weight:500;color:var(--accent);border-color:var(--accent-bd);background:var(--accent-bg)">${po}</select>
     <select onchange="setJF('session',this.value)"><option value="">Toutes sessions</option>${so}</select>
     <select onchange="setJF('instrument',this.value)"><option value="">Tous instruments</option>${io}</select>
     <select onchange="setJF('resultat',this.value)"><option value="">Tous résultats</option>${ro}</select>
-    <input type="date" value="${jFilters.dateFrom}" onchange="setJF('dateFrom',this.value)" title="Date début"/>
-    <input type="date" value="${jFilters.dateTo}" onchange="setJF('dateTo',this.value)" title="Date fin"/>
+    ${isCustom?`<input type="date" value="${jFilters.dateFrom}" onchange="setJF('dateFrom',this.value)" title="Date début"/>
+    <input type="date" value="${jFilters.dateTo}" onchange="setJF('dateTo',this.value)" title="Date fin"/>`:''}
     <button class="btn btn-ghost btn-sm" onclick="resetJF()">✕ Reset</button>
     <div style="margin-left:auto;display:flex;gap:7px">
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
     </div>`;
 }
-function setJF(k,v){jFilters[k]=v;renderJournal();}
+function setJF(k,v){if(k==='dateFrom'||k==='dateTo')jFilters.period='custom';jFilters[k]=v;renderJournal();}
 function resetJF(){
-  const w=getWeekRange();
-  jFilters={session:'',instrument:'',resultat:'',dateFrom:w.from,dateTo:w.to};
+  const r=getPeriodRange('week');
+  jFilters={session:'',instrument:'',resultat:'',dateFrom:r.from,dateTo:r.to,period:'week'};
   renderJournal();
 }
 function getFT(){return DB.trades.filter(t=>{if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
 
+function renderJSummary(){
+  const trades=getFT();
+  const el=document.getElementById('jSummary');if(!el)return;
+  if(!trades.length){el.innerHTML='';return;}
+  const closed=trades.filter(t=>t.resultat!=='En cours');
+  const open=trades.filter(t=>t.resultat==='En cours').length;
+  const wins=closed.filter(t=>t.resultat==='Win').length;
+  const losses=closed.filter(t=>t.resultat==='Loss').length;
+  const be=closed.filter(t=>t.resultat==='Breakeven').length;
+  const wr=closed.length?Math.round(wins/closed.length*100):0;
+  const pnl=closed.reduce((s,t)=>s+calcPnl(t),0);
+  const rrArr=closed.map(t=>calcRR(t)).filter(r=>r!==null&&isFinite(r));
+  const avgRR=rrArr.length?rrArr.reduce((s,r)=>s+r,0)/rrArr.length:null;
+  const grossWins=closed.filter(t=>t.resultat==='Win').reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  const grossLosses=Math.abs(closed.filter(t=>t.resultat==='Loss').reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0));
+  const pf=grossLosses>0?grossWins/grossLosses:grossWins>0?Infinity:0;
+  const pfStr=pf===Infinity?'∞':pf>0?fmtN(pf,2):'—';
+  const pfCol=pf>=1.5?'var(--green)':pf>=1?'var(--accent)':pf>0?'var(--red)':'var(--text4)';
+  const pnlCol=pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--text)';
+  const rrCol=avgRR===null?'var(--text)':avgRR>0?'var(--green)':avgRR<0?'var(--red)':'var(--text3)';
+  el.innerHTML=`<div class="j-summary">
+    <div class="j-sum-item">
+      <div class="j-sum-lbl">Trades</div>
+      <div class="j-sum-val">${trades.length}</div>
+      <div class="j-sum-sub">${open>0?`${open} en cours · `:''}${closed.length} fermé${closed.length>1?'s':''}</div>
+    </div>
+    <div class="j-sum-item">
+      <div class="j-sum-lbl">P&L Net</div>
+      <div class="j-sum-val" style="color:${pnlCol}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</div>
+      <div class="j-sum-sub">gains − pertes</div>
+    </div>
+    <div class="j-sum-item">
+      <div class="j-sum-lbl">Win Rate</div>
+      <div class="j-sum-val" style="color:${wr>=60?'var(--green)':wr>=40?'var(--text)':'var(--red)'}">${wr}%</div>
+      <div class="j-sum-sub">${wins}W · ${losses}L${be?' · '+be+'BE':''}</div>
+    </div>
+    <div class="j-sum-item">
+      <div class="j-sum-lbl">RR Moyen</div>
+      <div class="j-sum-val" style="color:${rrCol}">${avgRR!==null?(avgRR>0?'+':'')+fmtN(avgRR,2)+'R':'—'}</div>
+      <div class="j-sum-sub">${rrArr.length} trade${rrArr.length>1?'s':''} avec RR</div>
+    </div>
+    <div class="j-sum-item">
+      <div class="j-sum-lbl">Profit Factor</div>
+      <div class="j-sum-val" style="color:${pfCol}">${pfStr}</div>
+      <div class="j-sum-sub">+$${fmtN(grossWins,2)} · -$${fmtN(grossLosses,2)}</div>
+    </div>
+  </div>`;
+}
 function renderJTable(){
   const trades=getFT();
   if(!trades.length){document.getElementById('jTable').innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
-  let h='<div class="j-cards">';
+  let h=`<div class="jl-wrap">
+  <div class="jl-head jl-cols">
+    <div class="jl-hcell jl-hide-xs"></div>
+    <div class="jl-hcell">Instrument</div>
+    <div class="jl-hcell jl-hide-md">Date / Heure</div>
+    <div class="jl-hcell jl-hide-sm">Compte</div>
+    <div class="jl-hcell jl-hide-sm">Session</div>
+    <div class="jl-hcell jl-hide-xs">RR</div>
+    <div class="jl-hcell">Gain / Perte</div>
+    <div class="jl-hcell"></div>
+  </div>`;
   trades.forEach(t=>{
     const ac=DB.accounts.find(a=>a.name===t.compte);
     const rr=calcRR(t);
     const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':t.resultat==='En cours'?'row-encours':'';
-    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:'—';
+    const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}" style="font-size:10px;padding:1px 7px">${t.resultat}</span>`:'';
     const gp=parseFloat(t.gainPerte)||0;
     const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''
-      ?(gp>=0?`<span style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px;font-weight:400">+$${Math.abs(gp).toFixed(2)}</span>`
-        :`<span style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px;font-weight:400">-$${Math.abs(gp).toFixed(2)}</span>`)
-      :'—';
-    const rrColor=rr===null?'var(--text3)':rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)';
-    const rrStr=rr!==null?(rr>0?'+':'')+fmtN(rr,2)+'R':'—';
-    h+=`<div class="j-card ${cls}" onclick="openDetail('${t.id}')">
-      <div class="j-card-top">
-        <div style="display:flex;align-items:center;gap:6px">
-          ${ac?`<span style="width:8px;height:8px;border-radius:50%;background:${ac.color};display:inline-block;flex-shrink:0"></span>`:''}
-          <span style="font-weight:700;font-family:'DM Mono',monospace;font-size:13px">${esc(t.instrument||'—')}</span>${bdg}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${fmtD(t.date)} ${t.heure||''}</span>
-          <div onclick="event.stopPropagation()" style="display:flex;gap:2px">
-            <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')">✎</button>
-            <button class="btn-ghost btn-sm" style="color:var(--red)" onclick="delTrade('${t.id}')">🗑</button>
-          </div>
-        </div>
+      ?(gp>=0?`<span style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px">+$${Math.abs(gp).toFixed(2)}</span>`
+        :`<span style="color:var(--red);font-family:'DM Mono',monospace;font-size:12px">-$${Math.abs(gp).toFixed(2)}</span>`)
+      :`<span style="color:var(--text4)">—</span>`;
+    const rrColor=rr===null?'var(--text4)':rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)';
+    const rrStr=rr!==null?`<span style="font-family:'DM Mono',monospace;font-size:12px;color:${rrColor}">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:`<span style="color:var(--text4)">—</span>`;
+    const scrUrl=(t.screenshotAvant||t.screenshot||t.screenshotApres||'').trim();
+    const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
+    const safeUrl=scrUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeLabel=esc(t.instrument||'Trade')+' — '+fmtD(t.date);
+    const thumbHtml=hasImg
+      ?`<div class="j-thumb" onclick="event.stopPropagation();openImgPreview('${safeUrl}','${safeLabel}')"><img src="${scrUrl}" alt="" onerror="this.parentElement.className='j-thumb-empty';this.parentElement.innerHTML='<svg width=14 height=14 viewBox=\\'0 0 24 24\\' fill=none stroke=currentColor stroke-width=1.5><rect x=3 y=3 width=18 height=18 rx=2/><circle cx=8.5 cy=8.5 r=1.5/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"/></div>`
+      :`<div class="j-thumb-empty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    h+=`<div class="jl-row jl-cols ${cls}" onclick="openDetail('${t.id}')">
+      <div class="jl-thumb-cell jl-hide-xs">${thumbHtml}</div>
+      <div class="jl-cell jl-instr">
+        ${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};flex-shrink:0;display:inline-block"></span>`:''}
+        <span style="font-weight:600;font-family:'DM Mono',monospace;font-size:12.5px;flex-shrink:0">${esc(t.instrument||'—')}</span>
+        ${bdg}
       </div>
-      <div class="j-card-row">
-        <span class="j-card-lbl">Compte</span><span class="j-card-val">${esc(t.compte||'—')}</span>
-        <span class="j-card-lbl">Session</span><span class="j-card-val">${esc(t.session||'—')}</span>
-        <span class="j-card-lbl">RR</span><span class="j-card-val" style="font-family:'DM Mono',monospace;color:${rrColor}">${rrStr}</span>
-        <span class="j-card-lbl">Gain/Perte</span><span class="j-card-val">${gpStr}</span>
+      <div class="jl-cell jl-hide-md"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${fmtD(t.date)}${t.heure?' <span style="opacity:.6">'+t.heure+'</span>':''}</span></div>
+      <div class="jl-cell jl-hide-sm" style="font-size:11.5px;color:var(--text3)">${esc(t.compte||'—')}</div>
+      <div class="jl-cell jl-hide-sm" style="font-size:11.5px;color:var(--text3)">${esc(t.session||'—')}</div>
+      <div class="jl-cell jl-hide-xs">${rrStr}</div>
+      <div class="jl-cell">${gpStr}</div>
+      <div class="jl-actions" onclick="event.stopPropagation()">
+        <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier" style="padding:4px 6px">✎</button>
+        <button class="btn-ghost btn-sm" style="color:var(--red);padding:4px 6px" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
       </div>
     </div>`;
   });
