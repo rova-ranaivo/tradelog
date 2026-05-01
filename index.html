@@ -16,155 +16,115 @@
 ══════════════════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-/* ── Light (default) ──────────────────────────────────────────────────── */
+/* ── Dark Default — Cyber Terminal ─────────────────────────────────────── */
 :root{
-  --bg:#F5F7FA;
-  --bg2:#EBEEF3;
-  --surface:#FFFFFF;
-  --surface2:#F9FAFB;
-  --surface3:#EEF1F6;
-  --border:rgba(30,50,100,.1);
-  --border2:rgba(30,50,100,.055);
-  --text:#161D2E;
-  --text2:#2A3550;
-  --text3:#4A6080;
-  --text4:#8AA0BE;
-  /* Primary: Clean Blue */
-  --accent:#2558CE;
-  --accent2:#1A45A8;
-  --accent-bg:rgba(37,88,206,.07);
-  --accent-bd:rgba(37,88,206,.2);
+  --bg:#050608;
+  --bg2:#0A0C12;
+  --surface:rgba(13,17,23,0.82);
+  --surface2:rgba(18,24,35,0.72);
+  --surface3:rgba(28,36,52,0.6);
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.03);
+  --text:#E8F0FE;
+  --text2:#C0D0E8;
+  --text3:#7890B0;
+  --text4:#4A5E78;
+  /* Accent: Electric Blue */
+  --accent:#3B82F6;
+  --accent2:#2563EB;
+  --accent-bg:rgba(59,130,246,0.1);
+  --accent-bd:rgba(59,130,246,0.28);
   /* Gold */
-  --gold:#8E6B1E;
-  --gold-bg:rgba(142,107,30,.07);
-  --gold-bd:rgba(142,107,30,.2);
-  /* P&L */
-  --green:#1A7A4A;
-  --green-bg:rgba(26,122,74,.07);
-  --green-bd:rgba(26,122,74,.2);
-  --red:#C0392B;
-  --red-bg:rgba(192,57,43,.07);
-  --red-bd:rgba(192,57,43,.2);
-  --amber:#A06010;
-  --amber-bg:rgba(160,96,16,.07);
-  --amber-bd:rgba(160,96,16,.2);
-  --blue:#2558CE;
-  --blue-bg:rgba(37,88,206,.07);
-  --blue-bd:rgba(37,88,206,.2);
+  --gold:#F59E0B;
+  --gold-bg:rgba(245,158,11,0.1);
+  --gold-bd:rgba(245,158,11,0.28);
+  /* P&L — Neon */
+  --green:#00FF9D;
+  --green-bg:rgba(0,255,157,0.08);
+  --green-bd:rgba(0,255,157,0.22);
+  --red:#FF3E3E;
+  --red-bg:rgba(255,62,62,0.08);
+  --red-bd:rgba(255,62,62,0.22);
+  --amber:#F59E0B;
+  --amber-bg:rgba(245,158,11,0.08);
+  --amber-bd:rgba(245,158,11,0.22);
+  --blue:#3B82F6;
+  --blue-bg:rgba(59,130,246,0.08);
+  --blue-bd:rgba(59,130,246,0.22);
+  /* AI / Purple */
+  --purple:#7000FF;
+  --purple-bg:rgba(112,0,255,0.1);
+  --purple-bd:rgba(112,0,255,0.32);
   /* Layout */
-  --sidebar:228px;
+  --sidebar:244px;
   --r:3px;
   --rl:5px;
   --rxl:8px;
-  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-  --shl:0 6px 20px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.06);
-  --shfocus:0 0 0 3px rgba(37,88,206,.2);
-  /* Sidebar tokens */
-  --sb-bg:#1C3461;
-  --sb-border:rgba(255,255,255,.1);
-  --sb-text:rgba(180,210,255,.52);
-  --sb-text-h:rgba(180,210,255,.88);
-  --sb-text-active:#FFFFFF;
-  --sb-hover:rgba(255,255,255,.08);
-  --sb-active-bg:rgba(96,165,250,.18);
-  --sb-active-bar:#60A5FA;
-  --sb-section:rgba(180,210,255,.22);
+  --sh:0 1px 8px rgba(0,0,0,0.5);
+  --shl:0 8px 32px rgba(0,0,0,0.7),0 2px 8px rgba(0,0,0,0.4);
+  --shfocus:0 0 0 3px rgba(59,130,246,0.28);
+  /* Sidebar */
+  --sb-bg:#030405;
+  --sb-border:rgba(255,255,255,0.06);
+  --sb-text:rgba(120,144,176,0.7);
+  --sb-text-h:rgba(200,220,240,0.9);
+  --sb-text-active:#E8F0FE;
+  --sb-hover:rgba(255,255,255,0.05);
+  --sb-active-bg:rgba(0,255,157,0.08);
+  --sb-active-bar:#00FF9D;
+  --sb-section:rgba(120,144,176,0.28);
   /* Header */
-  --header-bg:rgba(245,247,250,.94);
+  --header-bg:rgba(5,6,8,0.92);
 }
 
-/* ── Ciel (Sky Blue Light) ──────────────────────────────────────────────── */
-body[data-theme="dark"]{
-  --bg:#EEF5FC;
-  --bg2:#E0EDF8;
-  --surface:#FFFFFF;
-  --surface2:#F4F8FD;
-  --surface3:#E8F2FA;
-  --border:rgba(30,80,160,.1);
-  --border2:rgba(30,80,160,.055);
-  --text:#162542;
-  --text2:#223558;
-  --text3:#476A94;
-  --text4:#86A8CC;
-  --accent:#1E5FD0;
-  --accent2:#1549B0;
-  --accent-bg:rgba(30,95,208,.08);
-  --accent-bd:rgba(30,95,208,.2);
-  --gold:#A07020;
-  --gold-bg:rgba(160,112,32,.07);
-  --gold-bd:rgba(160,112,32,.2);
-  --green:#1A7A4A;
-  --green-bg:rgba(26,122,74,.07);
-  --green-bd:rgba(26,122,74,.2);
-  --red:#B03428;
-  --red-bg:rgba(176,52,40,.07);
-  --red-bd:rgba(176,52,40,.2);
-  --amber:#A06010;
-  --amber-bg:rgba(160,96,16,.07);
-  --amber-bd:rgba(160,96,16,.2);
-  --blue:#1E5FD0;
-  --blue-bg:rgba(30,95,208,.07);
-  --blue-bd:rgba(30,95,208,.2);
-  --sh:0 1px 3px rgba(30,80,160,.07),0 1px 2px rgba(30,80,160,.04);
-  --shl:0 6px 20px rgba(30,80,160,.12),0 2px 6px rgba(30,80,160,.06);
-  --shfocus:0 0 0 3px rgba(30,95,208,.18);
-  --sb-bg:#1E3D72;
-  --sb-border:rgba(255,255,255,.1);
-  --sb-text:rgba(180,210,255,.52);
-  --sb-text-h:rgba(180,210,255,.88);
+/* ── Light — Institutional Paper ────────────────────────────────────────── */
+body.light{
+  --bg:#F8FAFC;
+  --bg2:#EFF3F8;
+  --surface:rgba(255,255,255,0.82);
+  --surface2:rgba(248,250,252,0.9);
+  --surface3:rgba(239,243,248,0.95);
+  --border:rgba(0,0,0,0.06);
+  --border2:rgba(0,0,0,0.04);
+  --text:#0F172A;
+  --text2:#1E293B;
+  --text3:#475569;
+  --text4:#94A3B8;
+  --accent:#2558CE;
+  --accent2:#1A45A8;
+  --accent-bg:rgba(37,88,206,0.07);
+  --accent-bd:rgba(37,88,206,0.2);
+  --gold:#8E6B1E;
+  --gold-bg:rgba(142,107,30,0.07);
+  --gold-bd:rgba(142,107,30,0.2);
+  --green:#10B981;
+  --green-bg:rgba(16,185,129,0.08);
+  --green-bd:rgba(16,185,129,0.2);
+  --red:#EF4444;
+  --red-bg:rgba(239,68,68,0.08);
+  --red-bd:rgba(239,68,68,0.2);
+  --amber:#D97706;
+  --amber-bg:rgba(217,119,6,0.08);
+  --amber-bd:rgba(217,119,6,0.2);
+  --blue:#2558CE;
+  --blue-bg:rgba(37,88,206,0.07);
+  --blue-bd:rgba(37,88,206,0.2);
+  --purple:#7C3AED;
+  --purple-bg:rgba(124,58,237,0.08);
+  --purple-bd:rgba(124,58,237,0.25);
+  --sh:0 8px 32px rgba(0,0,0,0.04),0 1px 3px rgba(0,0,0,0.06);
+  --shl:0 16px 48px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.06);
+  --shfocus:0 0 0 3px rgba(37,88,206,0.18);
+  --sb-bg:#1C3461;
+  --sb-border:rgba(255,255,255,0.1);
+  --sb-text:rgba(180,210,255,0.52);
+  --sb-text-h:rgba(180,210,255,0.88);
   --sb-text-active:#FFFFFF;
-  --sb-hover:rgba(255,255,255,.08);
-  --sb-active-bg:rgba(100,160,255,.18);
+  --sb-hover:rgba(255,255,255,0.08);
+  --sb-active-bg:rgba(96,165,250,0.18);
   --sb-active-bar:#60A5FA;
-  --sb-section:rgba(180,210,255,.22);
-  --header-bg:rgba(238,245,252,.94);
-}
-
-/* ── Warm Gold ──────────────────────────────────────────────────────────── */
-body[data-theme="gold"]{
-  --bg:#F7F3EA;
-  --bg2:#EEE7D8;
-  --surface:#FFFEF8;
-  --surface2:#F8F4EB;
-  --surface3:#F0E9DA;
-  --border:rgba(80,50,10,.12);
-  --border2:rgba(80,50,10,.06);
-  --text:#1E1608;
-  --text2:#3A2E10;
-  --text3:#7A6438;
-  --text4:#AA9060;
-  --accent:#6B4E14;
-  --accent2:#4E3808;
-  --accent-bg:rgba(107,78,20,.07);
-  --accent-bd:rgba(107,78,20,.2);
-  --gold:#6B4E14;
-  --gold-bg:rgba(107,78,20,.07);
-  --gold-bd:rgba(107,78,20,.2);
-  --green:#2A5C3A;
-  --green-bg:rgba(42,92,58,.07);
-  --green-bd:rgba(42,92,58,.2);
-  --red:#8A3020;
-  --red-bg:rgba(138,48,32,.07);
-  --red-bd:rgba(138,48,32,.2);
-  --amber:#8A5E12;
-  --amber-bg:rgba(138,94,18,.07);
-  --amber-bd:rgba(138,94,18,.2);
-  --blue:#2B5491;
-  --blue-bg:rgba(43,84,145,.07);
-  --blue-bd:rgba(43,84,145,.2);
-  --sh:0 1px 3px rgba(40,20,0,.07),0 1px 2px rgba(40,20,0,.05);
-  --shl:0 6px 20px rgba(40,20,0,.12),0 2px 6px rgba(40,20,0,.07);
-  --shfocus:0 0 0 3px rgba(107,78,20,.22);
-  --sb-bg:#3A2208;
-  --sb-border:rgba(240,210,150,.1);
-  --sb-text:rgba(240,210,150,.52);
-  --sb-text-h:rgba(240,210,150,.88);
-  --sb-text-active:#F5E8C8;
-  --sb-hover:rgba(255,255,255,.05);
-  --sb-active-bg:rgba(212,168,76,.13);
-  --sb-active-bar:#D4A84C;
-  --sb-section:rgba(240,210,150,.18);
-  --header-bg:rgba(247,243,234,.94);
+  --sb-section:rgba(180,210,255,0.22);
+  --header-bg:rgba(248,250,252,0.94);
 }
 
 /* ─── BASE ──────────────────────────────────────────────────────── */
@@ -177,6 +137,20 @@ body{
 }
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit}
+
+/* ─── GLASSMORPHISM ──────────────────────────────────────────────── */
+.card,.stat-card,.jl-wrap,.table-wrap,.modal,.overlay .modal{
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)
+}
+/* In light mode the background is already mostly opaque — glass is subtle */
+body.light .card,body.light .stat-card{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* ─── AI / PURPLE ────────────────────────────────────────────────── */
+.badge-ai{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-bd);font-weight:700}
+@keyframes purseGlow{0%,100%{box-shadow:0 0 12px rgba(112,0,255,0.3),0 0 0 1px rgba(112,0,255,0.2)}50%{box-shadow:0 0 28px rgba(112,0,255,0.55),0 0 0 1px rgba(112,0,255,0.35)}}
+.ai-glow{animation:purseGlow 2.4s ease-in-out infinite}
+body.light .ai-glow{animation:purseGlowLight 2.4s ease-in-out infinite}
+@keyframes purseGlowLight{0%,100%{box-shadow:0 0 10px rgba(124,58,237,0.2),0 0 0 1px rgba(124,58,237,0.18)}50%{box-shadow:0 0 22px rgba(124,58,237,0.38),0 0 0 1px rgba(124,58,237,0.28)}}
 
 /* ─── LAYOUT ────────────────────────────────────────────────────── */
 .app{display:flex;min-height:100vh}
@@ -249,25 +223,25 @@ input,select,textarea{font-family:inherit}
 .theme-dot[data-t="gold"]{background:#D4A84C;border-color:rgba(212,168,76,.3)}
 .theme-dot.active{border-color:#FFFFFF!important;transform:scale(1.2)}
 
-/* ─── SIDEBAR LIGHT MODE ─────────────────────────────────────── */
-body.sidebar-light .sidebar{background:var(--surface);border-right:1px solid var(--border);box-shadow:2px 0 8px rgba(0,0,0,.05)}
-body.sidebar-light .logo{border-bottom:1px solid var(--border)}
-body.sidebar-light .logo h1{color:var(--text)}
-body.sidebar-light .logo p{color:var(--text4)}
-body.sidebar-light .nav-section{color:var(--text4)}
-body.sidebar-light .nav-item{color:var(--text3);border-left-color:transparent}
-body.sidebar-light .nav-item:hover{background:var(--surface3);color:var(--text)}
-body.sidebar-light .nav-item.active{background:var(--accent-bg);color:var(--accent);border-left-color:var(--accent)}
-body.sidebar-light .nav-item.active svg{color:var(--accent);opacity:1}
-body.sidebar-light .sidebar-foot{border-top:1px solid var(--border)}
-body.sidebar-light .refresh-btn{color:var(--text3)}
-body.sidebar-light .refresh-btn:hover{background:var(--surface3);color:var(--text2)}
-body.sidebar-light .sync-lbl{color:var(--text4)}
-body.sidebar-light .sync-dot{background:var(--border)}
-body.sidebar-light .hamburger{background:var(--surface);border-color:var(--border)}
-body.sidebar-light .hamburger span{background:var(--text)}
-body.sidebar-light .logo-icon{background:var(--accent)}
-body.sidebar-light .theme-lbl{color:var(--text4)}
+/* ─── SIDEBAR LIGHT MODE (only in body.light) ───────────────── */
+body.light.sidebar-light .sidebar{background:rgba(255,255,255,0.95);border-right:1px solid rgba(0,0,0,0.08);box-shadow:2px 0 16px rgba(0,0,0,0.06)}
+body.light.sidebar-light .logo{border-bottom:1px solid rgba(0,0,0,0.08)}
+body.light.sidebar-light .logo h1{color:#0F172A}
+body.light.sidebar-light .logo p{color:#94A3B8}
+body.light.sidebar-light .nav-section{color:#94A3B8}
+body.light.sidebar-light .nav-item{color:#475569;border-left-color:transparent}
+body.light.sidebar-light .nav-item:hover{background:rgba(0,0,0,0.04);color:#0F172A}
+body.light.sidebar-light .nav-item.active{background:var(--accent-bg);color:var(--accent);border-left-color:var(--accent)}
+body.light.sidebar-light .nav-item.active svg{color:var(--accent);opacity:1}
+body.light.sidebar-light .sidebar-foot{border-top:1px solid rgba(0,0,0,0.08)}
+body.light.sidebar-light .refresh-btn{color:#475569}
+body.light.sidebar-light .refresh-btn:hover{background:rgba(0,0,0,0.04);color:#0F172A}
+body.light.sidebar-light .sync-lbl{color:#94A3B8}
+body.light.sidebar-light .sync-dot{background:rgba(0,0,0,0.12)}
+body.light.sidebar-light .hamburger{background:rgba(255,255,255,0.95);border-color:rgba(0,0,0,0.1)}
+body.light.sidebar-light .hamburger span{background:#0F172A}
+body.light.sidebar-light .logo-icon{background:var(--accent)}
+body.light.sidebar-light .theme-lbl{color:#94A3B8}
 
 /* Hamburger */
 .hamburger{
@@ -386,6 +360,7 @@ tr.tr-data:nth-child(even):hover td{background:var(--surface3)}
 .badge-encours{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
 .badge-depot{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .badge-payout{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.badge-anomalie{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);font-weight:800;letter-spacing:.4px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* ─── MODALS ─────────────────────────────────────────────────────── */
@@ -1098,7 +1073,7 @@ tr.tr-data:nth-child(even):hover td{background:var(--surface3)}
 .sidebar-toggle svg { transition:transform .28s cubic-bezier(.4,0,.2,1);display:block }
 
 /* sidebar-light overrides for toggle */
-body.sidebar-light .sidebar-toggle { border-color:var(--surface);background:var(--accent);color:#fff }
+body.light.sidebar-light .sidebar-toggle { border-color:rgba(255,255,255,0.9);background:var(--accent);color:#fff }
 
 /* Collapsed: override CSS var so .main shifts */
 body.sidebar-collapsed { --sidebar:62px }
@@ -1135,10 +1110,7 @@ body.sidebar-collapsed .sidebar-toggle svg { transform:rotate(180deg) }
   width:3px;height:.78em;min-height:14px;
   background:var(--accent);border-radius:2px;flex-shrink:0;
 }
-body[data-theme="dark"] .page-title {
-  color:var(--text)
-}
-body[data-theme="gold"] .page-title {
+body.light .page-title {
   color:var(--text)
 }
 
@@ -1196,7 +1168,7 @@ body[data-theme="gold"] .page-title {
 }
 </style>
 </head>
-<body class="sidebar-light">
+<body>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
@@ -1284,6 +1256,12 @@ body[data-theme="gold"] .page-title {
     </button>
   </nav>
   <div class="sidebar-foot">
+    <button class="refresh-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Changer de thème" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="themeToggleIcon" style="font-size:14px">☀️</span>
+        <span class="btn-text" id="themeToggleLbl" style="font-size:11px">Mode clair</span>
+      </div>
+    </button>
     <button class="refresh-btn" id="refreshBtn" onclick="refreshApp()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.13"/></svg>
       <span class="btn-text">Rafraîchir</span>
@@ -1319,8 +1297,12 @@ body[data-theme="gold"] .page-title {
         </div>
         <!-- body injected by renderDash() -->
       </div>
+      <!-- AI Coach Insight -->
+      <div id="dashAICoach" style="margin-top:20px"></div>
+      <!-- Alerte Discipline -->
+      <div id="dashAnomalies" style="margin-top:8px"></div>
       <!-- Secondary stat cards -->
-      <div class="stats-grid" id="dashStats" style="margin-top:20px"></div>
+      <div class="stats-grid" id="dashStats" style="margin-top:8px"></div>
       <!-- Charts -->
       <div class="charts-grid" style="margin-top:8px">
         <div class="card">
@@ -1338,7 +1320,7 @@ body[data-theme="gold"] .page-title {
           <div class="ch"><canvas id="cSession"></canvas></div>
         </div>
       </div>
-      <div class="charts-row" style="margin-top:8px">
+      <div class="charts-row" style="margin-top:8px;grid-template-columns:repeat(2,minmax(0,1fr))!important">
         <div class="card" style="cursor:pointer">
           <div class="card-head">
             <span class="card-head-title">Gain Net — Instrument</span>
@@ -1352,20 +1334,6 @@ body[data-theme="gold"] .page-title {
             <span class="card-head-hint">↗</span>
           </div>
           <div class="ch-sm"><canvas id="cDay"></canvas></div>
-        </div>
-        <div class="card" style="cursor:pointer">
-          <div class="card-head">
-            <span class="card-head-title">Distribution W/L/BE</span>
-            <span class="card-head-hint">↗</span>
-          </div>
-          <div class="ch-sm"><canvas id="cDist"></canvas></div>
-        </div>
-        <div class="card" style="cursor:pointer">
-          <div class="card-head">
-            <span class="card-head-title">Gain Net — Heure</span>
-            <span class="card-head-hint">↗</span>
-          </div>
-          <div class="ch-sm"><canvas id="cHour"></canvas></div>
         </div>
       </div>
       <!-- Extra metrics row -->
@@ -1638,6 +1606,8 @@ const STRUCTURES=['BOS haussier','BOS baissier','ChoCH haussier','ChoCH baissier
 const RESULTATS=['Win','Loss','Breakeven','En cours'];
 // Tags : chargés dynamiquement depuis DB.tags
 const LIQUIDITES=['Inducement','ChoCH','EQL (Equal Lows)','EQH (Equal Highs)'];
+const ALLOWED_PAIRS=['EURUSD','GBPUSD','GBPJPY','EURJPY','USDJPY','XAUUSD'];
+const KILLZONES=[{label:'Londres',from:'09:00',to:'14:00'},{label:'NYSE',from:'15:30',to:'19:30'}];
 const ACC_COLORS=['#2558CE','#8E6B1E','#2B8A4E','#8A5E12','#1E6A9A','#6B4F8A','#B05020','#4A6880'];
 const SH=['ID','Compte','Date','Heure','Session','Instrument','Direction','Qualité Setup','Liquidité','Structure Solide','Montant Risqué','Gain/Perte','Capital','Résultat','RR','État','Confiance','Pourquoi Entrer','Doute/Hésitation'];
 
@@ -1709,6 +1679,150 @@ function calcPnl(t){
   const gp=parseFloat(t.gainPerte);
   if(!isNaN(gp))return gp;
   return 0;
+}
+
+// ── DISCIPLINE ─────────────────────────────────────────────────────────────
+function checkConformity(trade){
+  const instr=(trade.instrument||'').toUpperCase().trim();
+  const pairOk=ALLOWED_PAIRS.includes(instr);
+  let timeOk=false,inKZ=null;
+  if(trade.heure){
+    const parts=trade.heure.split(':');
+    const mins=parseInt(parts[0]||0)*60+parseInt(parts[1]||0);
+    for(const kz of KILLZONES){
+      const[fh,fm]=kz.from.split(':').map(Number);
+      const[th,tm]=kz.to.split(':').map(Number);
+      if(mins>=fh*60+fm&&mins<th*60+tm){timeOk=true;inKZ=kz.label;break;}
+    }
+  }
+  const isConform=pairOk&&timeOk;
+  const reasons=[];
+  if(!pairOk)reasons.push(`Paire non autorisée (${trade.instrument||'—'})`);
+  if(!timeOk)reasons.push(`Hors Killzone (${trade.heure||'—'})`);
+  return{isConform,reason:reasons.join(' · '),pairOk,timeOk,inKZ};
+}
+function getAnomalies(){
+  const anomalies=DB.trades.filter(t=>!checkConformity(t).isConform&&t.resultat!=='En cours');
+  const cost=anomalies.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  return{anomalies,cost};
+}
+// ── AI COACH ──────────────────────────────────────────────────────────────
+const AI_CACHE_KEY='tl_ai_cache';
+const AI_CACHE_TTL=6*60*60*1000; // 6 heures
+async function fetchAIInterpretation(trades){
+  const apiKey=localStorage.getItem('gemini_api_key')||'';
+  if(!apiKey||!trades.length)return null;
+  // Check cache
+  try{
+    const cached=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'{}');
+    if(cached.ts&&Date.now()-cached.ts<AI_CACHE_TTL&&cached.text)return cached.text;
+  }catch(e){}
+  const last20=trades.slice(-20).map(t=>({instrument:t.instrument,heure:t.heure,session:t.session,resultat:t.resultat,gainPerte:t.gainPerte,montantRisque:t.montantRisque,confiance:t.confiance,etat:t.etat,tags:t.tags}));
+  const prompt=`Tu es un coach de trading senior. Analyse ces ${last20.length} derniers trades (JSON). Identifie la plus grosse faille psychologique ou de discipline (ex: revenge trading, hors-session, mauvaise gestion du risque) et donne un conseil unique en 2 phrases maximum. Sois direct et précis.\n\nTrades:\n${JSON.stringify(last20,null,1)}`;
+  try{
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:180,temperature:0.7}})
+    });
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    if(text){localStorage.setItem(AI_CACHE_KEY,JSON.stringify({ts:Date.now(),text}));}
+    return text||null;
+  }catch(e){console.error('AI Coach error:',e);return null;}
+}
+function clearAICache(){localStorage.removeItem(AI_CACHE_KEY);}
+
+function renderAICoach(f){
+  const el=document.getElementById('dashAICoach');if(!el)return;
+  const apiKey=localStorage.getItem('gemini_api_key')||'';
+  if(!apiKey){el.innerHTML='';return;}
+  const cached=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'{}');
+  const hasCache=cached.ts&&Date.now()-cached.ts<AI_CACHE_TTL&&cached.text;
+  const closedTrades=f.filter(t=>t.resultat!=='En cours').sort((a,b)=>a.date.localeCompare(b.date)||(a.heure||'').localeCompare(b.heure||''));
+  if(!closedTrades.length){el.innerHTML='';return;}
+  const cacheAge=hasCache?Math.round((Date.now()-cached.ts)/60000):'—';
+  const ageStr=hasCache?(cacheAge<60?`${cacheAge} min`:`${Math.round(cacheAge/60)}h`):'';
+  el.innerHTML=`<div class="card ai-glow" style="border:1px solid var(--purple-bd);background:var(--surface);padding:14px 18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 10px var(--purple);flex-shrink:0"></div>
+        <span style="font-size:9.5px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1.4px">AI Coach Insight</span>
+        <span style="font-size:10px;color:var(--text4);font-family:'DM Mono',monospace">Gemini 2.5</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px">
+        ${hasCache?`<span style="font-size:10px;color:var(--text4)">Mis à jour il y a ${ageStr}</span>`:''}
+        <button class="btn-ghost btn-sm" style="font-size:11px;color:var(--purple);padding:3px 8px" onclick="refreshAICoach()" id="aiRefreshBtn">↻ Analyser</button>
+      </div>
+    </div>
+    <div id="aiCoachContent" style="font-size:13px;line-height:1.7;color:var(--text2);font-style:italic;min-height:28px">
+      ${hasCache?`"${esc(cached.text)}"`:
+        `<span style="color:var(--text4);font-style:normal;font-size:12px">Cliquez sur "Analyser" pour obtenir un diagnostic de votre performance.</span>`}
+    </div>
+  </div>`;
+}
+
+async function refreshAICoach(){
+  clearAICache();
+  const btn=document.getElementById('aiRefreshBtn');
+  const content=document.getElementById('aiCoachContent');
+  if(btn){btn.textContent='…';btn.disabled=true;}
+  if(content){content.innerHTML=`<span style="color:var(--text4);font-size:12px">Analyse en cours…</span>`;}
+  const closed=(window._dashF||DB.trades).filter(t=>t.resultat!=='En cours').sort((a,b)=>a.date.localeCompare(b.date)||(a.heure||'').localeCompare(b.heure||''));
+  const text=await fetchAIInterpretation(closed);
+  if(content){
+    content.innerHTML=text?`"${esc(text)}"`:
+      `<span style="color:var(--red);font-size:12px">Erreur : vérifiez votre clé API Gemini dans les paramètres.</span>`;
+  }
+  if(btn){btn.textContent='↻ Analyser';btn.disabled=false;}
+}
+
+function renderDashAnomalies(f){
+  const el=document.getElementById('dashAnomalies');if(!el)return;
+  const anomalies=f.filter(t=>!checkConformity(t).isConform&&t.resultat!=='En cours')
+    .sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||'')).slice(0,3);
+  const allAnomalies=f.filter(t=>!checkConformity(t).isConform&&t.resultat!=='En cours');
+  const cost=allAnomalies.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  if(!anomalies.length){el.innerHTML='';return;}
+  const costCol=cost>=0?'var(--green)':'var(--red)';
+  const cards=anomalies.map(t=>{
+    const c=checkConformity(t);
+    const scrUrl=(t.screenshotAvant||t.screenshot||'').trim();
+    const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
+    const gp=parseFloat(t.gainPerte)||0;
+    const gpCol=gp>=0?'var(--green)':'var(--red)';
+    const gpStr=gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`;
+    const thumb=hasImg
+      ?`<img src="${scrUrl}" style="width:100%;height:52px;object-fit:cover;border-radius:4px;border:1px solid var(--border2);display:block;margin-bottom:8px" onerror="this.style.display='none'"/>`
+      :`<div style="width:100%;height:52px;background:var(--surface3);border-radius:4px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;margin-bottom:8px;opacity:.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    return `<div style="background:var(--surface);border:1px solid var(--red-bd);border-left:3px solid var(--red);border-radius:var(--rl);padding:10px 12px;cursor:pointer;transition:box-shadow .12s" onclick="openDetail('${t.id}')" onmouseover="this.style.boxShadow='var(--shl)'" onmouseout="this.style.boxShadow=''">
+      ${thumb}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:12px;color:${c.pairOk?'var(--text)':'var(--red)'}">${esc(t.instrument||'—')}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:${c.timeOk?'var(--text3)':'var(--red)'};font-weight:500">${t.heure||'—'}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:10px;color:var(--text4)">${fmtD(t.date)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${gpCol}">${gpStr}</span>
+      </div>
+      <div style="font-size:9.5px;color:var(--red);margin-top:5px;line-height:1.4;opacity:.8">${esc(c.reason)}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--rl);padding:12px 16px 14px;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1.2px">Alerte Discipline</span>
+        <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px">${allAnomalies.length} anomalie${allAnomalies.length>1?'s':''}</span>
+      </div>
+      <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:${costCol}">Coût erreurs : ${cost>=0?'+':''}$${Math.abs(cost).toFixed(2)}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      ${cards}
+    </div>
+    ${allAnomalies.length>3?`<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--red);opacity:.7">+ ${allAnomalies.length-3} autres anomalies dans le journal</div>`:''}
+  </div>`;
 }
 function stats(trades){
   if(!trades.length)return{total:0,wins:0,losses:0,be:0,winRate:0,avgRR:0,pnl:0};
@@ -1804,6 +1918,14 @@ function renderDash(){
   if(dashPeriod!=='all'){const r=getPeriodRange(dashPeriod);if(r.from)f=f.filter(t=>t.date>=r.from);if(r.to)f=f.filter(t=>t.date<=r.to);}
   const s=stats(f);window._dashF=f;
 
+  // ── Discipline score ──
+  const conformCount=f.filter(t=>checkConformity(t).isConform).length;
+  const disciplineScore=f.length?Math.round(conformCount/f.length*100):100;
+  const dScoreCls=disciplineScore>=90?'pos':disciplineScore>=70?'gold':'neg';
+
+  renderAICoach(f);
+  renderDashAnomalies(f);
+
   // ── Hero command bar ──
   const heroEl=document.getElementById('dashHero');
   if(heroEl){
@@ -1842,8 +1964,8 @@ function renderDash(){
           <span class="dash-hero-kpi-l">Profit Factor</span>
         </div>
         <div class="dash-hero-kpi">
-          <span class="dash-hero-kpi-v">${s.total}</span>
-          <span class="dash-hero-kpi-l">Total Trades</span>
+          <span class="dash-hero-kpi-v ${dScoreCls}">${disciplineScore}%</span>
+          <span class="dash-hero-kpi-l">Discipline</span>
         </div>
       </div>`;
   }
@@ -1952,32 +2074,46 @@ function renderEnCours(f){
 }
 
 // ── THEME ─────────────────────────────────────────────────────────────────
-function setTheme(t){
-  document.body.dataset.theme=(t==='light'?'':t);
-  localStorage.setItem('tl_theme',t);
-  // Update chart color defaults for theme
-  if(t==='dark'){
-    Chart.defaults.color='#86A8CC';
-    Chart.defaults.borderColor='rgba(30,80,160,.07)';
-  }else if(t==='gold'){
-    Chart.defaults.color='#AA9060';
-    Chart.defaults.borderColor='rgba(80,50,10,.06)';
-  }else{
-    Chart.defaults.color='#8AA0BE';
-    Chart.defaults.borderColor='rgba(30,50,100,.06)';
-  }
+function _applyChartTheme(){
+  const isDark=!document.body.classList.contains('light');
+  Chart.defaults.color=isDark?'#7890B0':'#94A3B8';
+  Chart.defaults.borderColor=isDark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.05)';
   Object.values(Chart.instances||{}).forEach(c=>{try{c.update();}catch(e){}});
 }
+function _updateThemeToggleUI(){
+  const isDark=!document.body.classList.contains('light');
+  const icon=document.getElementById('themeToggleIcon');
+  const lbl=document.getElementById('themeToggleLbl');
+  if(icon) icon.textContent=isDark?'☀️':'🌙';
+  if(lbl) lbl.textContent=isDark?'Mode clair':'Mode sombre';
+}
+function setTheme(t){
+  if(t==='light'){document.body.classList.add('light');}
+  else{document.body.classList.remove('light');}
+  localStorage.setItem('tl_theme',t);
+  _applyChartTheme();
+  _updateThemeToggleUI();
+  if(curPage==='settings')renderSettings();
+  if(curPage==='dashboard')renderDash();
+}
+function toggleTheme(){
+  const isDark=!document.body.classList.contains('light');
+  setTheme(isDark?'light':'dark');
+}
 (function(){
-  const saved=localStorage.getItem('tl_theme')||'light';
-  document.body.dataset.theme=(saved==='light'?'':saved);
+  const saved=localStorage.getItem('tl_theme')||'dark';
+  if(saved==='light') document.body.classList.add('light');
+  if(localStorage.getItem('sidebarLight')==='1') document.body.classList.add('sidebar-light');
+  if(localStorage.getItem('sidebarCollapsed')==='1') document.body.classList.add('sidebar-collapsed');
 })();
 
 // ── CHARTS ────────────────────────────────────────────────────────────────
 Chart.defaults.font.family="'DM Mono','Inter',system-ui,sans-serif";
 Chart.defaults.font.size=11;
 Chart.defaults.font.weight='400';
-Chart.defaults.color='#8AA0BE';
+// Colors set by theme IIFE below; defaults here for dark mode
+Chart.defaults.color='#7890B0';
+Chart.defaults.borderColor='rgba(255,255,255,0.04)';
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -2165,10 +2301,11 @@ function renderCharts(f){
     });
   }
 
-  // ── Par session
-  const sm={};f.forEach(t=>{if(!t.session)return;if(!sm[t.session])sm[t.session]=[];sm[t.session].push(t);});
-  const smKeys=Object.keys(sm);
-  mkGainChart('cSession',smKeys.map(s=>s.length>10?s.slice(0,10)+'…':s),smKeys.map(k=>gainNet(sm[k])),smKeys.map(k=>sm[k].length),null,idx=>openTradeListModal(sm[smKeys[idx]],`Session — ${smKeys[idx]}`));
+  // ── Par session (Killzones uniquement : Londres · NYSE · Hors Session)
+  const kzBuckets={'Londres':[],'NYSE':[],'Hors Session':[]};
+  f.forEach(t=>{const c=checkConformity(t);if(c.inKZ==='Londres')kzBuckets['Londres'].push(t);else if(c.inKZ==='NYSE')kzBuckets['NYSE'].push(t);else kzBuckets['Hors Session'].push(t);});
+  const kzKeys=['Londres','NYSE','Hors Session'];
+  mkGainChart('cSession',kzKeys,kzKeys.map(k=>gainNet(kzBuckets[k])),kzKeys.map(k=>kzBuckets[k].length),(v,i)=>['rgba(37,88,206,.85)','rgba(39,106,68,.85)','rgba(138,53,48,.78)'][i],idx=>openTradeListModal(kzBuckets[kzKeys[idx]],`Session — ${kzKeys[idx]}`));
 
   // ── Par instrument
   const im={};f.forEach(t=>{if(!t.instrument)return;if(!im[t.instrument])im[t.instrument]=[];im[t.instrument].push(t);});
@@ -2182,46 +2319,6 @@ function renderCharts(f){
   f.forEach(t=>{if(!t.date)return;const d=new Date(t.date).getDay();const idx=d===0?6:d-1;dm[idx].push(t);});
   mkGainChart('cDay',DAYS,Object.keys(dm).map(i=>gainNet(dm[i])),Object.keys(dm).map(i=>dm[i].length),null,idx=>{const dayJS=idx===6?0:idx+1;openTradeListModal(f.filter(t=>{if(!t.date)return false;return new Date(t.date).getDay()===dayJS;}),`Jour — ${DAYS[idx]}`);});
 
-  // ── Par heure (tranches de 2h)
-  const hm2={};
-  f.forEach(t=>{if(!t.heure)return;const h=parseInt(t.heure.slice(0,2));const slot=String(Math.floor(h/2)*2).padStart(2,'0');if(!hm2[slot])hm2[slot]=[];hm2[slot].push(t);});
-  const hKeys2=Object.keys(hm2).sort();
-  mkGainChart('cHour',hKeys2.map(k=>k+'–'+(parseInt(k)+2)+'h'),hKeys2.map(k=>gainNet(hm2[k])),hKeys2.map(k=>hm2[k].length),null,idx=>openTradeListModal(hm2[hKeys2[idx]],`Plage ${hKeys2[idx]}h–${String(parseInt(hKeys2[idx])+2).padStart(2,'0')}h`));
-
-  dc('cDist');
-  const ctxDist=document.getElementById('cDist')?.getContext('2d');
-  if(!ctxDist)return;
-  const s=stats(f);
-  const distDL={id:'dl_cDist',afterDatasetsDraw(chart){
-    const{ctx:c,data}=chart;
-    data.datasets[0].data.forEach((val,i)=>{
-      if(!val)return;
-      const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
-      c.save();c.font='400 11px "Inter",system-ui,sans-serif';
-      c.fillStyle=['#276A44','#8A3530','#8A5E12'][i];
-      c.textAlign='center';c.textBaseline='bottom';
-      c.fillText(val,bar.x,bar.y-4);c.restore();
-    });
-  }};
-  charts['cDist']=new Chart(ctxDist,{type:'bar',plugins:[distDL],
-    data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:['rgba(39,106,68,.85)','rgba(138,53,48,.8)','rgba(138,94,18,.75)'],borderRadius:6,borderSkipped:false}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      layout:{padding:{top:24,bottom:2}},
-      onClick:(e,els)=>{if(!els.length)return;const r=['Win','Loss','Breakeven'][els[0].index];openTradeListModal(f.filter(t=>t.resultat===r),`Résultat — ${r}`);},
-      plugins:{legend:{display:false},tooltip:{
-        backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C2218',
-        titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-        borderColor:'rgba(27,77,62,.3)',borderWidth:1,cornerRadius:6,padding:11,
-        callbacks:{label:v=>`  ${v.parsed.y} trades`}
-      }},
-      scales:{
-        x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},padding:4}},
-        y:{grid:{color:'rgba(28,24,16,.06)',lineWidth:1},border:{display:false},beginAtZero:true,
-          ticks:{font:{size:10},padding:6,maxTicksLimit:5}}
-      }
-    }
-  });
 }
 
 // ── DASHBOARD BOTTOM ──────────────────────────────────────────────────────
@@ -2586,8 +2683,10 @@ function renderJTable(){
   trades.forEach(t=>{
     const ac=DB.accounts.find(a=>a.name===t.compte);
     const rr=calcRR(t);
+    const conform=checkConformity(t);
     const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':t.resultat==='En cours'?'row-encours':'';
     const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}" style="font-size:10px;padding:1px 7px">${t.resultat}</span>`:'';
+    const anomalieBdg=!conform.isConform?`<span class="badge badge-anomalie" style="font-size:9px;padding:1px 6px" title="${esc(conform.reason)}">ANOMALIE</span>`:'';
     const gp=parseFloat(t.gainPerte)||0;
     const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''
       ?(gp>=0?`<span style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px">+$${Math.abs(gp).toFixed(2)}</span>`
@@ -2606,8 +2705,9 @@ function renderJTable(){
       <div class="jl-thumb-cell jl-hide-xs">${thumbHtml}</div>
       <div class="jl-cell jl-instr">
         ${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};flex-shrink:0;display:inline-block"></span>`:''}
-        <span style="font-weight:600;font-family:'DM Mono',monospace;font-size:12.5px;flex-shrink:0">${esc(t.instrument||'—')}</span>
+        <span style="font-weight:600;font-family:'DM Mono',monospace;font-size:12.5px;flex-shrink:0;${!conform.pairOk?'color:var(--red)':''}">${esc(t.instrument||'—')}</span>
         ${bdg}
+        ${anomalieBdg}
       </div>
       <div class="jl-cell jl-hide-md"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${fmtD(t.date)}${t.heure?' <span style="opacity:.6">'+t.heure+'</span>':''}</span></div>
       <div class="jl-cell jl-hide-sm" style="font-size:11.5px;color:var(--text3)">${esc(t.compte||'—')}</div>
@@ -3190,40 +3290,42 @@ function renderSettings(){
   const it=DB.instruments.map(i=>`<span class="tag">${esc(i)}<button onclick="rmInstr('${i}')">×</button></span>`).join('');
   const sidebarLight=localStorage.getItem('sidebarLight')==='1';
   const sidebarCollapsed=localStorage.getItem('sidebarCollapsed')==='1';
-  const curTheme=localStorage.getItem('tl_theme')||'light';
+  const isLight=document.body.classList.contains('light');
+  const geminiKey=localStorage.getItem('gemini_api_key')||'';
 
-  function toggleBtn(on,onClick,id=''){
-    return `<button ${id?`id="${id}"`:''}onclick="${onClick}" class="toggle-switch" style="background:${on?'var(--accent)':'var(--bg2)'}">
+  function toggleBtn(on,onClick){
+    return `<button onclick="${onClick}" class="toggle-switch" style="background:${on?'var(--accent)':'var(--border)'}">
       <span class="toggle-knob" style="left:${on?'23px':'3px'}"></span>
     </button>`;
   }
 
   const themes=[
-    {id:'light',name:'Light',   sb:'#1C3461',bg:'#F5F7FA',accent:'#60A5FA',bar:'#60A5FA'},
-    {id:'dark', name:'Ciel',    sb:'#1E3D72',bg:'#EEF5FC',accent:'#60A5FA',bar:'#60A5FA'},
-    {id:'gold', name:'Gold',    sb:'#3A2208',bg:'#F7F3EA',accent:'#D4A84C',bar:'#D4A84C'},
+    {id:'dark', name:'Cyber Terminal', sb:'#030405',bg:'#050608',accent:'#00FF9D',bar:'#00FF9D'},
+    {id:'light',name:'Institutional',  sb:'#1C3461',bg:'#F8FAFC',accent:'#60A5FA',bar:'#60A5FA'},
   ];
-  const themeCards=themes.map(t=>`
-    <div class="theme-card ${curTheme===t.id?'active':''}" onclick="setTheme('${t.id}');renderSettings()" title="${t.name}">
+  const themeCards=themes.map(t=>{
+    const active=(isLight&&t.id==='light')||(!isLight&&t.id==='dark');
+    return `<div class="theme-card ${active?'active':''}" onclick="setTheme('${t.id}')" title="${t.name}">
       <div class="theme-card-preview" style="background:${t.bg}">
         <div class="theme-card-preview-sidebar" style="background:${t.sb}">
           <div style="width:10px;height:2px;background:${t.bar};border-radius:2px;margin:4px auto 3px"></div>
-          <div style="width:14px;height:2px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 3px"></div>
-          <div style="width:14px;height:2px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 3px"></div>
+          <div style="width:14px;height:2px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 3px"></div>
+          <div style="width:14px;height:2px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 3px"></div>
         </div>
         <div class="theme-card-preview-body">
-          <div class="theme-card-preview-row" style="background:${t.accent};opacity:.35"></div>
-          <div class="theme-card-preview-row"></div>
-          <div class="theme-card-preview-row" style="width:60%"></div>
+          <div class="theme-card-preview-row" style="background:${t.accent};opacity:.4"></div>
+          <div class="theme-card-preview-row" style="opacity:.15"></div>
+          <div class="theme-card-preview-row" style="width:60%;opacity:.1"></div>
         </div>
       </div>
-      <div class="theme-card-label">${t.name}${curTheme===t.id?' ✓':''}</div>
-    </div>`).join('');
+      <div class="theme-card-label">${t.name}${active?' ✓':''}</div>
+    </div>`;
+  }).join('');
 
   document.getElementById('settingsContent').innerHTML=`
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px">
-        <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(45,122,79,.4)"></div>
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-bd);flex-shrink:0"></div>
         <span style="font-size:14px;font-weight:700">Supabase connecté</span>
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Données synchronisées automatiquement</div>
@@ -3232,11 +3334,9 @@ function renderSettings(){
 
     <div class="card" style="margin-bottom:14px">
       <div style="font-size:14px;font-weight:700;margin-bottom:6px">Apparence</div>
-      <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px">Personnalisez l'interface selon vos préférences visuelles.</div>
-
-      <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px">Thème de couleur</div>
+      <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px">Deux modes optimisés pour le trading.</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px">Thème</div>
       <div style="display:flex;gap:10px;margin-bottom:20px">${themeCards}</div>
-
       <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px">Menu latéral</div>
       <div class="settings-toggle-row">
         <div class="settings-toggle-info">
@@ -3245,21 +3345,39 @@ function renderSettings(){
         </div>
         ${toggleBtn(sidebarCollapsed,'toggleSidebarCollapsed()')}
       </div>
-      <div class="settings-toggle-row">
+      ${isLight?`<div class="settings-toggle-row">
         <div class="settings-toggle-info">
-          <span class="settings-toggle-label">Menu fond clair</span>
-          <span class="settings-toggle-sub">Afficher la sidebar en mode light</span>
+          <span class="settings-toggle-label">Sidebar fond clair</span>
+          <span class="settings-toggle-sub">Sidebar blanche (mode clair uniquement)</span>
         </div>
         ${toggleBtn(sidebarLight,'toggleSidebarLight()')}
+      </div>`:''}
+    </div>
+
+    <div class="card" style="margin-bottom:14px;border-color:var(--purple-bd)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--purple)"></div>
+        <span style="font-size:14px;font-weight:700">AI Coach — Gemini</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Obtenez une analyse psychologique de vos 20 derniers trades. La clé API est stockée localement.</div>
+      <div class="field">
+        <label>Clé API Gemini</label>
+        <input type="password" id="geminiKeyInput" value="${esc(geminiKey)}" placeholder="AIzaSy…" autocomplete="off"
+          style="font-family:'DM Mono',monospace;letter-spacing:.5px"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">Enregistrer la clé</button>
+        ${geminiKey?`<button class="btn btn-secondary btn-sm" onclick="clearAICache();toast('Cache AI effacé','info')">Vider le cache</button>`:''}
+        <span style="font-size:11px;color:var(--text4)">Cache : 6h</span>
       </div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
       <div style="font-size:14px;font-weight:700;margin-bottom:6px">Export des données</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Télécharger une sauvegarde complète de tous vos trades, comptes et configurations.</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Sauvegarde complète de tous vos trades, comptes et configurations.</div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ Exporter en CSV</button>
-        <button class="btn btn-primary btn-sm" onclick="exportJSON()">↓ Exporter en JSON</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="exportJSON()">↓ JSON</button>
       </div>
     </div>
     <div class="card">
@@ -3270,6 +3388,12 @@ function renderSettings(){
         <button class="btn btn-primary btn-sm" onclick="addInstr()">+ Ajouter</button>
       </div>
     </div>`;
+}
+function saveGeminiKey(){
+  const v=document.getElementById('geminiKeyInput')?.value.trim();
+  if(v){localStorage.setItem('gemini_api_key',v);clearAICache();toast('Clé API Gemini enregistrée ✓','success');}
+  else{localStorage.removeItem('gemini_api_key');toast('Clé API supprimée','info');}
+  renderSettings();
 }
 function toggleSidebarLight(){
   const on=localStorage.getItem('sidebarLight')==='1';
@@ -3390,7 +3514,8 @@ async function loadApp(){
 }
 
 async function init(){
-  applySidebarLight();
+  _applyChartTheme();
+  _updateThemeToggleUI();
   applySidebarCollapsed();
   // Check if already logged in (existing session)
   const{data:{session}}=await sb.auth.getSession();
