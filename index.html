@@ -2,8 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>TradeLog</title>
+<!-- PWA / Home screen -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TradeLog"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#1C3461"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1176,6 +1182,42 @@ body[data-theme="gold"] .page-title {
 .star-rating span.lit{color:#F59E0B}
 .star-rating span:hover{transform:scale(1.15)}
 
+/* ─── AI COACH ───────────────────────────────────────────────────────── */
+.ai-coach-card{border:1.5px solid var(--accent-bd);background:var(--surface);border-radius:var(--rl);overflow:hidden;margin-top:8px;box-shadow:var(--sh)}
+.ai-coach-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--accent-bg);border-bottom:1px solid var(--accent-bd)}
+.ai-coach-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--accent)}
+.ai-coach-meta{font-size:10px;color:var(--text4);font-weight:400}
+.ai-coach-body{padding:16px 18px;font-size:12.5px;line-height:1.72;color:var(--text2)}
+.ai-coach-body h3{font-size:12.5px;font-weight:700;color:var(--text);margin:14px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--border2)}
+.ai-coach-body h3:first-child{margin-top:0}
+.ai-coach-body ul,.ai-coach-body ol{padding-left:18px;margin:4px 0 10px}
+.ai-coach-body li{margin-bottom:3px}
+.ai-coach-body strong{font-weight:700;color:var(--text)}
+.ai-coach-body em{color:var(--text3);font-style:italic}
+.ai-coach-body p{margin:0 0 9px}
+.ai-coach-body p:last-child{margin-bottom:0}
+.ai-coach-empty{padding:24px;text-align:center;color:var(--text4);font-size:12px}
+.ai-spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-bd);border-top-color:var(--accent);animation:rot .7s linear infinite;display:inline-block;flex-shrink:0}
+/* ─── AUDIT TOOLTIP ─────────────────────────────────────────────────── */
+#audit-tip{
+  position:fixed;z-index:9999;
+  background:var(--sb-bg);color:rgba(255,255,255,.92);
+  padding:9px 13px;border-radius:8px;font-size:11px;line-height:1.65;
+  pointer-events:none;max-width:270px;
+  box-shadow:0 8px 28px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.16);
+  border:1px solid rgba(255,255,255,.1);
+  display:none;white-space:pre-wrap
+}
+#audit-tip.show{display:block}
+/* Dashboard custom date range */
+.dash-date-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dash-date-input{
+  background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.88);font-size:11px;font-family:inherit;
+  padding:4px 9px;border-radius:6px;outline:none;cursor:pointer;
+  color-scheme:dark
+}
+.dash-date-input:focus{border-color:rgba(255,255,255,.35)}
 /* ─── DISCIPLINE BANNER ──────────────────────────────────────────────── */
 .disc-banner{border-radius:var(--rl);border:1.5px solid var(--amber-bd);background:var(--amber-bg);padding:14px 18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start;margin-bottom:16px}
 .disc-banner-item{text-align:center;padding:0 8px}
@@ -1215,6 +1257,286 @@ body[data-theme="gold"] .page-title {
   position:absolute;top:3px;
   width:18px;height:18px;border-radius:50%;background:white;
   box-shadow:0 1px 4px rgba(0,0,0,.25);transition:left .2s;display:block
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PWA — Native iPhone behaviour
+   Addresses every source of "website feel" when launched from home screen
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Global: no blue tap flash, no text resize on rotation ── */
+* { -webkit-tap-highlight-color: transparent }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ── 2. Kill rubber-band / overscroll bounce on the root ─────── */
+html, body {
+  overscroll-behavior: none;
+}
+/* Dynamic viewport height: adjusts when browser chrome hides/shows */
+body  { min-height: 100dvh }
+.app  { min-height: 100dvh }
+.main { min-height: 100dvh }
+
+/* ── 3. Eliminate 300ms tap delay on every interactive element ── */
+a, button, label,
+.btn, .nav-item, .acc-pill,
+.jl-row, .cal-day, .stat-card,
+.toggle-btn, .struct-btn, .tab, .tag-pill,
+.check-item, .star-rating span,
+.theme-card, .theme-dot, .swatch,
+.j-thumb, .album-img-tab, .album-footer button,
+.hamburger, .sidebar-toggle, #fab {
+  touch-action: manipulation;
+}
+/* Inputs keep their default touch-action (panning) */
+input, select, textarea { touch-action: auto }
+
+/* ── 4. No long-press callout or accidental text selection ────── */
+button, .nav-item, .acc-pill, .jl-row, .cal-day,
+.stat-card, .toggle-btn, .struct-btn, .tab, .tag-pill,
+.check-item, .badge, .theme-card, .theme-dot, .swatch,
+.album-img-tab, .j-thumb, #fab, .sidebar-toggle,
+.hamburger, .page-title, .chart-title, .card-head-title,
+.stat-label, .jl-hcell {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── 5. Momentum scrolling on all scrollable containers ─────── */
+.page-content, .nav, .modal,
+.album-detail-panel, .cf-table-wrap,
+.tabs, .jl-wrap, .settingsContent {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ── 6. Prevent background scroll when a modal is open ──────── */
+.overlay.open {
+  touch-action: none;          /* block scroll on the backdrop */
+  overscroll-behavior: contain;
+}
+.overlay.open .modal,
+.overlay.open .album-modal {
+  touch-action: auto;          /* re-enable inside the modal itself */
+  overscroll-behavior-y: contain;
+}
+.modal, .album-detail-panel {
+  overscroll-behavior: contain;
+}
+
+/* ── 7. CRITICAL: prevent iOS zoom on input focus ────────────── */
+/* iOS Safari zooms in whenever a focused input has font-size < 16px.
+   We override to 16px on mobile; the visual size stays acceptable.   */
+@media (max-width: 900px) {
+  input:not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ── 8. Safe area insets — notch (top) & home indicator (bottom) */
+/*
+  env(safe-area-inset-bottom) ≈ 34 px on iPhone X/11/12/13/14/15
+  env(safe-area-inset-top)    ≈ 44–59 px depending on model
+  We use max() so it degrades gracefully on older iPhones (value = 0)
+*/
+#fab {
+  bottom: max(22px, calc(16px + env(safe-area-inset-bottom)));
+  right:  max(22px, calc(16px + env(safe-area-inset-right)));
+}
+.page-content {
+  padding-bottom: max(90px, calc(70px + env(safe-area-inset-bottom)));
+}
+#toast {
+  bottom: max(76px, calc(58px + env(safe-area-inset-bottom)));
+}
+.sidebar-foot {
+  padding-bottom: max(14px, calc(8px + env(safe-area-inset-bottom)));
+}
+.album-footer {
+  padding-bottom: max(9px, calc(4px + env(safe-area-inset-bottom)));
+}
+
+/* ── 9. Standalone (added to home screen) — status bar handling  */
+/* black-translucent = content renders under the status bar.       */
+/* We shift the header + sidebar down to compensate.               */
+@media all and (display-mode: standalone) {
+  .page-header {
+    /* Absorb the status bar height into the header */
+    padding-top: max(14px, calc(8px + env(safe-area-inset-top)));
+    /* Keep it sticky below the bar */
+    top: 0;
+  }
+  /* Sidebar background extends behind the status bar */
+  .sidebar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* Hamburger moves down so it's below the status bar */
+  .hamburger {
+    top: max(10px, calc(6px + env(safe-area-inset-top)));
+  }
+  /* Hard-prevent any body bounce in standalone */
+  html, body { overflow: hidden; height: 100% }
+  .main       { overflow-y: auto; height: 100% }
+}
+
+/* ── 10. Native press feedback on touch devices ──────────────── */
+/* Replaces the tap flash with a more intentional visual response  */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active                { opacity: .7;  transform: scale(.96);  transition: none }
+  .btn-primary:active        { opacity: .75; transform: scale(.96);  transition: none }
+  #fab:active                { transform: scale(.90); opacity: .82;  transition: none }
+  .nav-item:active           { background: var(--sb-hover) !important }
+  .jl-row.jl-cols:active     { background: var(--surface3) !important }
+  .acc-pill:active           { opacity: .68 }
+  .cal-day.hast:active       { filter: brightness(.86) }
+  .toggle-btn:active,
+  .struct-btn:active         { opacity: .68; transform: scale(.96);  transition: none }
+  .tab:active                { background: var(--surface3) }
+  .acc-card:active           { box-shadow: var(--sh); transform: none }
+  .album-img-tab:active      { opacity: .6 }
+  .stat-card:active          { box-shadow: var(--sh) }
+}
+
+/* ── 11. Override safe-area values at the mobile breakpoint ───── */
+@media (max-width: 768px) {
+  #fab {
+    bottom: max(14px, calc(10px + env(safe-area-inset-bottom)));
+    right:  max(14px, calc(10px + env(safe-area-inset-right)));
+  }
+  #toast {
+    bottom: max(66px, calc(58px + env(safe-area-inset-bottom)));
+    right: 10px; left: 10px;
+  }
+  .page-content {
+    padding-bottom: max(80px, calc(62px + env(safe-area-inset-bottom)));
+  }
+}
+
+/* ─── ALBUM VIEW MODAL ──────────────────────────────────────────────────── */
+#albumModal{padding:0;align-items:center;justify-content:center}
+.album-modal{
+  width:88vw;height:88vh;max-width:1440px;
+  background:var(--surface);border-radius:12px;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 40px 120px rgba(0,0,0,.4),0 8px 32px rgba(0,0,0,.25);
+  border:1px solid var(--border);
+  animation:slideUp .2s cubic-bezier(.4,0,.2,1)
+}
+.album-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 18px;border-bottom:1px solid var(--border);
+  background:var(--surface3);flex-shrink:0;gap:10px;min-width:0
+}
+.album-header-left{display:flex;align-items:center;gap:9px;min-width:0;overflow:hidden}
+.album-header-instr{
+  font-family:'DM Mono',monospace;font-size:15px;font-weight:700;
+  letter-spacing:-.3px;color:var(--text);white-space:nowrap
+}
+.album-header-date{font-size:11.5px;color:var(--text4);white-space:nowrap;flex-shrink:0}
+.album-counter{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--text4);
+  font-weight:500;padding:3px 10px;background:var(--surface);
+  border:1px solid var(--border);border-radius:20px;white-space:nowrap;flex-shrink:0
+}
+.album-body{display:flex;flex:1;overflow:hidden}
+/* ── Left: screenshot ── */
+.album-img-panel{
+  flex:0 0 58%;background:#0b0d12;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;overflow:hidden
+}
+.album-img-main{
+  width:100%;height:100%;object-fit:contain;
+  display:block;cursor:zoom-in;transition:opacity .18s
+}
+.album-modal.img-zoomed .album-detail-panel{display:none}
+.album-modal.img-zoomed .album-img-panel{flex:1}
+.album-modal.img-zoomed .album-img-main{cursor:zoom-out}
+.album-zoom-close{
+  position:absolute;top:12px;right:12px;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);
+  color:#fff;border-radius:8px;padding:5px 11px;font-size:12px;
+  cursor:pointer;backdrop-filter:blur(8px);display:none;z-index:2
+}
+.album-modal.img-zoomed .album-zoom-close{display:block}
+.album-img-placeholder{
+  display:flex;flex-direction:column;align-items:center;
+  gap:14px;color:rgba(255,255,255,.16);user-select:none
+}
+.album-img-placeholder svg{opacity:.25}
+.album-img-placeholder span{font-size:12px;letter-spacing:.3px}
+.album-img-toggle{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:3px;background:rgba(0,0,0,.6);
+  border-radius:20px;padding:4px;backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.08)
+}
+.album-img-tab{
+  padding:4px 15px;border-radius:16px;font-size:11px;font-weight:600;
+  cursor:pointer;border:none;font-family:inherit;transition:all .15s;
+  color:rgba(255,255,255,.45);background:none
+}
+.album-img-tab.active{background:rgba(255,255,255,.16);color:#fff}
+.album-img-tab:hover:not(.active){color:rgba(255,255,255,.7)}
+/* ── Right: details ── */
+.album-detail-panel{
+  flex:1;overflow-y:auto;padding:20px 22px 22px;
+  display:flex;flex-direction:column;gap:14px;
+  border-left:1px solid var(--border)
+}
+.album-kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.album-kpi{
+  background:var(--surface3);border-radius:var(--rl);
+  padding:10px 12px;border-left:2.5px solid var(--border)
+}
+.album-kpi.green{border-left-color:var(--green)}
+.album-kpi.red{border-left-color:var(--red)}
+.album-kpi.blue{border-left-color:var(--blue)}
+.album-kpi.gold{border-left-color:var(--gold)}
+.album-kpi-lbl{font-size:8px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.1px;margin-bottom:5px}
+.album-kpi-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.album-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.album-field{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--r);padding:7px 10px
+}
+.album-field-lbl{font-size:8px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.9px;margin-bottom:3px}
+.album-field-val{font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album-text-block{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--r);padding:10px 12px
+}
+.album-text-lbl{font-size:8px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.9px;margin-bottom:6px}
+.album-text-content{font-size:12.5px;line-height:1.68;color:var(--text2)}
+.album-footer{
+  padding:9px 18px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;background:var(--surface3);gap:10px
+}
+.album-footer-nav{display:flex;align-items:center;gap:6px}
+.album-kbd-hint{font-size:10px;color:var(--text4);display:flex;align-items:center;gap:4px}
+.album-kbd{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:1px 5px;border-radius:3px;font-size:9.5px;font-family:'DM Mono',monospace;
+  background:var(--surface);border:1px solid var(--border);color:var(--text3);min-width:18px
+}
+@media(max-width:900px){
+  .album-modal{width:96vw;height:92vh}
+  .album-img-panel{flex:0 0 50%}
+  .album-kpis{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:680px){
+  .album-modal{width:100vw;height:100vh;border-radius:0}
+  .album-body{flex-direction:column}
+  .album-img-panel{flex:0 0 42%;border-right:none;border-bottom:1px solid var(--border2)}
+  .album-kbd-hint{display:none}
 }
 </style>
 </head>
@@ -1401,6 +1723,8 @@ body[data-theme="gold"] .page-title {
         <div class="card" id="dashTopInstrCard"></div>
       </div>
       <div id="dashEnCours" style="margin-top:8px"></div>
+      <!-- AI Coach -->
+      <div id="dashAICoach"></div>
     </div>
 
     <!-- JOURNAL -->
@@ -1461,6 +1785,9 @@ body[data-theme="gold"] .page-title {
   </div>
 </main>
 </div>
+
+<!-- Audit tooltip global -->
+<div id="audit-tip"></div>
 
 <!-- FAB -->
 <button id="fab" onclick="openNew()" title="Nouveau trade">
@@ -1585,6 +1912,43 @@ body[data-theme="gold"] .page-title {
 
 <div id="toast"></div>
 
+<!-- ─── ALBUM VIEW MODAL ─── -->
+<div class="overlay" id="albumModal">
+  <div class="album-modal">
+    <div class="album-header">
+      <div class="album-header-left">
+        <span class="album-header-instr" id="albumInstr"></span>
+        <span class="album-header-date" id="albumDate"></span>
+        <span id="albumBadge"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="album-counter" id="albumCounter"></span>
+        <button class="modal-close" onclick="closeModal('albumModal')">✕</button>
+      </div>
+    </div>
+    <div class="album-body" id="albumBody"></div>
+    <div class="album-footer">
+      <div class="album-footer-nav">
+        <button class="btn btn-secondary btn-sm" id="albumPrevBtn" onclick="albumNav(-1)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          Précédent
+        </button>
+        <button class="btn btn-secondary btn-sm" id="albumNextBtn" onclick="albumNav(1)">
+          Suivant
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <span class="album-kbd-hint">
+          <span class="album-kbd">←</span><span class="album-kbd">→</span> naviguer
+        </span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="albumEditBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Modifier
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── SUPABASE ──────────────────────────────────────────────────────────────
 const SUPABASE_URL='https://nakykfuduehcwsjuicpb.supabase.co';
@@ -1669,12 +2033,13 @@ const SH=['ID','Compte','Date','Heure','Session','Instrument','Direction','Confi
 
 let DB=loadLocalDB(),curPage='dashboard';
 let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new Set(['all']),cfAccFilters=new Set(['all']);
-let dashPeriod='all';
-let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week'};
+let dashPeriod='all',dashCustomFrom='',dashCustomTo='';
+let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week',rNonProfitable:'',horsSession:''};
 let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0]||'#2558CE';
-let editId=null,ss=null,tConf=3,tScrAvant='',tScrApres='',tTags=[],tDir='';
+let editId=null,ss=null,tConf=3,tScrHTF='',tScrMTF='',tScrLTF='',tTags=[],tDir='';
+let albumTrades=[],albumIdx=0,albumImgMode='htf';
 let editCapId=null,renameAccId=null,editCFId=null;
 let charts={};
 
@@ -1762,19 +2127,27 @@ function stats(trades){
 }
 
 function toast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='albumModal'){const m=document.querySelector('#albumModal .album-modal');if(m)m.classList.remove('img-zoomed');}}
 
-// ESC close modals
+// Hide tooltip on scroll
+document.addEventListener('scroll',()=>hideAuditTip(),true);
+
+// ESC close modals + album keyboard nav
 document.addEventListener('keydown',function(e){
+  const album=document.getElementById('albumModal');
+  if(album&&album.classList.contains('open')){
+    if(e.key==='ArrowLeft'){e.preventDefault();albumNav(-1);return;}
+    if(e.key==='ArrowRight'){e.preventDefault();albumNav(1);return;}
+  }
   if(e.key==='Escape'){
-    ['tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal'].forEach(id=>{
+    ['tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
       const el=document.getElementById(id);
       if(el&&el.classList.contains('open'))el.classList.remove('open');
     });
   }
 });
 // Click outside modal to close (all except tradeModal — risque de fermeture accidentelle)
-['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal'].forEach(id=>{
+['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
@@ -1830,17 +2203,38 @@ function renderDashFilter(){
     {v:'today',l:"Aujourd'hui"},{v:'week',l:'Cette semaine'},
     {v:'month',l:'Mois en cours'},{v:'lastmonth',l:'Mois dernier'},
     {v:'3months',l:'3 derniers mois'},{v:'year',l:'Cette année'},
-    {v:'all',l:'Tout afficher'},
+    {v:'all',l:'Tout afficher'},{v:'custom',l:'Personnalisé…'},
   ];
+  const selStyle=`font-weight:600;color:rgba(255,255,255,.88);border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.1);padding:5px 12px;border-radius:7px;border:1.5px solid rgba(255,255,255,.15);font-size:12px;font-family:inherit;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;backdrop-filter:blur(4px)`;
   const po=periods.map(p=>`<option value="${p.v}" ${dashPeriod===p.v?'selected':''}>${p.l}</option>`).join('');
-  el.innerHTML=`<select onchange="setDashPeriod(this.value)" style="font-weight:600;color:rgba(255,255,255,.88);border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.1);padding:5px 12px;border-radius:7px;border:1.5px solid rgba(255,255,255,.15);font-size:12px;font-family:inherit;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;backdrop-filter:blur(4px)">${po}</select>`;
+  const dateRow=dashPeriod==='custom'?`
+    <span style="color:rgba(255,255,255,.5);font-size:11px">du</span>
+    <input type="date" class="dash-date-input" id="dashCF" value="${dashCustomFrom}" onchange="setDashCustomDate('from',this.value)"/>
+    <span style="color:rgba(255,255,255,.5);font-size:11px">au</span>
+    <input type="date" class="dash-date-input" id="dashCT" value="${dashCustomTo}" onchange="setDashCustomDate('to',this.value)"/>`:'';
+  el.innerHTML=`<div class="dash-date-row">
+    <select onchange="setDashPeriod(this.value)" style="${selStyle}">${po}</select>
+    ${dateRow}
+  </div>`;
 }
-function setDashPeriod(v){dashPeriod=v;renderDash();}
+function setDashPeriod(v){
+  dashPeriod=v;
+  if(v==='custom'){
+    // init custom range to current month if empty
+    if(!dashCustomFrom||!dashCustomTo){const r=getPeriodRange('month');dashCustomFrom=r.from;dashCustomTo=r.to;}
+  }
+  renderDash();
+}
+function setDashCustomDate(k,v){
+  if(k==='from')dashCustomFrom=v;else dashCustomTo=v;
+  renderDash();
+}
 
 function renderDash(){
   renderPills();renderDashFilter();
   let f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
-  if(dashPeriod!=='all'){const r=getPeriodRange(dashPeriod);if(r.from)f=f.filter(t=>t.date>=r.from);if(r.to)f=f.filter(t=>t.date<=r.to);}
+  if(dashPeriod==='custom'){if(dashCustomFrom)f=f.filter(t=>t.date>=dashCustomFrom);if(dashCustomTo)f=f.filter(t=>t.date<=dashCustomTo);}
+  else if(dashPeriod!=='all'){const r=getPeriodRange(dashPeriod);if(r.from)f=f.filter(t=>t.date>=r.from);if(r.to)f=f.filter(t=>t.date<=r.to);}
   const s=stats(f);window._dashF=f;
 
   // ── Hero command bar ──
@@ -1908,19 +2302,23 @@ function renderDash(){
   renderCharts(f);
   renderEnCours(f);
   renderDashBottom(f,s);
+  renderAICoach(f);
 }
 function getDisciplineAudit(f){
   const closed=f.filter(t=>t.resultat!=='En cours');
-  if(!closed.length)return{score:100,leak:0,total:0,undisciplined:[]};
+  if(!closed.length)return{score:100,leak:0,total:0,undisciplined:[],cntHz:0,cntConf:0,cntFrag:0,cntNoReason:0};
   const undisciplined=closed.filter(t=>{
-    const hz=t.horsZone===true;
-    const frag=t.structure==='fragile';
-    const lowConf=(t.stars||t.confiance||5)<3;
-    return hz||frag||lowConf;
+    const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+    return t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
   });
   const score=Math.round((1-undisciplined.length/closed.length)*100);
   const leak=Math.abs(undisciplined.reduce((s,t)=>{const gp=parseFloat(t.gainPerte)||0;return s+(gp<0?gp:0);},0));
-  return{score,leak,total:closed.length,undisciplined};
+  // Compteurs détaillés (sur tous trades fermés, pas seulement les indisciplinés)
+  const cntHz=closed.filter(t=>t.horsZone===true).length;
+  const cntFrag=closed.filter(t=>t.structure==='fragile').length;
+  const cntConf=closed.filter(t=>{const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);return sv!==null&&sv<3;}).length;
+  const cntNoReason=closed.filter(t=>!t.pourquoiEntrer||!t.pourquoiEntrer.trim()).length;
+  return{score,leak,total:closed.length,undisciplined,cntHz,cntFrag,cntConf,cntNoReason};
 }
 function renderDisciplineBanner(f){
   const el=document.getElementById('dashDiscipline');if(!el)return;
@@ -1931,8 +2329,17 @@ function renderDisciplineBanner(f){
   const potential=totalPnl+d.leak;
   const pct=totalPnl!==0?((d.leak/Math.abs(totalPnl))*100).toFixed(0):0;
   const msg=d.leak>0
-    ?`Votre indiscipline coûte $${fmtN(d.leak,2)} · Avec un plan respecté, votre capital serait ${pct}% plus élevé`
+    ?`Votre indiscipline coûte $${fmtN(d.leak,2)} — avec un plan respecté, votre capital serait ${pct}% plus élevé`
     :`Discipline parfaite sur la période — continuez sur cette lancée`;
+  // Bullets de détail
+  const T=d.total;
+  const bullets=[
+    d.cntHz>0?`${d.cntHz} trade${d.cntHz>1?'s':''} sur ${T} pris hors killzone (Londres 11h–14h / NY 16h30–19h30 GMT+4)`:'',
+    d.cntConf>0?`${d.cntConf} trade${d.cntConf>1?'s':''} sur ${T} avec une conviction faible (inférieure à 3★)`:'',
+    d.cntFrag>0?`${d.cntFrag} trade${d.cntFrag>1?'s':''} sur ${T} forcés sur une structure jugée "Fragile"`:'',
+    d.cntNoReason>0?`${d.cntNoReason} trade${d.cntNoReason>1?'s':''} sur ${T} sans raison d'entrée documentée (trading impulsif)`:'',
+  ].filter(Boolean);
+  const bulletsHtml=bullets.length?`<ul style="margin:8px 0 0;padding-left:16px;list-style:disc;display:flex;flex-direction:column;gap:3px">${bullets.map(b=>`<li style="font-size:11px;color:var(--amber);opacity:.85">${b}</li>`).join('')}</ul>`:'';
   el.innerHTML=`<div class="disc-banner">
     <div class="disc-banner-item">
       <div class="disc-banner-label">Discipline Score</div>
@@ -1949,7 +2356,7 @@ function renderDisciplineBanner(f){
       <div class="disc-banner-value" style="color:var(--green)">${potential>=0?'+':''}$${fmtN(Math.abs(potential),2)}</div>
       <div class="disc-banner-sub">si plan respecté</div>
     </div>
-    <div class="disc-banner-msg">⚡ ${msg}</div>
+    <div class="disc-banner-msg">⚡ ${msg}${bulletsHtml}</div>
   </div>`;
 }
 function onStatCard(el){
@@ -2136,6 +2543,226 @@ function mkBarGain(id,labels,data,colors,onClickFn){
         }
       }
     }
+  });
+}
+
+// ── AI COACH ──────────────────────────────────────────────────────────────
+const GEMINI_MODEL='gemini-2.5-flash';
+const GEMINI_ENDPOINT=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const AI_CACHE_KEY='tl_ai_cache';
+const AI_CACHE_TTL=6*3600*1000; // 6h
+
+function saveGeminiKey(){
+  const k=document.getElementById('geminiKeyInput')?.value.trim();
+  if(!k)return;
+  localStorage.setItem('gemini_api_key',k);
+  // Reset status badge
+  const s=document.getElementById('geminiStatus');if(s)s.textContent='✓ Clé configurée';
+  toast('Clé Gemini enregistrée ✓','success');
+  // Si le dashboard est ouvert, relancer l'analyse
+  if(curPage==='dashboard')renderAICoach(window._dashF||DB.trades);
+}
+
+function refreshAICoach(){
+  localStorage.removeItem(AI_CACHE_KEY);
+  if(curPage==='dashboard')renderAICoach(window._dashF||DB.trades);
+  else toast('Cache IA effacé','info');
+}
+
+function _buildAIPrompt(trades){
+  const closed=trades.filter(t=>t.resultat!=='En cours')
+    .sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''))
+    .slice(0,20);
+
+  // Stats rapides pour le contexte
+  const wins=closed.filter(t=>t.resultat==='Win').length;
+  const losses=closed.filter(t=>t.resultat==='Loss').length;
+  const be=closed.filter(t=>t.resultat==='Breakeven').length;
+  const totalPnl=closed.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  const hzCount=closed.filter(t=>t.horsZone===true).length;
+  const fragCount=closed.filter(t=>t.structure==='fragile').length;
+
+  const tradeLines=closed.map((t,i)=>{
+    const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+    const gp=parseFloat(t.gainPerte)||0;
+    const rr=parseFloat(t.rr)||null;
+    const parts=[
+      `#${i+1}`,
+      t.date+(t.heure?' '+t.heure:''),
+      t.instrument||'?',
+      t.direction||'?',
+      t.resultat,
+      `PnL:${gp>=0?'+':''}$${gp.toFixed(2)}`,
+      rr!==null?`RR:${rr>=0?'+':''}${rr.toFixed(2)}R`:null,
+      sv?`Confiance:${sv}★`:null,
+      t.structure?`Structure:${t.structure.toUpperCase()}`:null,
+      t.horsZone?'HORS-ZONE':null,
+      t.pourquoiEntrer?`Raison:"${t.pourquoiEntrer.slice(0,100)}"`:null,
+    ].filter(Boolean);
+    return parts.join(' | ');
+  }).join('\n');
+
+  const systemPrompt=`Tu es un coach de trading spécialisé en Price Action et Smart Money Concepts. Tu analyses les données brutes de trades et fournis des retours précis, directs, et basés uniquement sur les données fournies.
+
+RÈGLES ABSOLUES :
+- Commence DIRECTEMENT par "### Ce qui a bien fonctionné" sans introduction ni formule de politesse
+- Cite chaque trade par son numéro (#1, #2, etc.) quand tu l'analyses
+- Si une donnée est manquante ("?"), dis-le clairement
+- Ne devine pas, ne généralise pas — base-toi uniquement sur les chiffres fournis
+- Réponds en français, ton coach professionnel
+
+STRUCTURE OBLIGATOIRE (respecte ces 5 sections exactement, dans cet ordre) :
+### Ce qui a bien fonctionné
+### Points faibles détectés
+### Analyse discipline
+### Recommandations (liste de 3 à 5 points actionnables)
+### Synthèse & Score de rigueur /10`;
+
+  const userMessage=`Voici les ${closed.length} derniers trades fermés à analyser :
+
+${tradeLines}
+
+Contexte global : ${wins}W / ${losses}L / ${be}BE | PnL net : ${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)} | ${hzCount} trades hors killzone | ${fragCount} trades structure fragile
+
+Règles de discipline du trader :
+- Killzones GMT+4 : Londres 11h–14h, New York 16h30–19h30
+- Confiance minimum : 3★/5
+- Structure préférée : SOLIDE (tendance alignée)`;
+
+  return {systemPrompt, userMessage};
+}
+
+async function fetchAIInterpretation(trades){
+  const key=localStorage.getItem('gemini_api_key');
+  if(!key)throw new Error('NO_KEY');
+
+  // Vérifier cache
+  try{
+    const c=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'null');
+    if(c&&Date.now()-c.ts<AI_CACHE_TTL)return{text:c.text,cached:true,ts:c.ts,truncated:c.truncated||false};
+  }catch(e){localStorage.removeItem(AI_CACHE_KEY);}
+
+  const {systemPrompt,userMessage}=_buildAIPrompt(trades);
+  const resp=await fetch(`${GEMINI_ENDPOINT}?key=${key}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      systemInstruction:{parts:[{text:systemPrompt}]},
+      contents:[{role:'user',parts:[{text:userMessage}]}],
+      generationConfig:{temperature:0.4,maxOutputTokens:4000,topP:0.9}
+    })
+  });
+
+  if(!resp.ok){
+    const err=await resp.json().catch(()=>({}));
+    throw new Error(err?.error?.message||`HTTP ${resp.status}`);
+  }
+  const data=await resp.json();
+  const candidate=data?.candidates?.[0];
+  const text=candidate?.content?.parts?.[0]?.text;
+  if(!text)throw new Error('Réponse vide de Gemini — vérifie ta clé API et les quotas');
+  const truncated=candidate?.finishReason==='MAX_TOKENS';
+
+  localStorage.setItem(AI_CACHE_KEY,JSON.stringify({text,ts:Date.now(),truncated,promptVer:'v2'}));
+  return{text,cached:false,ts:Date.now(),truncated};
+}
+
+// Rendu Markdown minimal (bold, italic, h3, listes, paragraphes)
+function _mdToHtml(md){
+  const lines=md.split('\n');
+  let html='',inUl=false,inOl=false;
+  const closeList=()=>{if(inUl){html+='</ul>';inUl=false;}if(inOl){html+='</ol>';inOl=false;}};
+  const inline=s=>s
+    .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-family:\'DM Mono\',monospace;font-size:11px">$1</code>');
+  lines.forEach(raw=>{
+    const l=raw.trimEnd();
+    if(/^###\s/.test(l)){closeList();html+=`<h3>${inline(l.replace(/^###\s/,''))}</h3>`;return;}
+    if(/^##\s/.test(l)){closeList();html+=`<h3>${inline(l.replace(/^##\s/,''))}</h3>`;return;}
+    if(/^#\s/.test(l)){closeList();html+=`<h3>${inline(l.replace(/^#\s/,''))}</h3>`;return;}
+    if(/^[-*]\s/.test(l)){if(!inUl){closeList();html+='<ul>';inUl=true;}html+=`<li>${inline(l.replace(/^[-*]\s/,''))}</li>`;return;}
+    if(/^\d+\.\s/.test(l)){if(!inOl){closeList();html+='<ol>';inOl=true;}html+=`<li>${inline(l.replace(/^\d+\.\s/,''))}</li>`;return;}
+    closeList();
+    if(l===''){html+='';return;}
+    html+=`<p>${inline(l)}</p>`;
+  });
+  closeList();
+  return html;
+}
+
+function renderAICoach(f){
+  const el=document.getElementById('dashAICoach');if(!el)return;
+  const key=localStorage.getItem('gemini_api_key');
+  const closed=f.filter(t=>t.resultat!=='En cours');
+
+  if(!key){
+    el.innerHTML=`<div class="ai-coach-card">
+      <div class="ai-coach-head">
+        <div class="ai-coach-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Coach IA — Gemini
+        </div>
+      </div>
+      <div class="ai-coach-empty">
+        <div style="font-size:28px;margin-bottom:8px">🤖</div>
+        <div style="font-weight:600;color:var(--text2);margin-bottom:5px">Coach IA non configuré</div>
+        <div>Ajoute ta clé API Gemini dans <strong>Paramètres</strong> pour activer l'analyse de tes trades.</div>
+      </div>
+    </div>`;
+    return;
+  }
+  if(closed.length<3){
+    el.innerHTML=`<div class="ai-coach-card"><div class="ai-coach-empty">Pas assez de trades fermés (minimum 3) pour une analyse IA.</div></div>`;
+    return;
+  }
+
+  // Afficher état loading
+  el.innerHTML=`<div class="ai-coach-card">
+    <div class="ai-coach-head">
+      <div class="ai-coach-title">
+        <div class="ai-spin"></div>
+        Coach IA — Gemini
+      </div>
+      <span class="ai-coach-meta">Analyse en cours…</span>
+    </div>
+    <div class="ai-coach-body" style="display:flex;align-items:center;gap:10px;padding:18px">
+      <div class="ai-spin"></div>
+      <span style="color:var(--text4);font-size:12px">Gemini analyse tes ${Math.min(closed.length,20)} derniers trades…</span>
+    </div>
+  </div>`;
+
+  // Appel async
+  fetchAIInterpretation(f).then(({text,cached,ts,truncated})=>{
+    const age=cached?Math.round((Date.now()-ts)/60000)+'min':'maintenant';
+    const cacheLabel=cached?`<span style="color:var(--text4);font-size:10px">· cache ${age}</span>`:'<span style="color:var(--green);font-size:10px">· fraîche</span>';
+    const truncWarn=truncated?`<div style="margin:0 18px 12px;padding:7px 11px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:6px;font-size:11px;color:var(--amber)">⚠ Réponse tronquée (quota tokens atteint) — clique sur ↺ Actualiser pour relancer</div>`:'';
+    el.innerHTML=`<div class="ai-coach-card">
+      <div class="ai-coach-head">
+        <div class="ai-coach-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Coach IA — Gemini 2.5 Flash
+          ${cacheLabel}
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAICoach()" style="font-size:10px;padding:3px 9px" title="Vider le cache et relancer">↺ Actualiser</button>
+      </div>
+      ${truncWarn}
+      <div class="ai-coach-body">${_mdToHtml(text)}</div>
+    </div>`;
+  }).catch(err=>{
+    const isNoKey=err.message==='NO_KEY';
+    const msg=isNoKey?'Clé API manquante — configure-la dans Paramètres.':err.message;
+    el.innerHTML=`<div class="ai-coach-card">
+      <div class="ai-coach-head">
+        <div class="ai-coach-title" style="color:var(--red)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Coach IA — Erreur
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAICoach()" style="font-size:10px;padding:3px 9px">Réessayer</button>
+      </div>
+      <div class="ai-coach-empty" style="color:var(--red)">${esc(msg)}</div>
+    </div>`;
   });
 }
 
@@ -2634,6 +3261,16 @@ function renderJFilters(){
     <select onchange="setJF('resultat',this.value)"><option value="">Tous résultats</option>${ro}</select>
     ${isCustom?`<input type="date" value="${jFilters.dateFrom}" onchange="setJF('dateFrom',this.value)" title="Date début"/>
     <input type="date" value="${jFilters.dateTo}" onchange="setJF('dateTo',this.value)" title="Date fin"/>`:''}
+    <select onchange="setJF('rNonProfitable',this.value)" style="${jFilters.rNonProfitable?'color:var(--blue);border-color:var(--blue-bd);background:var(--blue-bg)':''}">
+      <option value="">Toutes confiances</option>
+      <option value="rnp" ${jFilters.rNonProfitable==='rnp'?'selected':''}>R non profitable (≤3★)</option>
+      <option value="profitable" ${jFilters.rNonProfitable==='profitable'?'selected':''}>Profitable (>3★)</option>
+    </select>
+    <select onchange="setJF('horsSession',this.value)" style="${jFilters.horsSession?'color:var(--blue);border-color:var(--blue-bd);background:var(--blue-bg)':''}">
+      <option value="">Toutes sessions</option>
+      <option value="hors" ${jFilters.horsSession==='hors'?'selected':''}>Hors session</option>
+      <option value="en" ${jFilters.horsSession==='en'?'selected':''}>En session</option>
+    </select>
     <button class="btn btn-ghost btn-sm" onclick="resetJF()">✕ Reset</button>
     <div style="margin-left:auto;display:flex;gap:7px">
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
@@ -2642,10 +3279,19 @@ function renderJFilters(){
 function setJF(k,v){if(k==='dateFrom'||k==='dateTo')jFilters.period='custom';jFilters[k]=v;renderJournal();}
 function resetJF(){
   const r=getPeriodRange('week');
-  jFilters={session:'',instrument:'',resultat:'',dateFrom:r.from,dateTo:r.to,period:'week'};
+  jFilters={session:'',instrument:'',resultat:'',dateFrom:r.from,dateTo:r.to,period:'week',rNonProfitable:'',horsSession:''};
   renderJournal();
 }
-function getFT(){return DB.trades.filter(t=>{if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
+function isRNonProfitable(t){const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);return sv!==null&&sv<=3;}
+function isHorsSession(heure){
+  if(!heure)return false;
+  const[h,m]=heure.split(':').map(Number);
+  const mins=h*60+m;
+  const inLondres=mins>=10*60&&mins<13*60;
+  const inNY=mins>=16*60+30&&mins<19*60;
+  return!(inLondres||inNY);
+}
+function getFT(){return DB.trades.filter(t=>{if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;if(f.rNonProfitable==='rnp'&&!isRNonProfitable(t))return false;if(f.rNonProfitable==='profitable'&&isRNonProfitable(t))return false;if(f.horsSession==='hors'&&!isHorsSession(t.heure))return false;if(f.horsSession==='en'&&isHorsSession(t.heure))return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
 
 function renderJSummary(){
   const trades=getFT();
@@ -2714,8 +3360,13 @@ function renderJTable(){
     const rr=calcRR(t);
     const cls=t.resultat==='Win'?'row-win':t.resultat==='Loss'?'row-loss':t.resultat==='Breakeven'?'row-be':t.resultat==='En cours'?'row-encours':'';
     const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}" style="font-size:10px;padding:1px 7px">${t.resultat}</span>`:'';
-    const isUndisciplined=t.horsZone===true||t.structure==='fragile'||(t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):5))<3;
-    const disciplineBdg=isUndisciplined&&t.resultat!=='En cours'?`<span style="padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);white-space:nowrap">INDISCIPLINE</span>`:'';
+    const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+    const isUndisciplined=t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
+    const auditReasons=isUndisciplined&&t.resultat!=='En cours'?getAuditReasons(t):[];
+    const auditTipLines=auditReasons.map(r=>`• ${r}`).join('\n');
+    const disciplineBdg=auditReasons.length?`<span class="_audit-badge" style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);white-space:nowrap;cursor:help" data-audit="${esc(auditTipLines)}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">⚠ INDISCIPLINE</span>`:'';
+    const rnpBdg=isRNonProfitable(t)?`<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue);white-space:nowrap" title="Confiance ≤ 3 étoiles — setup R non profitable">R NON PROFITABLE</span>`:'';
+    const horsSessBdg=isHorsSession(t.heure)?`<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);white-space:nowrap" title="Trade pris hors session de Londres (10-13h) ou New York (16:30-19h) GMT+4">HORS SESSION</span>`:'';
     const gp=parseFloat(t.gainPerte)||0;
     const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''
       ?(gp>=0?`<span style="color:var(--green);font-family:'DM Mono',monospace;font-size:12px">+$${Math.abs(gp).toFixed(2)}</span>`
@@ -2723,19 +3374,19 @@ function renderJTable(){
       :`<span style="color:var(--text4)">—</span>`;
     const rrColor=rr===null?'var(--text4)':rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)';
     const rrStr=rr!==null?`<span style="font-family:'DM Mono',monospace;font-size:12px;color:${rrColor}">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:`<span style="color:var(--text4)">—</span>`;
-    const scrUrl=(t.screenshotApres||t.screenshotAvant||t.screenshot||'').trim();
+    const scrUrl=(t.screenshotHTF||t.screenshotMTF||t.screenshotLTF||t.screenshotAvant||t.screenshot||'').trim();
     const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
     const safeUrl=scrUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const safeLabel=esc(t.instrument||'Trade')+' — '+fmtD(t.date);
     const thumbHtml=hasImg
       ?`<div class="j-thumb" onclick="event.stopPropagation();openImgPreview('${safeUrl}','${safeLabel}')"><img src="${scrUrl}" alt="" onerror="this.parentElement.className='j-thumb-empty';this.parentElement.innerHTML='<svg width=14 height=14 viewBox=\\'0 0 24 24\\' fill=none stroke=currentColor stroke-width=1.5><rect x=3 y=3 width=18 height=18 rx=2/><circle cx=8.5 cy=8.5 r=1.5/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"/></div>`
       :`<div class="j-thumb-empty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-    h+=`<div class="jl-row jl-cols ${cls}" onclick="openDetail('${t.id}')">
+    h+=`<div class="jl-row jl-cols ${cls}" onclick="openAlbumView('${t.id}')">
       <div class="jl-thumb-cell jl-hide-xs">${thumbHtml}</div>
       <div class="jl-cell jl-instr">
         ${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};flex-shrink:0;display:inline-block"></span>`:''}
         <span style="font-weight:600;font-family:'DM Mono',monospace;font-size:12.5px;flex-shrink:0">${esc(t.instrument||'—')}</span>
-        ${bdg}${disciplineBdg}
+        ${bdg}${disciplineBdg}${rnpBdg}${horsSessBdg}
       </div>
       <div class="jl-cell jl-hide-md"><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${fmtD(t.date)}${t.heure?' <span style="opacity:.6">'+t.heure+'</span>':''}</span></div>
       <div class="jl-cell jl-hide-sm" style="font-size:11.5px;color:var(--text3)">${esc(t.compte||'—')}</div>
@@ -2754,9 +3405,9 @@ function renderJTable(){
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
 function openNew(){
-  editId=null;ss=null;tConf=3;tScrAvant='';tScrApres='';tDir='';
+  editId=null;ss=null;tConf=3;tScrHTF='';tScrMTF='';tScrLTF='';tDir='';
   document.getElementById('tmTitle').textContent='Nouveau trade';
-  buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',direction:'',structure:null,montantRisque:'',gainPerte:'',resultat:'',etat:'',stars:3,horsZone:false,pourquoiEntrer:'',douteHesitation:'',screenshotAvant:'',screenshotApres:''});
+  buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',direction:'',structure:null,montantRisque:'',gainPerte:'',resultat:'',etat:'',stars:3,horsZone:false,pourquoiEntrer:'',douteHesitation:'',screenshotHTF:'',screenshotMTF:'',screenshotLTF:''});
   document.getElementById('tradeModal').classList.add('open');
 }
 function openEdit(id){
@@ -2766,7 +3417,7 @@ function openEdit(id){
   ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
   // backward compat: confiance 1-10 → stars 1-5
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
-  tScrAvant=t.screenshotAvant||t.screenshot||'';tScrApres=t.screenshotApres||'';tDir=t.direction||'';
+  tScrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';tScrMTF=t.screenshotMTF||t.screenshotApres||'';tScrLTF=t.screenshotLTF||'';tDir=t.direction||'';
   document.getElementById('tmTitle').textContent='Modifier le trade';
   buildForm(t);
   document.getElementById('tradeModal').classList.add('open');
@@ -2788,7 +3439,7 @@ function scrBlock(idPrefix,label,url){
   </div>`;
 }
 function buildForm(t){
-  tScrAvant=t.screenshotAvant||t.screenshot||'';tScrApres=t.screenshotApres||'';
+  tScrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';tScrMTF=t.screenshotMTF||t.screenshotApres||'';tScrLTF=t.screenshotLTF||'';
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
   ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
   tDir=t.direction||'';
@@ -2848,8 +3499,10 @@ function buildForm(t){
       </div>
     </div>
     <div class="sdiv"><span>Captures d'écran (liens TradingView)</span></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap" id="scrSec">
-      ${scrBlock('scr_av','Avant le trade',tScrAvant)}${scrBlock('scr_ap','Après le trade',tScrApres)}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px" id="scrSec">
+      ${scrBlock('scr_htf','HTF — Vue macro',tScrHTF)}
+      ${scrBlock('scr_mtf','MTF — Vue intermédiaire',tScrMTF)}
+      ${scrBlock('scr_ltf','LTF — Entrée précise',tScrLTF)}
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid var(--border2)">
       <button class="btn btn-secondary" onclick="closeModal('tradeModal')">Annuler</button>
@@ -2891,10 +3544,37 @@ function calcHorsZone(heure){
   if(!heure)return false;
   const [h,m]=heure.split(':').map(Number);
   const mins=h*60+m;
-  const inLondres=mins>=9*60&&mins<12*60;
-  const inNY=mins>=14*60+30&&mins<17*60+30;
+  // Killzones GMT+4 : Londres 11h00–14h00, New York 16h30–19h30
+  const inLondres=mins>=11*60&&mins<14*60;
+  const inNY=mins>=16*60+30&&mins<19*60+30;
   return!(inLondres||inNY);
 }
+// Retourne la liste des raisons d'indiscipline pour un trade (texte tooltip)
+function getAuditReasons(t){
+  const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+  const reasons=[];
+  if(t.horsZone===true)reasons.push(`Hors Session (saisie à ${t.heure||'?'})`);
+  if(t.structure==='fragile')reasons.push('Structure Fragile (contre-tendance)');
+  if(sv!==null&&sv<3)reasons.push(`Confiance Faible (${sv}★ < 3★)`);
+  if(!t.pourquoiEntrer||!t.pourquoiEntrer.trim())reasons.push('Aucune raison documentée (impulsif)');
+  return reasons;
+}
+// Tooltip flottant — accepte une string multi-lignes ou un tableau
+function showAuditTip(el,content){
+  const tip=document.getElementById('audit-tip');if(!tip)return;
+  tip.textContent=Array.isArray(content)?content.join('\n'):content;
+  tip.classList.add('show');
+  _posAuditTip(el);
+}
+function _posAuditTip(el){
+  const tip=document.getElementById('audit-tip');if(!tip)return;
+  const r=el.getBoundingClientRect();
+  let top=r.bottom+6,left=r.left;
+  if(left+tip.offsetWidth>window.innerWidth-10)left=window.innerWidth-tip.offsetWidth-10;
+  if(top+tip.offsetHeight>window.innerHeight-10)top=r.top-tip.offsetHeight-6;
+  tip.style.top=top+'px';tip.style.left=Math.max(8,left)+'px';
+}
+function hideAuditTip(){const tip=document.getElementById('audit-tip');if(tip)tip.classList.remove('show');}
 function updateHorsZoneDisplay(){
   const heure=document.getElementById('f_h')?.value||'';
   const hz=calcHorsZone(heure);
@@ -2905,13 +3585,20 @@ function updateHorsZoneDisplay(){
 }
 function togDir(v){tDir=(tDir===v)?'':v;const l=document.getElementById('dirL'),s=document.getElementById('dirS');if(l)l.className='toggle-btn'+(tDir==='Long'?' along':'');if(s)s.className='toggle-btn'+(tDir==='Short'?' ashort':'');}
 function previewScrUrl(pfx){const url=document.getElementById(pfx+'_url').value.trim();const prev=document.getElementById(pfx+'_prev');if(!url){prev.style.display='none';return;}prev.style.display='block';prev.innerHTML=`<img src="${url}" style="width:100%;height:90px;object-fit:cover;border-radius:7px;border:1px solid var(--border);cursor:pointer" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','Aperçu')" onerror="this.style.display='none'"/>`;}
-function clearScrField(pfx){if(pfx==='scr_av')tScrAvant='';else tScrApres='';document.getElementById('scrSec').innerHTML=scrBlock('scr_av','Avant le trade',tScrAvant)+scrBlock('scr_ap','Après le trade',tScrApres);}
+function clearScrField(pfx){
+  if(pfx==='scr_htf')tScrHTF='';else if(pfx==='scr_mtf')tScrMTF='';else if(pfx==='scr_ltf')tScrLTF='';
+  document.getElementById('scrSec').innerHTML=
+    scrBlock('scr_htf','HTF — Vue macro',tScrHTF)+
+    scrBlock('scr_mtf','MTF — Vue intermédiaire',tScrMTF)+
+    scrBlock('scr_ltf','LTF — Entrée précise',tScrLTF);
+}
 function openImgPreview(url,label){document.getElementById('imgModalSrc').src=url;document.getElementById('imgModalLabel').textContent=label;document.getElementById('imgModal').classList.add('open');}
 
 async function saveTrade(){
-  const avEl=document.getElementById('scr_av_url'),apEl=document.getElementById('scr_ap_url');
-  if(avEl&&avEl.value.trim())tScrAvant=avEl.value.trim();
-  if(apEl&&apEl.value.trim())tScrApres=apEl.value.trim();
+  const htfEl=document.getElementById('scr_htf_url'),mtfEl=document.getElementById('scr_mtf_url'),ltfEl=document.getElementById('scr_ltf_url');
+  if(htfEl&&htfEl.value.trim())tScrHTF=htfEl.value.trim();
+  if(mtfEl&&mtfEl.value.trim())tScrMTF=mtfEl.value.trim();
+  if(ltfEl&&ltfEl.value.trim())tScrLTF=ltfEl.value.trim();
   const montantRisque=document.getElementById('f_m').value;
   const gainPerte=document.getElementById('f_gp').value;
   const gpVal=parseFloat(gainPerte);
@@ -2936,7 +3623,7 @@ async function saveTrade(){
     etat:document.getElementById('f_e').value,
     pourquoiEntrer:document.getElementById('f_p').value,
     douteHesitation:document.getElementById('f_dh').value,
-    screenshotAvant:tScrAvant,screenshotApres:tScrApres,
+    screenshotHTF:tScrHTF,screenshotMTF:tScrMTF,screenshotLTF:tScrLTF,
     tags:existing?existing.tags||[]:[]
   };
   // Avertissement instrument manquant (inline + toast, non-bloquant)
@@ -2985,8 +3672,9 @@ function openDetail(id){
   if(t.pourquoiEntrer)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Pourquoi entrer</div><p style="font-size:13px;line-height:1.6;background:var(--surface3);padding:11px 13px;border-radius:7px">${esc(t.pourquoiEntrer)}</p></div>`;
   if(t.tags&&t.tags.length)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">Tags setup</div><div style="display:flex;flex-wrap:wrap;gap:5px">${t.tags.map(tag=>`<span style="padding:3px 10px;border-radius:20px;background:var(--accent-bg);border:1.5px solid var(--accent-bd);color:var(--accent);font-size:11.5px;font-weight:600">${esc(tag)}</span>`).join('')}</div></div>`;
   if(t.douteHesitation)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Doute / Hésitation</div><p style="font-size:13px;line-height:1.6;background:var(--surface3);padding:11px 13px;border-radius:7px">${esc(t.douteHesitation)}</p></div>`;
-  const scrAvant=t.screenshotAvant||t.screenshot||'',scrApres=t.screenshotApres||'';
-  if(scrAvant||scrApres){h+=`<div><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:9px">Captures d'écran</div><div style="display:flex;gap:9px;flex-wrap:wrap">`;if(scrAvant)h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">Avant</div><img src="${scrAvant}" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${scrAvant.replace(/'/g,"\\'")}','Avant le trade')" onerror="this.style.opacity='.3'"/></div>`;if(scrApres)h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">Après</div><img src="${scrApres}" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${scrApres.replace(/'/g,"\\'")}','Après le trade')" onerror="this.style.opacity='.3'"/></div>`;h+=`</div></div>`;}
+  const scrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'',scrMTF=t.screenshotMTF||t.screenshotApres||'',scrLTF=t.screenshotLTF||'';
+  const scrs=[['HTF',scrHTF],['MTF',scrMTF],['LTF',scrLTF]].filter(([,u])=>u&&(u.startsWith('http')||u.startsWith('//')||u.startsWith('data:')));
+  if(scrs.length){h+=`<div><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:9px">Captures d'écran</div><div style="display:flex;gap:9px;flex-wrap:wrap">`;scrs.forEach(([lbl,url])=>{h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">${lbl}</div><img src="${url}" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${lbl}')" onerror="this.style.opacity='.3'"/></div>`;});h+=`</div></div>`;}
   h+=`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)"><button class="btn btn-secondary" onclick="closeModal('detailModal');openEdit('${t.id}')">✎ Modifier</button><button class="btn btn-secondary" onclick="closeModal('detailModal')">Fermer</button></div>`;
   document.getElementById('detailBody').innerHTML=h;document.getElementById('detailModal').classList.add('open');
 }
@@ -3346,6 +4034,25 @@ function renderSettings(){
 
   document.getElementById('settingsContent').innerHTML=`
     <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          <span style="font-size:14px;font-weight:700">Coach IA — Gemini</span>
+        </div>
+        <span id="geminiStatus" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface3);color:var(--text4)">${localStorage.getItem('gemini_api_key')?'✓ Clé configurée':'Non configuré'}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Connecte Gemini 2.5 Flash pour analyser tes 20 derniers trades et recevoir des recommandations personnalisées. La clé est stockée uniquement dans ton navigateur.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="password" id="geminiKeyInput" placeholder="AIza…" value="${localStorage.getItem('gemini_api_key')||''}"
+          style="flex:1;padding:7px 11px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;font-family:'DM Mono',monospace;background:var(--surface);color:var(--text);outline:none"
+          onfocus="this.type='text'" onblur="this.type='password'"/>
+        <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">Enregistrer</button>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAICoach()" title="Vider le cache et relancer l'analyse">↺ Relancer</button>
+      </div>
+      <div style="margin-top:9px;font-size:10.5px;color:var(--text4)">Obtenir une clé gratuite sur <span style="color:var(--accent);font-weight:600">aistudio.google.com</span> · Cache de 6h pour économiser les appels</div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px">
         <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(45,122,79,.4)"></div>
         <span style="font-size:14px;font-weight:700">Supabase connecté</span>
@@ -3457,6 +4164,138 @@ function exportJSON(){
   toast('Export JSON téléchargé ✓','success');
 }
 
+// ── ALBUM VIEW ────────────────────────────────────────────────────────────
+function openAlbumView(id){
+  albumTrades=getFT();
+  albumIdx=albumTrades.findIndex(t=>t.id===id);
+  if(albumIdx<0)albumIdx=0;
+  albumImgMode='htf';
+  _renderAlbum();
+  document.getElementById('albumModal').classList.add('open');
+}
+function albumNav(dir){
+  albumIdx=Math.max(0,Math.min(albumTrades.length-1,albumIdx+dir));
+  albumImgMode='htf';
+  const m=document.querySelector('#albumModal .album-modal');if(m)m.classList.remove('img-zoomed');
+  _renderAlbum();
+}
+function albumSetImg(mode){
+  albumImgMode=mode;
+  _renderAlbum();
+}
+function _renderAlbum(){
+  const t=albumTrades[albumIdx];if(!t)return;
+  // ── Header ──
+  document.getElementById('albumInstr').textContent=t.instrument||'—';
+  document.getElementById('albumDate').textContent=fmtD(t.date)+(t.heure?' · '+t.heure:'');
+  const bdgCls=t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be';
+  document.getElementById('albumBadge').innerHTML=t.resultat?`<span class="badge badge-${bdgCls}">${t.resultat}</span>`:'';
+  document.getElementById('albumCounter').textContent=`${albumIdx+1} / ${albumTrades.length}`;
+  // ── Nav buttons ──
+  const prev=document.getElementById('albumPrevBtn'),next=document.getElementById('albumNextBtn');
+  if(prev)prev.disabled=albumIdx===0;
+  if(next)next.disabled=albumIdx===albumTrades.length-1;
+  // ── Edit button ──
+  const eb=document.getElementById('albumEditBtn');
+  if(eb)eb.onclick=()=>{closeModal('albumModal');openEdit(t.id);};
+  // ── Screenshot ──
+  const okUrl=u=>u&&(u.startsWith('http')||u.startsWith('//')||u.startsWith('data:'));
+  const scrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';
+  const scrMTF=t.screenshotMTF||t.screenshotApres||'';
+  const scrLTF=t.screenshotLTF||'';
+  const hasHTF=okUrl(scrHTF),hasMTF=okUrl(scrMTF),hasLTF=okUrl(scrLTF);
+  // Auto-fallback: find first available if requested mode is empty
+  const modeMap={htf:hasHTF,mtf:hasMTF,ltf:hasLTF};
+  let mode=albumImgMode;
+  if(!modeMap[mode]){mode=hasHTF?'htf':hasMTF?'mtf':hasLTF?'ltf':mode;}
+  const urlMap={htf:scrHTF,mtf:scrMTF,ltf:scrLTF};
+  const activeUrl=urlMap[mode]||'';
+  const hasImg=okUrl(activeUrl);
+  const safeUrl=activeUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const imgLabel=esc(t.instrument||'Trade')+' — '+fmtD(t.date);
+  const imgHtml=hasImg
+    ?`<img class="album-img-main" src="${activeUrl}" alt=""
+        onclick="albumToggleZoom()"
+        onerror="this.style.display='none';document.getElementById('_albPh').style.display='flex'"/>
+      <div id="_albPh" class="album-img-placeholder" style="display:none;position:absolute;inset:0;justify-content:center;align-items:center;flex-direction:column;gap:14px">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Image inaccessible</span>
+      </div>`
+    :`<div class="album-img-placeholder">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Aucune capture d'écran</span>
+      </div>`;
+  const anyImg=hasHTF||hasMTF||hasLTF;
+  const toggleHtml=anyImg?`<div class="album-img-toggle">
+    ${hasHTF?`<button class="album-img-tab ${mode==='htf'?'active':''}" onclick="albumSetImg('htf')">HTF</button>`:''}
+    ${hasMTF?`<button class="album-img-tab ${mode==='mtf'?'active':''}" onclick="albumSetImg('mtf')">MTF</button>`:''}
+    ${hasLTF?`<button class="album-img-tab ${mode==='ltf'?'active':''}" onclick="albumSetImg('ltf')">LTF</button>`:''}
+  </div>`:'';
+  // ── Trade data ──
+  const gp=parseFloat(t.gainPerte)||0;
+  const hasGP=t.gainPerte!==undefined&&t.gainPerte!=='';
+  const gpStr=hasGP?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
+  const gpCls=gp>0?'green':gp<0?'red':'';
+  const gpColor=gp>0?'var(--green)':gp<0?'var(--red)':'var(--text)';
+  const rr=calcRR(t);
+  const rrStr=rr!==null?(rr>0?'+':'')+fmtN(rr,2)+'R':'—';
+  const rrCls=rr!==null?(rr>0?'green':rr<0?'red':''):'';
+  const rrColor=rr!==null?(rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)'):'var(--text3)';
+  const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+  const starsHtml=sv?`${'★'.repeat(sv)}<span style="opacity:.2">${'★'.repeat(5-sv)}</span>`:'—';
+  const dirStr=t.direction==='Long'?'↑ Long':t.direction==='Short'?'↓ Short':'—';
+  const dirColor=t.direction==='Long'?'var(--green)':t.direction==='Short'?'var(--red)':'var(--text3)';
+  const structStr=t.structure==='solide'?'✓ Solide':t.structure==='fragile'?'⚠ Fragile':'—';
+  const structColor=t.structure==='solide'?'var(--green)':t.structure==='fragile'?'var(--amber)':'var(--text3)';
+  const hzStr=t.horsZone?'⚠ Hors zone':'✓ En zone';
+  const hzColor=t.horsZone?'var(--amber)':'var(--green)';
+  const ac=DB.accounts.find(a=>a.name===t.compte);
+  const acDot=ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};flex-shrink:0;display:inline-block"></span>`:'';
+  // ── Detail panel ──
+  let det=`<div class="album-kpis">
+    <div class="album-kpi ${gpCls}">
+      <div class="album-kpi-lbl">P&amp;L Net</div>
+      <div class="album-kpi-val" style="color:${gpColor}">${gpStr}</div>
+    </div>
+    <div class="album-kpi ${rrCls}">
+      <div class="album-kpi-lbl">Ratio R:R</div>
+      <div class="album-kpi-val" style="color:${rrColor}">${rrStr}</div>
+    </div>
+    <div class="album-kpi">
+      <div class="album-kpi-lbl">Direction</div>
+      <div class="album-kpi-val" style="color:${dirColor};font-size:16px">${dirStr}</div>
+    </div>
+  </div>
+  <div class="album-field-grid">
+    <div class="album-field"><div class="album-field-lbl">Session</div><div class="album-field-val">${esc(t.session||'—')}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Heure</div><div class="album-field-val" style="font-family:'DM Mono',monospace">${t.heure||'—'}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Compte</div><div class="album-field-val" style="display:flex;align-items:center;gap:5px">${acDot}${esc(t.compte||'—')}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Risque</div><div class="album-field-val" style="font-family:'DM Mono',monospace">${t.montantRisque?'$'+t.montantRisque:'—'}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Confiance</div><div class="album-field-val" style="color:#F59E0B;letter-spacing:2px;font-size:13px">${starsHtml}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Structure</div><div class="album-field-val" style="color:${structColor}">${structStr}</div></div>
+    <div class="album-field"><div class="album-field-lbl">Zone</div><div class="album-field-val" style="color:${hzColor};font-size:11px">${hzStr}</div></div>
+    <div class="album-field"><div class="album-field-lbl">État</div><div class="album-field-val">${esc(t.etat||'—')}</div></div>
+  </div>`;
+  if(t.pourquoiEntrer){det+=`<div class="album-text-block"><div class="album-text-lbl">Pourquoi entrer</div><div class="album-text-content">${esc(t.pourquoiEntrer)}</div></div>`;}
+  if(t.douteHesitation){det+=`<div class="album-text-block"><div class="album-text-lbl">Doute / Hésitation</div><div class="album-text-content">${esc(t.douteHesitation)}</div></div>`;}
+  if(t.tags&&t.tags.length){
+    det+=`<div><div style="font-size:8px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.9px;margin-bottom:6px">Tags</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${t.tags.map(tag=>`<span style="padding:2px 9px;border-radius:20px;background:var(--accent-bg);border:1px solid var(--accent-bd);color:var(--accent);font-size:11px;font-weight:600">${esc(tag)}</span>`).join('')}</div></div>`;
+  }
+  // ── Inject ──
+  document.getElementById('albumBody').innerHTML=`
+    <div class="album-img-panel">
+      ${imgHtml}
+      ${toggleHtml}
+      <button class="album-zoom-close" onclick="albumToggleZoom()">✕ Réduire</button>
+    </div>
+    <div class="album-detail-panel">${det}</div>`;
+}
+
+function albumToggleZoom(){
+  const m=document.querySelector('#albumModal .album-modal');
+  if(m)m.classList.toggle('img-zoomed');
+}
 // ── AUTH ───────────────────────────────────────────────────────────────────
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
@@ -3516,6 +4355,10 @@ async function loadApp(){
 }
 
 async function init(){
+  // Vider le cache IA si le prompt a changé de version
+  const AI_PROMPT_VER='v2';
+  const cached=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'null');
+  if(cached&&cached.promptVer!==AI_PROMPT_VER)localStorage.removeItem(AI_CACHE_KEY);
   applySidebarLight();
   applySidebarCollapsed();
   // Check if already logged in (existing session)

@@ -1,1 +1,5 @@
 /node_modules
+/dist
+/Tentative-react
+.env
+.env.local
