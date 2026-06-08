@@ -109,51 +109,102 @@ body[data-theme="dark"]{
   --header-bg:rgba(12,14,20,.94);
 }
 
-/* ── Warm Gold ──────────────────────────────────────────────────────────── */
+/* ── Luxe Lumineux — Alabaster & Gold ───────────────────────────────────── */
 body[data-theme="gold"]{
-  --bg:#F7F3EA;
-  --bg2:#EEE7D8;
-  --surface:#FFFEF8;
-  --surface2:#F8F4EB;
-  --surface3:#F0E9DA;
-  --border:rgba(80,50,10,.12);
-  --border2:rgba(80,50,10,.06);
-  --text:#1E1608;
-  --text2:#3A2E10;
-  --text3:#7A6438;
-  --text4:#AA9060;
-  --accent:#6B4E14;
-  --accent2:#4E3808;
-  --accent-bg:rgba(107,78,20,.07);
-  --accent-bd:rgba(107,78,20,.2);
-  --gold:#6B4E14;
-  --gold-bg:rgba(107,78,20,.07);
-  --gold-bd:rgba(107,78,20,.2);
-  --green:#2A5C3A;
-  --green-bg:rgba(42,92,58,.07);
-  --green-bd:rgba(42,92,58,.2);
-  --red:#8A3020;
-  --red-bg:rgba(138,48,32,.07);
-  --red-bd:rgba(138,48,32,.2);
-  --amber:#8A5E12;
-  --amber-bg:rgba(138,94,18,.07);
-  --amber-bd:rgba(138,94,18,.2);
-  --blue:#2B5491;
-  --blue-bg:rgba(43,84,145,.07);
-  --blue-bd:rgba(43,84,145,.2);
-  --sh:0 1px 3px rgba(40,20,0,.07),0 1px 2px rgba(40,20,0,.05);
-  --shl:0 6px 20px rgba(40,20,0,.12),0 2px 6px rgba(40,20,0,.07);
-  --shfocus:0 0 0 3px rgba(107,78,20,.22);
-  --sb-bg:#3A2208;
-  --sb-border:rgba(240,210,150,.1);
-  --sb-text:rgba(240,210,150,.52);
-  --sb-text-h:rgba(240,210,150,.88);
+  /* Backgrounds */
+  --bg:#FDFBF7;
+  --bg2:#F5F1E8;
+  --surface:#FFFFFF;
+  --surface2:#FAFAF8;
+  --surface3:#F4F1EA;
+  /* Borders */
+  --border:rgba(179,143,55,.18);
+  --border2:rgba(179,143,55,.09);
+  /* Typography */
+  --text:#1C1C1E;
+  --text2:#3A3A3C;
+  --text3:#68686E;
+  --text4:#AEAEB2;
+  /* Accent — or riche */
+  --accent:#B38F37;
+  --accent2:#9A7B36;
+  --accent-bg:rgba(179,143,55,.07);
+  --accent-bd:rgba(179,143,55,.22);
+  /* Gold */
+  --gold:#B38F37;
+  --gold-bg:rgba(179,143,55,.07);
+  --gold-bd:rgba(179,143,55,.22);
+  /* P&L */
+  --green:#1A6640;
+  --green-bg:rgba(26,102,64,.07);
+  --green-bd:rgba(26,102,64,.22);
+  --red:#C0392B;
+  --red-bg:rgba(192,57,43,.07);
+  --red-bd:rgba(192,57,43,.22);
+  --amber:#B38F37;
+  --amber-bg:rgba(179,143,55,.07);
+  --amber-bd:rgba(179,143,55,.22);
+  --blue:#2558CE;
+  --blue-bg:rgba(37,88,206,.07);
+  --blue-bd:rgba(37,88,206,.2);
+  /* Shadows */
+  --sh:0 4px 18px rgba(154,123,54,.05),0 1px 3px rgba(154,123,54,.08);
+  --shl:0 12px 36px rgba(154,123,54,.12),0 4px 10px rgba(154,123,54,.07);
+  --shfocus:0 0 0 3px rgba(179,143,55,.22);
+  /* Sidebar — deep midnight navy pour contraste premium */
+  --sb-bg:#12100D;
+  --sb-border:rgba(212,175,55,.1);
+  --sb-text:rgba(212,175,55,.45);
+  --sb-text-h:rgba(212,175,55,.85);
   --sb-text-active:#F5E8C8;
-  --sb-hover:rgba(255,255,255,.05);
-  --sb-active-bg:rgba(212,168,76,.13);
-  --sb-active-bar:#D4A84C;
-  --sb-section:rgba(240,210,150,.18);
-  --header-bg:rgba(247,243,234,.94);
+  --sb-hover:rgba(212,175,55,.06);
+  --sb-active-bg:rgba(212,175,55,.12);
+  --sb-active-bar:#D4AF37;
+  --sb-section:rgba(212,175,55,.18);
+  /* Header — glassmorphism Apple */
+  --header-bg:rgba(253,251,247,.8);
+  /* Border radii légèrement plus arrondis (iOS feel) */
+  --r:7px;
+  --rl:11px;
+  --rxl:16px;
+}
+
+/* ── Gold : glassmorphism header ─────────────────────────────────────────── */
+body[data-theme="gold"] .page-header{
+  background:rgba(253,251,247,.8);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(179,143,55,.14);
+}
+
+/* ── Gold : boutons primaires avec dégradé solaire ──────────────────────── */
+body[data-theme="gold"] .btn-primary{
+  background:linear-gradient(135deg,#B38F37 0%,#D4AF37 100%);
+  color:#FFFFFF;
+  box-shadow:0 4px 18px rgba(154,123,54,.28);
+  border:none;
+}
+body[data-theme="gold"] .btn-primary:hover{
+  background:linear-gradient(135deg,#9A7B36 0%,#B38F37 100%);
+  box-shadow:0 6px 24px rgba(154,123,54,.38);
+}
+
+/* ── Gold : cartes avec ombre douce ─────────────────────────────────────── */
+body[data-theme="gold"] .card,
+body[data-theme="gold"] .stat-card{
+  box-shadow:0 4px 18px rgba(154,123,54,.05),0 1px 3px rgba(154,123,54,.08);
+  border-color:rgba(179,143,55,.14);
+}
+
+/* ── Gold : FAB dégradé solaire ─────────────────────────────────────────── */
+body[data-theme="gold"] #fab{
+  background:linear-gradient(135deg,#B38F37 0%,#D4AF37 100%);
+  box-shadow:0 4px 18px rgba(154,123,54,.32);
+}
+
+/* ── Gold : nav active bar ──────────────────────────────────────────────── */
+body[data-theme="gold"] .nav-item.active{
+  box-shadow:inset 0 0 0 1px rgba(212,175,55,.12);
 }
 
 /* ─── BASE ──────────────────────────────────────────────────────── */

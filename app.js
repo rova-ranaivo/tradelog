@@ -1,3 +1,42 @@
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  TABLE OF CONTENTS  —  app.js                                           ║
+// ╠══════════════════════════════════════════════════════════════════════════╣
+// ║  L.43    SUPABASE (client init)                                          ║
+// ║  L.48    SUPABASE: TRADES (sbLoadTrades, sbSaveTrade…)                  ║
+// ║  L.63    SUPABASE: ACCOUNTS (sbLoadAccounts, sbSaveAccount…)            ║
+// ║  L.82    SUPABASE: CASHFLOW (sbLoadCashflow, sbSaveCashflow…)           ║
+// ║  L.111   STATE / CONSTANTS                                               ║
+// ║  L.137   LOCAL DB (loadApp, DB object)                                   ║
+// ║  L.177   HELPERS (fmtD, fmtN, esc, stats…)                              ║
+// ║  L.183   RR / SESSION CALC (calcRR, calcSession, calcHorsZone…)         ║
+// ║  L.261   NAVIGATION / SIDEBAR (showPage, toggleSidebar…)                ║
+// ║  L.290   DASHBOARD (renderDash, renderPills, renderDashFilter…)         ║
+// ║  L.379     renderDash()                                                  ║
+// ║  L.452     getDisciplineAudit()                                          ║
+// ║  L.468     renderDisciplineBanner()                                      ║
+// ║  L.588   THEME (setTheme, toggleTheme, _applyChartTheme)                ║
+// ║  L.610   CHARTS SETUP                                                    ║
+// ║  L.617     getChartTheme()                                               ║
+// ║  L.712   AI COACH (fetchAIInterpretation, renderAICoach…)               ║
+// ║  L.932   renderCharts()                                                  ║
+// ║  L.1224  DASHBOARD BOTTOM (renderEnCours, renderDashBottom…)            ║
+// ║  L.1439  JOURNAL (renderJournal, renderJTable, getFT…)                  ║
+// ║  L.1588    renderJTable()                                                ║
+// ║  L.1650  TRADE MODAL (openTradeModal, saveTradeModal…)                  ║
+// ║  L.1685    buildForm()                                                   ║
+// ║  L.1894  DETAIL MODAL (openDetailModal)                                  ║
+// ║  L.1926  CALENDAR (renderCalendar)                                       ║
+// ║  L.2043  CASHFLOW PAGE (renderCashflow)                                  ║
+// ║  L.2158  ACCOUNTS PAGE (renderAccounts)                                  ║
+// ║  L.2219  RULES PAGE (renderRules)                                        ║
+// ║  L.2244  SETTINGS PAGE (renderSettings)                                  ║
+// ║  L.2375  CSV / JSON EXPORT                                               ║
+// ║  L.2411  ALBUM VIEW (renderAlbum)                                        ║
+// ║  L.2543  AUTH (login, logout)                                            ║
+// ║  L.2578  INIT (DOMContentLoaded)                                         ║
+// ║  L.2600  LOADING (startLoadingCycle, hideLoadingScreen)                  ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
 // ── SUPABASE ──────────────────────────────────────────────────────────────
 const SUPABASE_URL='https://nakykfuduehcwsjuicpb.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ha3lrZnVkdWVoY3dzanVpY3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTM0MjAsImV4cCI6MjA4ODk4OTQyMH0.dGd4UnYdzOZRrExSW22AJE4RJEtU8y4U4SuXvOY-MMQ';
@@ -576,16 +615,16 @@ function getChartTheme(){
   const t=document.body.dataset.theme||'light';
   const dk=t==='dark',gd=t==='gold';
   return{
-    win:       dk?'#10B981':'#276A44',
-    loss:      dk?'#F43F5E':'#8A3530',
-    winBg:     dk?'rgba(16,185,129,.78)':'rgba(39,106,68,.82)',
-    lossBg:    dk?'rgba(244,63,94,.72)':'rgba(138,53,48,.78)',
-    winFill:   dk?'rgba(16,185,129,.12)':'rgba(39,106,68,.10)',
-    lossFill:  dk?'rgba(244,63,94,.14)':'rgba(138,53,48,.12)',
-    midBg:     dk?'rgba(245,158,11,.68)':'rgba(138,94,18,.75)',
-    emptyBg:   dk?'rgba(255,255,255,.10)':'rgba(180,180,180,.25)',
-    grid:      dk?'rgba(255,255,255,.05)':gd?'rgba(80,50,10,.06)':'rgba(28,24,16,.06)',
-    ttBorder:  dk?'rgba(59,130,246,.2)':gd?'rgba(107,78,20,.2)':'rgba(37,88,206,.15)'
+    win:       dk?'#10B981':gd?'#1A6640':'#276A44',
+    loss:      dk?'#F43F5E':gd?'#C0392B':'#8A3530',
+    winBg:     dk?'rgba(16,185,129,.78)':gd?'rgba(26,102,64,.80)':'rgba(39,106,68,.82)',
+    lossBg:    dk?'rgba(244,63,94,.72)':gd?'rgba(192,57,43,.75)':'rgba(138,53,48,.78)',
+    winFill:   dk?'rgba(16,185,129,.12)':gd?'rgba(26,102,64,.10)':'rgba(39,106,68,.10)',
+    lossFill:  dk?'rgba(244,63,94,.14)':gd?'rgba(192,57,43,.10)':'rgba(138,53,48,.12)',
+    midBg:     dk?'rgba(245,158,11,.68)':gd?'rgba(212,175,55,.72)':'rgba(138,94,18,.75)',
+    emptyBg:   dk?'rgba(255,255,255,.10)':gd?'rgba(179,143,55,.15)':'rgba(180,180,180,.25)',
+    grid:      dk?'rgba(255,255,255,.05)':gd?'rgba(179,143,55,.08)':'rgba(28,24,16,.06)',
+    ttBorder:  dk?'rgba(59,130,246,.2)':gd?'rgba(179,143,55,.25)':'rgba(37,88,206,.15)'
   };
 }
 
