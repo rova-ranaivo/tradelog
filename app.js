@@ -257,8 +257,8 @@ async function refreshApp(){
 }
 
 // ── SIDEBAR MOBILE ────────────────────────────────────────────────────────
-function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');}
-function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('open');}
+function toggleSidebar(){const open=document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');document.body.classList.toggle('sidebar-open',open);}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('open');document.body.classList.remove('sidebar-open');}
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
 const PTitles={dashboard:'Dashboard',report:'Rapport & Analyse',journal:'Journal de trades',calendar:'Calendrier',cashflow:'Dépôts & Retraits',accounts:'Gestion des comptes',rules:'Règles & Checklist',settings:'Paramètres'};
