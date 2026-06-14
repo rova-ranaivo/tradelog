@@ -87,6 +87,10 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <span class="nav-label">Dashboard</span>
     </button>
+    <button class="nav-item" data-page="report" onclick="showPage('report');closeSidebar()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+      <span class="nav-label">Rapport</span>
+    </button>
     <button class="nav-item" data-page="journal" onclick="showPage('journal');closeSidebar()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
       <span class="nav-label">Journal</span>
@@ -180,47 +184,66 @@
           <div class="ch"><canvas id="cTrades"></canvas></div>
         </div>
       </div>
-      <div class="charts-row" style="margin-top:8px">
+      <div id="dashEnCours" style="margin-top:8px"></div>
+      <!-- AI Coach -->
+      <div id="dashAICoach"></div>
+    </div>
+
+    <!-- REPORT -->
+    <div id="page-report" class="page">
+      <div class="dash-hero" id="reportHero">
+        <div class="dash-hero-top">
+          <div class="dash-hero-acc-row">
+            <div class="acc-pills" id="reportPills"></div>
+          </div>
+          <div class="dash-hero-filter-row" id="reportFilterBar"></div>
+        </div>
+      </div>
+      <!-- Gain Net par Instrument — full width, barres horizontales -->
+      <div style="margin-top:8px">
         <div class="card" style="cursor:pointer">
           <div class="card-head">
             <span class="card-head-title">Gain Net — Instrument</span>
-            <span class="card-head-hint">↗</span>
+            <span class="card-head-hint">↗ cliquer</span>
           </div>
-          <div class="ch-sm"><canvas id="cInstr"></canvas></div>
+          <div id="rInstrWrap" style="position:relative;width:100%;height:200px"><canvas id="rInstr"></canvas></div>
         </div>
-        <div class="card" style="cursor:pointer">
-          <div class="card-head">
-            <span class="card-head-title">Gain Net — Jour</span>
-            <span class="card-head-hint">↗</span>
-          </div>
-          <div class="ch-sm"><canvas id="cDay"></canvas></div>
-        </div>
+      </div>
+      <!-- Distribution · Stars · Classement -->
+      <div class="charts-row" style="margin-top:8px;grid-template-columns:1fr 1fr 1.4fr">
         <div class="card" style="cursor:pointer">
           <div class="card-head">
             <span class="card-head-title">Distribution W/L/BE</span>
             <span class="card-head-hint">↗</span>
           </div>
-          <div class="ch-sm"><canvas id="cDist"></canvas></div>
+          <div class="ch-sm"><canvas id="rDist"></canvas></div>
         </div>
         <div class="card">
           <div class="card-head">
             <span class="card-head-title">Win Rate / Confiance ★</span>
             <span class="card-head-hint">par note 1-5</span>
           </div>
-          <div class="ch-sm"><canvas id="cStars"></canvas></div>
+          <div class="ch-sm"><canvas id="rStars"></canvas></div>
+        </div>
+        <div class="card" id="reportTopInstrCard"></div>
+      </div>
+      <!-- Performance par Jour — full width -->
+      <div style="margin-top:8px">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-head-title">Performance par Jour</span>
+            <span class="card-head-hint">ligne cliquable</span>
+          </div>
+          <div id="rDay" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -1px"></div>
         </div>
       </div>
       <!-- Extra metrics row -->
-      <div class="dash-metrics-row" id="dashMetricsRow" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px"></div>
-      <!-- Bottom section -->
-      <div class="dash-bottom" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);gap:8px;margin-top:8px">
-        <div class="card" id="dashStreakCard"></div>
-        <div class="card" id="dashPerfCard"></div>
-        <div class="card" id="dashTopInstrCard"></div>
+      <div class="dash-metrics-row" id="reportMetricsRow" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:8px"></div>
+      <!-- Streaks + Best/Worst -->
+      <div class="dash-bottom" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="card" id="reportStreakCard"></div>
+        <div class="card" id="reportPerfCard"></div>
       </div>
-      <div id="dashEnCours" style="margin-top:8px"></div>
-      <!-- AI Coach -->
-      <div id="dashAICoach"></div>
     </div>
 
     <!-- JOURNAL -->

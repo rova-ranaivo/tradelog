@@ -249,16 +249,34 @@ Compat ascendante : `structureSolide` (bool) → `structure` ; `confiance` (1–
 
 ## Responsive
 
+**RÈGLE ABSOLUE : toute nouvelle fonctionnalité DOIT être testée et fonctionner sur mobile (≤768px) et tablette (≤1100px). Ne jamais ajouter de layout sans vérifier la cascade responsive.**
+
 | Breakpoint | Changements |
 |---|---|
-| ≤1100px | Grilles 2 cols |
-| ≤900px | Charts 1 col, sidebar 200px |
+| ≤1280px | `.charts-row` → 2 cols |
+| ≤1100px | Grilles 2 cols, `.charts-row` 2 cols |
+| ≤900px | Tout 1 col, sidebar 200px, `#reportMetricsRow` 2 cols |
 | ≤768px | Sidebar cachée, hamburger visible, margin-left:0 |
-| ≤600px | Journal en cartes |
-| ≤480px | `.disc-banner` 2 cols, paddings réduits |
+| ≤600px | Journal en cartes, Report day-table font réduit |
+| ≤480px | `.disc-banner` 2 cols, paddings réduits, pills plus petites |
+| ≤420px | J-cards forcé 1 col |
 
-**Hamburger** : présent (`#hamburger`), `display:none` par défaut, `display:flex` à ≤768px.
-**overflow-x fix** : `html{overflow-x:hidden}` uniquement sur `html` — pas sur `body` (bug Safari iOS).
+### Règles anti-overflow mobile
+- `html{overflow-x:hidden}` sur `html` uniquement — PAS sur `body` (bug Safari iOS)
+- Les media queries `.charts-row` ont `!important` pour écraser les `style=""` inline
+- `#reportMetricsRow` : 3 cols ≤1100px, 2 cols ≤900px et ≤768px — régler via CSS, pas inline
+- Tables larges (leaderboard, cashflow, day-table) : toujours entourer d'un `overflow-x:auto`
+- Nouveaux grids inline (`style="grid-template-columns:..."`) : toujours ajouter la règle CSS correspondante avec `!important` dans un `@media`
+
+### Hamburger & iOS PWA
+- `#hamburger` : `display:none` par défaut, `display:flex` à ≤768px
+- iOS standalone : `touchend` listener + `transform:translateZ(0)` + `isolation:isolate` sur `.hamburger`
+
+### Page Rapport — IDs responsive à maintenir
+- `#reportMetricsRow` (≤1100px: 3col, ≤900px: 2col)
+- `#reportTopInstrCard` (overflow-x:auto à ≤600px)
+- `#rInstrWrap` (overflow-x:auto à ≤600px pour les barres horizontales)
+- `#rDay` (font réduit à ≤600px)
 
 ---
 
