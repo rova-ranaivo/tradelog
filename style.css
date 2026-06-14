@@ -386,7 +386,7 @@ body.sidebar-light .theme-lbl{color:var(--text4)}
 
 /* ─── CHARTS ─────────────────────────────────────────────────────── */
 .charts-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px;margin-bottom:8px}
-.charts-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.charts-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
 .chart-title{font-size:10px;font-weight:700;margin-bottom:12px;color:var(--text4);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
 .chart-hint{font-size:9.5px;color:var(--text4);font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;opacity:.7}
 .ch{position:relative;width:100%;height:195px}
@@ -1097,11 +1097,11 @@ tr.tr-data:nth-child(even):hover td{background:var(--surface3)}
 }
 .dash-hero-acc-row {
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding:10px 24px 9px
+  padding:13px 24px 16px
 }
 .dash-hero-filter-row {
   display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;
-  padding:8px 24px 10px;
+  padding:12px 24px 13px;
   border-top:1px solid var(--border2);
   background:var(--surface2)
 }
@@ -1111,12 +1111,20 @@ tr.tr-data:nth-child(even):hover td{background:var(--surface3)}
   border-color:var(--border);
   color:var(--text3)
 }
+.dash-hero-acc-row .acc-pill:not(.active) {
+  background:var(--bg);
+  border-color:var(--border2);
+  color:var(--text4);
+  opacity:.7
+}
+.dash-hero-acc-row .acc-pill:not(.active) > span { opacity:.28 }
 .dash-hero-acc-row .acc-pill:hover {
+  opacity:1;
   background:var(--surface3);
   border-color:var(--accent-bd);
   color:var(--text)
 }
-.dash-hero-acc-row .acc-pill.active { color:#fff;border-color:transparent }
+.dash-hero-acc-row .acc-pill.active { color:#fff;border-color:transparent;opacity:1 }
 .dash-hero-filter-row .dash-period-pill {
   background:var(--surface3);
   border-color:var(--border)
@@ -1199,7 +1207,7 @@ tr.tr-data:nth-child(even):hover td{background:var(--surface3)}
 }
 .card-head-title {
   font-size:9px;font-weight:700;
-  color:var(--text4);
+  color:var(--text2);
   letter-spacing:1.5px;text-transform:uppercase
 }
 .card-head-sub {
@@ -1829,8 +1837,6 @@ html{touch-action:manipulation}
 /* ── Séparateurs de sections — cachés sur desktop ── */
 .mob-sep{display:none}
 
-/* ── CTA mobile — caché sur desktop ── */
-.mob-trade-cta{display:none}
 
 /* ════════════════════════════════════════════════════════════════════════
    Tout ce qui suit s'applique UNIQUEMENT au mobile (≤ 768px)
@@ -1989,40 +1995,6 @@ html{touch-action:manipulation}
   body.sidebar-light .nav-item.active::before{background:var(--accent)}
   body.sidebar-light .mob-sep{color:var(--text4)}
 
-  /* ── CTA Nouveau trade ── */
-  .mob-trade-cta{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    /* Hors du .nav, juste avant .sidebar-foot */
-    margin:10px 14px 4px;
-    padding:13px 16px;
-    background:var(--accent);
-    color:#fff;
-    border:none;
-    border-radius:11px;
-    font-size:13.5px;
-    font-weight:700;
-    font-family:inherit;
-    letter-spacing:.1px;
-    cursor:pointer;
-    flex-shrink:0;
-    box-shadow:0 4px 14px rgba(0,0,0,.2);
-    /* Composite-only */
-    transition:opacity .12s ease, transform .12s ease;
-    touch-action:manipulation;
-  }
-  .mob-trade-cta:active{
-    opacity:.88;
-    transform:scale(.97);
-  }
-  /* Thème or : dégradé gold */
-  body[data-theme="gold"] .mob-trade-cta{
-    background:linear-gradient(135deg,#B38F37,#D4AF37);
-    box-shadow:0 4px 14px rgba(154,123,54,.32);
-  }
-
   /* ── Sidebar footer ── */
   .sidebar-foot{
     padding:10px 8px;
@@ -2041,3 +2013,11 @@ html{touch-action:manipulation}
   }
 
 } /* fin @media 768px */
+
+/* ─── REPORT PAGE — overrides spécifiques ────────────────────────── */
+/* rHour : hauteur réduite, pas de whitespace excessif */
+#rHourWrap { height: 155px }
+/* Leaderboard card : flex pour remplir la hauteur de la grille */
+#page-report .charts-row > .card { display:flex;flex-direction:column }
+#page-report .charts-row > .card .ch-sm { flex:1;height:auto;min-height:155px }
+@media(max-width:768px){ #rHourWrap { height:130px } }

@@ -1072,10 +1072,6 @@ function renderCharts(f){
     }
   }
 
-  // ── Par session
-  const sm={};f.forEach(t=>{if(!t.session)return;if(!sm[t.session])sm[t.session]=[];sm[t.session].push(t);});
-  const smKeys=Object.keys(sm);
-  mkGainChart('cSession',smKeys.map(s=>s.length>10?s.slice(0,10)+'…':s),smKeys.map(k=>gainNet(sm[k])),smKeys.map(k=>sm[k].length),null,idx=>openTradeListModal(sm[smKeys[idx]],`Session — ${smKeys[idx]}`));
 }
 
 // ── MODULE-LEVEL CHART HELPERS ────────────────────────────────────────────
@@ -1108,7 +1104,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
     data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:bgs,borderRadius:6,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,
       indexAxis:horizontal?'y':'x',
-      layout:{padding:horizontal?{right:60,left:4,top:2,bottom:2}:{top:24,bottom:2}},
+      layout:{padding:horizontal?{right:64,left:8,top:4,bottom:4}:{top:24,bottom:2}},
       onClick:(e,els)=>{if(!els.length||!filterFn)return;filterFn(els[0].index);},
       plugins:{legend:{display:false},tooltip:{
         backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
@@ -1221,6 +1217,63 @@ function renderReportCharts(f){
           x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},padding:4}},
           y:{grid:{color:'rgba(28,24,16,.06)',lineWidth:1},border:{display:false},beginAtZero:true,
             ticks:{font:{size:10},padding:6,maxTicksLimit:5}}
+        }
+      }
+    });
+  }
+
+  // ── Gain Net par Heure (heures tradées uniquement, triées 00→23)
+  dc('rHour');
+  const ctxH=document.getElementById('rHour')?.getContext('2d');
+  if(ctxH){
+    const hm={};
+    f.forEach(t=>{
+      if(!t.heure||t.resultat==='En cours'||t.gainPerte===''||t.gainPerte===undefined||isNaN(parseFloat(t.gainPerte)))return;
+      const h=t.heure.slice(0,2);
+      if(!hm[h])hm[h]=[];
+      hm[h].push(t);
+    });
+    // Trier chronologiquement
+    const hKeys=Object.keys(hm).sort();
+    const hVals=hKeys.map(k=>gainNet(hm[k]));
+    const hCounts=hKeys.map(k=>hm[k].length);
+    const hLabels=hKeys.map(h=>h+'h');
+    const _cth=getChartTheme();
+    const hBgs=hVals.map(v=>v>=0?_cth.winBg:_cth.lossBg);
+    const dlH={id:'dl_rHour',afterDatasetsDraw(chart){
+      const{ctx:c,data}=chart;
+      data.datasets[0].data.forEach((val,i)=>{
+        if(!val)return;
+        const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
+        const isPos=val>=0,a=Math.abs(val);
+        const lbl=a>=1000?`${isPos?'+':'-'}$${(a/1000).toFixed(1)}k`:`${isPos?'+':'-'}$${a.toFixed(0)}`;
+        c.save();c.font='400 10px "Inter",system-ui,sans-serif';
+        c.fillStyle=isPos?_cth.win:_cth.loss;
+        c.textAlign='center';c.textBaseline=isPos?'bottom':'top';
+        c.fillText(lbl,bar.x,isPos?bar.y-4:bar.y+4);c.restore();
+      });
+    }};
+    charts['rHour']=new Chart(ctxH,{type:'bar',plugins:[dlH],
+      data:{labels:hLabels,datasets:[{data:hVals,backgroundColor:hBgs,borderRadius:5,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        layout:{padding:{top:22,bottom:2}},
+        onClick:(e,els)=>{if(!els.length)return;const k=hKeys[els[0].index];openTradeListModal(hm[k],`Heure — ${k}h`);},
+        plugins:{legend:{display:false},tooltip:{
+          backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
+          titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
+          borderColor:_cth.ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+          callbacks:{
+            label:v=>{const val=v.parsed.y;return` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;},
+            afterLabel:ctx2=>{const n=hCounts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;}
+          }
+        }},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{font:{size:11},padding:4}},
+          y:{grid:{color:_cth.grid,lineWidth:1},border:{display:false},beginAtZero:true,
+            ticks:{font:{size:10},maxTicksLimit:5,padding:6,
+              callback:v=>{if(v===0)return'0';const a=Math.abs(v);return(v>0?'+':'-')+'$'+(a>=1000?(a/1000).toFixed(0)+'k':a.toFixed(0));}
+            }
+          }
         }
       }
     });

@@ -123,11 +123,6 @@
       <span class="nav-label">Paramètres</span>
     </button>
   </nav>
-  <!-- CTA mobile : saisie rapide de trade -->
-  <button class="mob-trade-cta" onclick="openTradeModal();closeSidebar()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Nouveau trade
-  </button>
   <div class="sidebar-foot">
     <button class="refresh-btn" id="refreshBtn" onclick="refreshApp()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.13"/></svg>
@@ -171,20 +166,13 @@
       <!-- Secondary stat cards -->
       <div class="stats-grid" id="dashStats" style="margin-top:8px"></div>
       <!-- Charts -->
-      <div class="charts-grid" style="margin-top:8px">
+      <div style="margin-top:8px">
         <div class="card">
           <div class="card-head">
             <span class="card-head-title">Courbe de Capital</span>
             <span id="capitalSubtitle" class="card-head-sub"></span>
           </div>
           <div class="ch"><canvas id="cCapital"></canvas></div>
-        </div>
-        <div class="card" style="cursor:pointer">
-          <div class="card-head">
-            <span class="card-head-title">Gain Net — Session</span>
-            <span class="card-head-hint">↗ cliquer</span>
-          </div>
-          <div class="ch"><canvas id="cSession"></canvas></div>
         </div>
       </div>
       <div style="margin-top:8px">
@@ -238,6 +226,16 @@
           <div class="ch-sm"><canvas id="rStars"></canvas></div>
         </div>
         <div class="card" id="reportTopInstrCard"></div>
+      </div>
+      <!-- Performance par Heure — full width -->
+      <div style="margin-top:8px">
+        <div class="card" style="cursor:pointer">
+          <div class="card-head">
+            <span class="card-head-title">Gain Net — Par Heure</span>
+            <span class="card-head-hint">↗ cliquer · heures tradées uniquement</span>
+          </div>
+          <div class="ch" id="rHourWrap"><canvas id="rHour"></canvas></div>
+        </div>
       </div>
       <!-- Performance par Jour — full width -->
       <div style="margin-top:8px">
