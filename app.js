@@ -123,6 +123,7 @@ let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new 
 let dashPeriod='all',dashCustomFrom='',dashCustomTo='';
 let dashWeekOffset=0,dashMonthOffset=0,dashYearOffset=0;
 let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week',rNonProfitable:'',horsSession:''};
+let jViewMode='table'; // 'table' | 'cards'
 let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0]||'#2558CE';
@@ -1513,7 +1514,15 @@ function renderJFilters(){
       <option value="en" ${jFilters.horsSession==='en'?'selected':''}>En session</option>
     </select>
     <button class="btn btn-ghost btn-sm" onclick="resetJF()">✕ Reset</button>
-    <div style="margin-left:auto;display:flex;gap:7px">
+    <div style="margin-left:auto;display:flex;gap:7px;align-items:center">
+      <div class="j-view-toggle">
+        <button class="j-view-btn ${jViewMode==='table'?'active':''}" onclick="toggleJView('table')" title="Vue liste">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><rect y="1" width="16" height="2.5" rx="1.2"/><rect y="6.5" width="16" height="2.5" rx="1.2"/><rect y="12" width="16" height="2.5" rx="1.2"/></svg>
+        </button>
+        <button class="j-view-btn ${jViewMode==='cards'?'active':''}" onclick="toggleJView('cards')" title="Vue cartes">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>
+        </button>
+      </div>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
     </div>`;
 }
@@ -1582,7 +1591,9 @@ function renderJSummary(){
     </div>
   </div>`;
 }
+function toggleJView(mode){jViewMode=mode;renderJFilters();renderJTable();}
 function renderJTable(){
+  if(jViewMode==='cards'){renderJCards();return;}
   const trades=getFT();
   if(!trades.length){document.getElementById('jTable').innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
   let h=`<div class="jl-wrap">
@@ -1642,6 +1653,75 @@ function renderJTable(){
   });
   h+='</div>';
   document.getElementById('jTable').innerHTML=h;
+}
+
+function renderJCards(){
+  const trades=getFT();
+  const el=document.getElementById('jTable');
+  if(!trades.length){el.innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
+  let h='<div class="j-cards-grid">';
+  trades.forEach(t=>{
+    const ac=DB.accounts.find(a=>a.name===t.compte);
+    const rr=calcRR(t);
+    const gp=parseFloat(t.gainPerte)||0;
+    const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
+    const isUndisciplined=t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
+    // Screenshot priority: LTF > MTF > HTF > avant
+    const scrLTF=(t.screenshotLTF||'').trim();
+    const scrMTF=(t.screenshotMTF||t.screenshotApres||'').trim();
+    const scrHTF=(t.screenshotHTF||t.screenshotAvant||t.screenshot||'').trim();
+    const scrUrl=scrLTF||scrMTF||scrHTF;
+    const scrLabel=scrLTF?'LTF':scrMTF?'MTF':scrHTF?'HTF':'';
+    const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
+    const safeUrl=scrUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const resClass=t.resultat==='Win'?'jc-win':t.resultat==='Loss'?'jc-loss':t.resultat==='Breakeven'?'jc-be':t.resultat==='En cours'?'jc-encours':'';
+    const resColor=t.resultat==='Win'?'var(--green)':t.resultat==='Loss'?'var(--red)':t.resultat==='Breakeven'?'var(--amber)':'var(--blue)';
+    const gpColor=gp>0?'var(--green)':gp<0?'var(--red)':'var(--text3)';
+    const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
+    const dirIcon=t.direction==='Long'?'↑':t.direction==='Short'?'↓':'';
+    const dirColor=t.direction==='Long'?'var(--green)':t.direction==='Short'?'var(--red)':'';
+    const starsHtml=sv?[1,2,3,4,5].map(n=>`<span style="color:${n<=sv?'var(--amber)':'var(--border2)'};font-size:11px;line-height:1">★</span>`).join(''):'';
+    const rrStr=rr!==null?`<span style="font-size:11px;color:${rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)'};font-family:'DM Mono',monospace;font-weight:600">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:'';
+    const auditReasons=isUndisciplined&&t.resultat!=='En cours'?getAuditReasons(t):[];
+    const disciplineBdg=auditReasons.length?`<span class="_audit-badge" style="font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);cursor:help;white-space:nowrap" data-audit="${esc(auditReasons.map(r=>'• '+r).join('\n'))}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">⚠ INDISCIPLINE</span>`:'';
+    const rnpBdg=isRNonProfitable(t)?`<span style="font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue);white-space:nowrap">R NON PROFIT.</span>`:'';
+    h+=`<div class="j-card ${resClass}" onclick="openAlbumView('${t.id}')">
+      <div class="j-card-thumb">
+        ${hasImg
+          ?`<img src="${scrUrl}" alt="" loading="lazy" onerror="this.parentElement.classList.add('j-card-thumb-err');this.remove()"/>`
+          :`<div class="j-card-no-img"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Pas de capture</span></div>`
+        }
+        <div class="j-card-thumb-overlay" style="--res-color:${resColor}"></div>
+        ${scrLabel?`<div class="j-card-scr-label">${scrLabel}</div>`:''}
+        <div class="j-card-res-pill" style="--res-color:${resColor}">${t.resultat||'—'}</div>
+      </div>
+      <div class="j-card-body">
+        <div class="j-card-top">
+          <div class="j-card-instr">
+            ${ac?`<span class="j-card-acc-dot" style="background:${ac.color}"></span>`:''}
+            <span class="j-card-instr-name">${esc(t.instrument||'—')}</span>
+            ${dirIcon?`<span class="j-card-dir" style="color:${dirColor}">${dirIcon}</span>`:''}
+          </div>
+          ${starsHtml?`<div class="j-card-stars">${starsHtml}</div>`:''}
+        </div>
+        <div class="j-card-pnl" style="color:${gpColor}">${gpStr}</div>
+        <div class="j-card-meta">
+          <span>${fmtD(t.date)}${t.heure?` · ${t.heure}`:''}</span>
+          ${t.session?`<span class="j-card-dot">·</span><span>${esc(t.session)}</span>`:''}
+        </div>
+        ${(disciplineBdg||rnpBdg)?`<div class="j-card-badges">${disciplineBdg}${rnpBdg}</div>`:''}
+        <div class="j-card-footer" onclick="event.stopPropagation()">
+          <div>${rrStr}</div>
+          <div class="j-card-actions">
+            <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier" style="padding:4px 9px">✎</button>
+            <button class="btn-ghost btn-sm" style="color:var(--red);padding:4px 9px" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+  el.innerHTML=h;
 }
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
@@ -2631,6 +2711,16 @@ async function init(){
     hideLoadingScreen();
   }
 }
+// iOS standalone PWA : le backdrop-filter du header peut intercepter les
+// touch events sur le bouton hamburger. On force un listener touchend.
+(function(){
+  const btn=document.getElementById('hamburger');
+  if(btn)btn.addEventListener('touchend',function(e){
+    e.preventDefault(); // empêche le click fantôme iOS 300ms
+    toggleSidebar();
+  },{passive:false});
+})();
+
 let _resizeTm;
 window.addEventListener('resize',()=>{
   clearTimeout(_resizeTm);
