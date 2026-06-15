@@ -215,6 +215,31 @@ function stats(trades){
   return{total:closed.length,wins:w,losses:l,be:b,winRate:closed.length?Math.round(w/closed.length*100):0,avgRR,pnl};
 }
 
+function maxDrawdown(trades,startCap){
+  const sorted=[...trades]
+    .filter(t=>t.resultat!=='En cours'&&!isNaN(parseFloat(t.gainPerte))&&t.date)
+    .sort((a,b)=>a.date.localeCompare(b.date)||(a.heure||'').localeCompare(b.heure||''));
+  if(!sorted.length)return{abs:0,pct:0};
+  let eq=startCap||0,peak=eq,maxDD=0,maxDDPct=0;
+  sorted.forEach(t=>{
+    eq+=parseFloat(t.gainPerte);
+    if(eq>peak)peak=eq;
+    const dd=peak-eq;
+    if(dd>maxDD){maxDD=dd;maxDDPct=peak>0?(dd/peak)*100:0;}
+  });
+  return{abs:parseFloat(maxDD.toFixed(2)),pct:parseFloat(maxDDPct.toFixed(1))};
+}
+function expectancy(trades){
+  const closed=trades.filter(t=>t.resultat!=='En cours'&&!isNaN(parseFloat(t.gainPerte)));
+  if(!closed.length)return 0;
+  const wins=closed.filter(t=>t.resultat==='Win');
+  const losses=closed.filter(t=>t.resultat==='Loss');
+  const wr=wins.length/closed.length,lr=losses.length/closed.length;
+  const avgW=wins.length?wins.reduce((s,t)=>s+parseFloat(t.gainPerte),0)/wins.length:0;
+  const avgL=losses.length?Math.abs(losses.reduce((s,t)=>s+parseFloat(t.gainPerte),0)/losses.length):0;
+  return parseFloat(((wr*avgW)-(lr*avgL)).toFixed(2));
+}
+
 function toast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000);}
 function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='albumModal'){const m=document.querySelector('#albumModal .album-modal');if(m)m.classList.remove('img-zoomed');}}
 
@@ -424,17 +449,24 @@ function renderDash(){
       </div>`;
   }
 
-  // ── Secondary stat cards (smaller, below hero) ──
+  // ── Secondary stat cards ──
+  const _singleAccObj=dashFilters.has('all')||dashFilters.size!==1?null:DB.accounts.find(a=>a.name===[...dashFilters][0]);
+  const _startCap=_singleAccObj?.startCapital?parseFloat(_singleAccObj.startCapital):0;
+  const _dd=maxDrawdown(f,_startCap);
+  const _exp=expectancy(f);
+  const _expCls=_exp>0?'green':_exp<0?'red':'';
+  const _ddCls=_dd.pct===0?'':_dd.pct<5?'green':_dd.pct<15?'gold':'red';
   const statDefs=[
-    {l:'Win rate',v:`${s.winRate}%`,sub:`${s.wins} gagnants`,c:s.winRate>=60?'green':s.winRate>=40?'':'red',dk:'Win',bar:s.winRate,barCol:s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'},
-    {l:'RR Moyen',v:`${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,sub:'Trades fermés',c:s.avgRR>=1?'green':s.avgRR>=0?'gold':'red',dk:''},
-    {l:'P&L Total',v:s.pnl>=0?`+$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:`-$${Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`,sub:'Gains nets',c:s.pnl>=0?'green':'red',dk:''},
-    {l:'Total Trades',v:s.total,sub:`${s.wins}W · ${s.losses}L · ${s.be}BE`,c:'',dk:'all'},
+    {l:'Win Rate',v:`${s.winRate}%`,sub:`${s.wins}W · ${s.losses}L · ${s.be}BE`,c:s.winRate>=60?'green':s.winRate>=40?'':'red',dk:'Win',bar:s.winRate,barCol:s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'},
+    {l:'Expectancy',v:_exp===0?'—':(_exp>0?'+$':'-$')+Math.abs(_exp).toFixed(2),sub:'par trade fermé',c:_expCls,extra:'expectancy'},
+    {l:'Max Drawdown',v:_dd.pct>0?`${_dd.pct}%`:'—',sub:_dd.abs>0?`-$${_dd.abs.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:'aucun drawdown',c:_ddCls,extra:'maxdd'},
+    {l:'Total Trades',v:s.total,sub:`RR moy. ${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,c:'',dk:'all'},
   ];
   document.getElementById('dashStats').innerHTML=statDefs.map(x=>{
     const click=x.dk?` onclick="onStatCard(this)" data-dk="${x.dk}" style="cursor:pointer"`:'';
     const progressBar=x.bar!==undefined?`<div style="margin-top:9px;height:3px;background:var(--border2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(x.bar,100)}%;height:100%;background:${x.barCol};border-radius:3px;transition:width .4s"></div></div>`:'';
-    return `<div class="stat-card ${x.c}"${click}>
+    const extraCls=x.extra?` ${x.extra}`:'';
+    return `<div class="stat-card ${x.c}${extraCls}"${click}>
       <div class="stat-label">${x.l}</div>
       <div class="stat-value ${x.c}">${x.v}</div>
       <div class="stat-delta">${x.sub}</div>
@@ -587,17 +619,10 @@ function renderEnCours(f){
 function setTheme(t){
   document.body.dataset.theme=(t==='light'?'':t);
   localStorage.setItem('tl_theme',t);
-  // Update chart color defaults for theme
-  if(t==='dark'){
-    Chart.defaults.color='#4A5E7A';
-    Chart.defaults.borderColor='rgba(255,255,255,.05)';
-  }else if(t==='gold'){
-    Chart.defaults.color='#AA9060';
-    Chart.defaults.borderColor='rgba(80,50,10,.06)';
-  }else{
-    Chart.defaults.color='#8AA0BE';
-    Chart.defaults.borderColor='rgba(30,50,100,.06)';
-  }
+  // Sync chart text color with current CSS theme (--text3 is calibrated per theme)
+  const cs=getComputedStyle(document.body);
+  Chart.defaults.color=cs.getPropertyValue('--text3').trim()||'#4A6080';
+  Chart.defaults.borderColor=cs.getPropertyValue('--border').trim()||'rgba(30,50,100,.1)';
   Object.values(Chart.instances||{}).forEach(c=>{try{c.update();}catch(e){}});
 }
 (function(){
@@ -609,7 +634,8 @@ function setTheme(t){
 Chart.defaults.font.family="'DM Mono','Inter',system-ui,sans-serif";
 Chart.defaults.font.size=11;
 Chart.defaults.font.weight='400';
-Chart.defaults.color='#8AA0BE';
+// Lire --text3 depuis le CSS (correct pour tous les thèmes, y.c. au chargement)
+Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--text3').trim()||'#4A6080';
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function getChartTheme(){
@@ -625,7 +651,7 @@ function getChartTheme(){
     midBg:     dk?'rgba(255,152,0,.70)':gd?'rgba(197,160,89,.70)':'rgba(138,94,18,.75)',
     emptyBg:   dk?'rgba(255,255,255,.08)':gd?'rgba(197,160,89,.12)':'rgba(180,180,180,.25)',
     grid:      dk?'rgba(42,46,57,.9)':gd?'rgba(45,38,26,.9)':'rgba(28,24,16,.06)',
-    ttBorder:  dk?'rgba(41,98,255,.28)':gd?'rgba(197,160,89,.35)':'rgba(37,88,206,.15)'
+    ttBorder:  dk?'rgba(77,126,255,.32)':gd?'rgba(197,160,89,.35)':'rgba(37,88,206,.15)'
   };
 }
 
@@ -1013,6 +1039,51 @@ function renderCharts(f){
     }
   });
 
+  // ── Drawdown sous-graphe ──────────────────────────────────────────────────
+  dc('cDrawdown');
+  const ctxDD=document.getElementById('cDrawdown')?.getContext('2d');
+  if(ctxDD&&cv.length>1){
+    let ddPk=cv[0];
+    const ddData=cv.map(v=>{if(v>ddPk)ddPk=v;return parseFloat((v-ddPk).toFixed(2));});
+    const hasDd=ddData.some(v=>v<0);
+    charts['cDrawdown']=new Chart(ctxDD,{
+      type:'line',
+      data:{labels:cl,datasets:[{
+        data:ddData,
+        borderColor:hasDd?_cct.loss:'rgba(100,200,150,.5)',
+        borderWidth:1.5,tension:0.3,pointRadius:0,
+        fill:{target:{value:0},below:'rgba(239,83,80,.18)'}
+      }]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{intersect:false,mode:'index'},
+        layout:{padding:{top:4,bottom:0}},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
+            titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
+            borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
+            callbacks:{
+              title:items=>cl[items[0].dataIndex]||'',
+              label:v=>{const val=v.parsed.y;return val===0?' DD : —':` DD : -$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;}
+            }
+          }
+        },
+        scales:{
+          x:{display:false},
+          y:{
+            max:0,
+            grid:{color:_cct.grid,lineWidth:1},border:{display:false},
+            ticks:{font:{size:9},padding:5,maxTicksLimit:3,
+              callback:v=>v===0?'0':'-$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(0)+'k':Math.abs(v).toFixed(0))
+            }
+          }
+        }
+      }
+    });
+  }
+
   // ── P&L par trade (trade-by-trade)
   dc('cTrades');
   const ctxTr=document.getElementById('cTrades')?.getContext('2d');
@@ -1072,6 +1143,67 @@ function renderCharts(f){
     }
   }
 
+  // ── Distribution R multiples ──────────────────────────────────────────────
+  dc('cRDist');
+  const ctxRD=document.getElementById('cRDist')?.getContext('2d');
+  if(ctxRD){
+    const rBuckets=[
+      {l:'< −3R',  min:-Infinity,max:-3},
+      {l:'−3 à −2',min:-3,       max:-2},
+      {l:'−2 à −1',min:-2,       max:-1},
+      {l:'−1 à 0', min:-1,       max:0},
+      {l:'0 à 1R', min:0,        max:1},
+      {l:'1 à 2R', min:1,        max:2},
+      {l:'2 à 3R', min:2,        max:3},
+      {l:'> 3R',   min:3,        max:Infinity},
+    ];
+    const rdTrades=closedF.filter(t=>{const rr=calcRR(t);return rr!==null&&isFinite(rr);});
+    const rdCounts=rBuckets.map(b=>rdTrades.filter(t=>{const rr=calcRR(t);return rr>=b.min&&rr<b.max;}).length);
+    const _ctrd=getChartTheme();
+    const rdBgs=rBuckets.map(b=>b.min>=0?_ctrd.winBg:_ctrd.lossBg);
+    const rdMax=Math.max(...rdCounts,1);
+    const dlRD={id:'dl_cRDist',afterDatasetsDraw(chart){
+      const{ctx:c,data}=chart;
+      data.datasets[0].data.forEach((val,i)=>{
+        if(!val)return;
+        const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
+        const pct=rdTrades.length?Math.round(val/rdTrades.length*100):0;
+        c.save();c.font=`600 10px 'Inter',system-ui,sans-serif`;
+        c.fillStyle=rBuckets[i].min>=0?_ctrd.win:_ctrd.loss;
+        c.textAlign='center';c.textBaseline='bottom';
+        c.fillText(`${val} (${pct}%)`,bar.x,bar.y-3);
+        c.restore();
+      });
+    }};
+    charts['cRDist']=new Chart(ctxRD,{
+      type:'bar',plugins:[dlRD],
+      data:{labels:rBuckets.map(b=>b.l),datasets:[{data:rdCounts,backgroundColor:rdBgs,borderRadius:2,borderSkipped:false,barPercentage:.75,categoryPercentage:.85}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        layout:{padding:{top:26,bottom:2}},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
+            titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
+            borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
+            callbacks:{
+              label:v=>{const n=v.parsed.y;const pct=rdTrades.length?Math.round(n/rdTrades.length*100):0;return` ${n} trade${n>1?'s':''} (${pct}%)`;}
+            }
+          }
+        },
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{font:{size:10,weight:'500'},padding:3}},
+          y:{display:false,beginAtZero:true,max:Math.ceil(rdMax*1.35)}
+        }
+      }
+    });
+    const sub=document.getElementById('cRDistSub');
+    if(sub){
+      const withRR=rdTrades.length,avgRR=withRR?rdTrades.reduce((s,t)=>s+(calcRR(t)||0),0)/withRR:0;
+      sub.innerHTML=`${withRR} trades · RR moy. <span style="color:${avgRR>=0?'var(--green)':'var(--red)'}">${avgRR>=0?'+':''}${fmtN(avgRR,2)}R</span>`;
+    }
+  }
 }
 
 // ── MODULE-LEVEL CHART HELPERS ────────────────────────────────────────────
