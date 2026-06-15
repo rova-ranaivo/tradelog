@@ -616,16 +616,16 @@ function getChartTheme(){
   const t=document.body.dataset.theme||'light';
   const dk=t==='dark',gd=t==='gold';
   return{
-    win:       dk?'#10B981':gd?'#1A6640':'#276A44',
-    loss:      dk?'#F43F5E':gd?'#C0392B':'#8A3530',
-    winBg:     dk?'rgba(16,185,129,.78)':gd?'rgba(26,102,64,.80)':'rgba(39,106,68,.82)',
-    lossBg:    dk?'rgba(244,63,94,.72)':gd?'rgba(192,57,43,.75)':'rgba(138,53,48,.78)',
-    winFill:   dk?'rgba(16,185,129,.12)':gd?'rgba(26,102,64,.10)':'rgba(39,106,68,.10)',
-    lossFill:  dk?'rgba(244,63,94,.14)':gd?'rgba(192,57,43,.10)':'rgba(138,53,48,.12)',
-    midBg:     dk?'rgba(245,158,11,.68)':gd?'rgba(212,175,55,.72)':'rgba(138,94,18,.75)',
-    emptyBg:   dk?'rgba(255,255,255,.10)':gd?'rgba(179,143,55,.15)':'rgba(180,180,180,.25)',
-    grid:      dk?'rgba(255,255,255,.05)':gd?'rgba(179,143,55,.08)':'rgba(28,24,16,.06)',
-    ttBorder:  dk?'rgba(59,130,246,.2)':gd?'rgba(179,143,55,.25)':'rgba(37,88,206,.15)'
+    win:       dk?'#26a69a':gd?'#26a69a':'#276A44',
+    loss:      dk?'#ef5350':gd?'#ef5350':'#8A3530',
+    winBg:     dk?'rgba(38,166,154,.80)':gd?'rgba(38,166,154,.75)':'rgba(39,106,68,.82)',
+    lossBg:    dk?'rgba(239,83,80,.75)':gd?'rgba(239,83,80,.72)':'rgba(138,53,48,.78)',
+    winFill:   dk?'rgba(38,166,154,.12)':gd?'rgba(38,166,154,.10)':'rgba(39,106,68,.10)',
+    lossFill:  dk?'rgba(239,83,80,.12)':gd?'rgba(239,83,80,.10)':'rgba(138,53,48,.12)',
+    midBg:     dk?'rgba(255,152,0,.70)':gd?'rgba(197,160,89,.70)':'rgba(138,94,18,.75)',
+    emptyBg:   dk?'rgba(255,255,255,.08)':gd?'rgba(197,160,89,.12)':'rgba(180,180,180,.25)',
+    grid:      dk?'rgba(42,46,57,.9)':gd?'rgba(45,38,26,.9)':'rgba(28,24,16,.06)',
+    ttBorder:  dk?'rgba(41,98,255,.28)':gd?'rgba(197,160,89,.35)':'rgba(37,88,206,.15)'
   };
 }
 
@@ -641,7 +641,7 @@ function mkBar(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:6,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:2,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -651,7 +651,7 @@ function mkBar(id,labels,data,colors,onClickFn){
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
           borderColor:ct.ttBorder,borderWidth:1,
-          cornerRadius:6,padding:11,
+          cornerRadius:3,padding:8,
           callbacks:{label:v=>`  ${v.parsed.y}%`}
         }
       },
@@ -679,7 +679,7 @@ function mkBarGain(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:5,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:2,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -688,7 +688,7 @@ function mkBarGain(id,labels,data,colors,onClickFn){
         tooltip:{
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:10,
+          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
           callbacks:{
             label:v=>{const val=v.parsed.y;return`${val>=0?'+':''}$${val.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`},
             afterLabel:ctx2=>{const idx=ctx2.dataIndex;const n=ctx2.dataset._counts?ctx2.dataset._counts[idx]:null;return n!=null?`${n} trade${n>1?'s':''}`:''}
@@ -985,10 +985,10 @@ function renderCharts(f){
     data:{labels:cl,datasets:[
       {label:'Courbe Réelle',data:cv,
        borderColor:isUp?_cct.win:_cct.loss,borderWidth:2,tension:0.35,
-       pointRadius:0,pointHoverRadius:5,
+       pointRadius:0,pointHoverRadius:4,
        fill:{target:{value:startCap},above:_cct.winFill,below:_cct.lossFill},
        segment:{borderColor:ctx2=>ctx2.p1.parsed.y<startCap?_cct.loss:_cct.win}},
-      {label:'Courbe Rigueur',data:cvR,borderColor:'#2558CE',borderWidth:1.5,borderDash:[5,4],tension:0.35,pointRadius:0,pointHoverRadius:5,fill:false}
+      {label:'Courbe Rigueur',data:cvR,borderColor:'#2558CE',borderWidth:1.5,borderDash:[5,4],tension:0.35,pointRadius:0,pointHoverRadius:4,fill:false}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
@@ -998,7 +998,7 @@ function renderCharts(f){
         tooltip:{
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
           callbacks:{label:v=>`${v.dataset.label}  $${v.parsed.y.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`}
         }
       },
@@ -1040,7 +1040,7 @@ function renderCharts(f){
     }};
     charts['cTrades']=new Chart(ctxTr,{
       type:'bar',plugins:[dlTr],
-      data:{labels:trLabels,datasets:[{data:trData,backgroundColor:trBgs,borderRadius:3,borderSkipped:false,barPercentage:.85,categoryPercentage:.85}]},
+      data:{labels:trLabels,datasets:[{data:trData,backgroundColor:trBgs,borderRadius:2,borderSkipped:false,barPercentage:.85,categoryPercentage:.85}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:showLbl?22:8,bottom:2}},
@@ -1050,7 +1050,7 @@ function renderCharts(f){
           tooltip:{
             backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
             titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-            borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:10,
+            borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
             callbacks:{
               title:items=>{const t=trTrades[items[0].dataIndex];return t?`${fmtD(t.date)}${t.heure?' · '+t.heure:''}`:'' ;},
               label:v=>{const t=trTrades[v.dataIndex];const val=v.parsed.y;return[` ${t?.instrument||''}  ${t?.direction||''}`,` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`];}
@@ -1101,7 +1101,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
   }};
   const pAxis=horizontal?'x':'y';const cAxis=horizontal?'y':'x';
   charts[id]=new Chart(ctx,{type:'bar',plugins:[dlPlugin],
-    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:bgs,borderRadius:6,borderSkipped:false}]},
+    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:bgs,borderRadius:2,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,
       indexAxis:horizontal?'y':'x',
       layout:{padding:horizontal?{right:64,left:8,top:4,bottom:4}:{top:24,bottom:2}},
@@ -1109,7 +1109,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
       plugins:{legend:{display:false},tooltip:{
         backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
         titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-        borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+        borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
         callbacks:{
           label:v=>{const val=horizontal?v.parsed.x:v.parsed.y;return` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;},
           afterLabel:ctx2=>{const n=counts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;}
@@ -1164,13 +1164,13 @@ function renderReportCharts(f){
       });
     }};
     charts['rStars']=new Chart(ctxSt,{type:'bar',plugins:[dlSt],
-      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:stBgs,borderRadius:6,borderSkipped:false}]},
+      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:stBgs,borderRadius:2,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:22,bottom:2}},
         plugins:{legend:{display:false},tooltip:{
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
           callbacks:{
             label:v=>`  WinRate : ${v.parsed.y}%`,
             afterLabel:(_,i)=>`  ${stCounts[_?.dataIndex??0]} trade(s)`
@@ -1202,7 +1202,7 @@ function renderReportCharts(f){
       });
     }};
     charts['rDist']=new Chart(ctxDist,{type:'bar',plugins:[distDL],
-      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:['rgba(39,106,68,.85)','rgba(138,53,48,.8)','rgba(138,94,18,.75)'],borderRadius:6,borderSkipped:false}]},
+      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:['rgba(39,106,68,.85)','rgba(138,53,48,.8)','rgba(138,94,18,.75)'],borderRadius:2,borderSkipped:false}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:24,bottom:2}},
@@ -1210,7 +1210,7 @@ function renderReportCharts(f){
         plugins:{legend:{display:false},tooltip:{
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+          borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:3,padding:8,
           callbacks:{label:v=>`  ${v.parsed.y} trades`}
         }},
         scales:{
@@ -1254,14 +1254,14 @@ function renderReportCharts(f){
       });
     }};
     charts['rHour']=new Chart(ctxH,{type:'bar',plugins:[dlH],
-      data:{labels:hLabels,datasets:[{data:hVals,backgroundColor:hBgs,borderRadius:5,borderSkipped:false}]},
+      data:{labels:hLabels,datasets:[{data:hVals,backgroundColor:hBgs,borderRadius:2,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:22,bottom:2}},
         onClick:(e,els)=>{if(!els.length)return;const k=hKeys[els[0].index];openTradeListModal(hm[k],`Heure — ${k}h`);},
         plugins:{legend:{display:false},tooltip:{
           backgroundColor:getComputedStyle(document.body).getPropertyValue('--sb-bg').trim()||'#0C0E14',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:_cth.ttBorder,borderWidth:1,cornerRadius:6,padding:11,
+          borderColor:_cth.ttBorder,borderWidth:1,cornerRadius:3,padding:8,
           callbacks:{
             label:v=>{const val=v.parsed.y;return` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;},
             afterLabel:ctx2=>{const n=hCounts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;}
