@@ -113,13 +113,18 @@ const STRUCTURES=['BOS haussier','BOS baissier','ChoCH haussier','ChoCH baissier
 const RESULTATS=['Win','Loss','Breakeven','En cours'];
 // Tags : chargés dynamiquement depuis DB.tags
 const LIQUIDITES=['Inducement','ChoCH','EQL (Equal Lows)','EQH (Equal Highs)'];
-const FORM_INSTRUMENTS=['EURUSD','GBPUSD','XAUUSD','GBPJPY','EURJPY','USDJPY','NZDUSD','NASDAQ'];
+const FORM_INSTRUMENTS=['GER40','EURUSD','XAUUSD','GBPUSD'];
 const WARN_INSTRUMENTS=['USDJPY','EURJPY'];
 const ACC_COLORS=['#2558CE','#8E6B1E','#2B8A4E','#8A5E12','#1E6A9A','#6B4F8A','#B05020','#4A6880'];
 const SH=['ID','Compte','Date','Heure','Session','Instrument','Direction','Confiance (★)','Structure','Hors Zone','Montant Risqué','Gain/Perte','Capital','Résultat','RR','État','Pourquoi Entrer','Doute/Hésitation'];
 
 let DB=loadLocalDB(),curPage='dashboard';
 let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new Set(['all']),cfAccFilters=new Set(['all']);
+function getDisabledAccounts(){try{return JSON.parse(localStorage.getItem('tl_disabled_accounts')||'[]');}catch(e){return[];}}
+function setDisabledAccounts(arr){localStorage.setItem('tl_disabled_accounts',JSON.stringify(arr));}
+function isAccDisabled(accId){return getDisabledAccounts().includes(String(accId));}
+function toggleAccDisabled(accId){const d=getDisabledAccounts();const id=String(accId);const i=d.indexOf(id);if(i>=0)d.splice(i,1);else d.push(id);setDisabledAccounts(d);renderAccounts();}
+function getActiveAccounts(){return DB.accounts.filter(a=>!isAccDisabled(a.id));}
 let dashPeriod='all',dashCustomFrom='',dashCustomTo='';
 let dashWeekOffset=0,dashMonthOffset=0,dashYearOffset=0;
 let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week',rNonProfitable:'',horsSession:''};
@@ -254,14 +259,14 @@ document.addEventListener('keydown',function(e){
     if(e.key==='ArrowRight'){e.preventDefault();albumNav(1);return;}
   }
   if(e.key==='Escape'){
-    ['tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+    ['gateModal','tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
       const el=document.getElementById(id);
       if(el&&el.classList.contains('open'))el.classList.remove('open');
     });
   }
 });
 // Click outside modal to close (all except tradeModal — risque de fermeture accidentelle)
-['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+['gateModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
@@ -282,17 +287,23 @@ async function refreshApp(){
 }
 
 // ── SIDEBAR MOBILE ────────────────────────────────────────────────────────
-function toggleSidebar(){const open=document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');document.body.classList.toggle('sidebar-open',open);}
-function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('open');document.body.classList.remove('sidebar-open');}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
 const PTitles={dashboard:'Dashboard',report:'Rapport & Analyse',journal:'Journal de trades',calendar:'Calendrier',cashflow:'Dépôts & Retraits',accounts:'Gestion des comptes',rules:'Règles & Checklist',settings:'Paramètres'};
 function showPage(p){
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  const navEl=document.querySelector('[data-page="'+p+'"]');
-  if(navEl)navEl.classList.add('active');
+  document.querySelectorAll('[data-page="'+p+'"]').forEach(e=>e.classList.add('active'));
+  closeSidebar();
   curPage=p;
   document.getElementById('pageTitle').textContent=PTitles[p]||p;
   document.getElementById('pageSub').textContent=`${DB.trades.length} trade${DB.trades.length>1?'s':''} · ${DB.accounts.length} compte${DB.accounts.length>1?'s':''}`;
@@ -402,82 +413,120 @@ function getDashNavLabel(){
 
 function renderDash(){
   renderPills();renderDashFilter();
-  let f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
+  const _activeNames=new Set(getActiveAccounts().map(a=>a.name));
+  let f=dashFilters.has('all')?DB.trades.filter(t=>_activeNames.has(t.compte)):DB.trades.filter(t=>dashFilters.has(t.compte));
   const _dr=getDashRange();if(_dr.from)f=f.filter(t=>t.date>=_dr.from);if(_dr.to)f=f.filter(t=>t.date<=_dr.to);
   const s=stats(f);window._dashF=f;
 
-  // ── Hero command bar ──
-  const heroEl=document.getElementById('dashHero');
-  if(heroEl){
-    const pnlAbs=Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
-    const pnlStr=(s.pnl>=0?'+$':'-$')+pnlAbs;
-    const pnlCls=s.pnl>0?'pos':s.pnl<0?'neg':'';
-    const closed=f.filter(t=>t.resultat!=='En cours');
-    const totalWin=closed.filter(t=>t.resultat==='Win').reduce((a,t)=>a+(parseFloat(t.gainPerte)||0),0);
-    const totalLoss=Math.abs(closed.filter(t=>t.resultat==='Loss').reduce((a,t)=>a+(parseFloat(t.gainPerte)||0),0));
-    const pf=totalLoss>0?(totalWin/totalLoss):0;
-    const pfStr=pf>0?fmtN(pf,2):'—';
-    const pfCls=pf>=1.5?'pos':pf>=1?'gold':'neg';
-    const rrCls=s.avgRR>=1.5?'pos':s.avgRR>=0?'gold':'neg';
-    const wrCls=s.winRate>=60?'pos':s.winRate>=40?'gold':'neg';
-    // find or create hero-body
-    let body=heroEl.querySelector('.dash-hero-body');
-    if(!body){body=document.createElement('div');body.className='dash-hero-body';heroEl.appendChild(body);}
-    body.innerHTML=`
-      <div>
-        <div class="dash-hero-pnl-label">P&amp;L NET RÉALISÉ</div>
-        <div class="dash-hero-pnl-value ${pnlCls}">${pnlStr}</div>
-        <div class="dash-hero-pnl-sub">${s.total} trades · ${s.wins} wins · ${s.losses} losses · ${s.be} BE</div>
-      </div>
-      <div class="dash-hero-divider"></div>
-      <div class="dash-hero-kpis">
-        <div class="dash-hero-kpi">
-          <span class="dash-hero-kpi-v ${wrCls}">${s.winRate}%</span>
-          <span class="dash-hero-kpi-l">Win Rate</span>
-        </div>
-        <div class="dash-hero-kpi">
-          <span class="dash-hero-kpi-v ${rrCls}">${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R</span>
-          <span class="dash-hero-kpi-l">RR Moyen</span>
-        </div>
-        <div class="dash-hero-kpi">
-          <span class="dash-hero-kpi-v ${pfCls}">${pfStr}</span>
-          <span class="dash-hero-kpi-l">Profit Factor</span>
-        </div>
-        <div class="dash-hero-kpi">
-          ${(()=>{const disc=getDisciplineAudit(f);const dCls=disc.score>=80?'pos':disc.score>=60?'gold':'neg';return`<span class="dash-hero-kpi-v ${dCls}">${disc.score}%</span><span class="dash-hero-kpi-l">Discipline</span>`;})()}
-        </div>
-      </div>`;
-  }
+  // ── Today strip ──
+  renderTodayStrip(f);
 
-  // ── Secondary stat cards ──
+  // ── Unified KPI band ──
+  const closed=f.filter(t=>t.resultat!=='En cours');
+  const totalWin=closed.filter(t=>t.resultat==='Win').reduce((a,t)=>a+(parseFloat(t.gainPerte)||0),0);
+  const totalLoss=Math.abs(closed.filter(t=>t.resultat==='Loss').reduce((a,t)=>a+(parseFloat(t.gainPerte)||0),0));
+  const pf=totalLoss>0?(totalWin/totalLoss):0;
   const _singleAccObj=dashFilters.has('all')||dashFilters.size!==1?null:DB.accounts.find(a=>a.name===[...dashFilters][0]);
   const _startCap=_singleAccObj?.startCapital?parseFloat(_singleAccObj.startCapital):0;
   const _dd=maxDrawdown(f,_startCap);
   const _exp=expectancy(f);
-  const _expCls=_exp>0?'green':_exp<0?'red':'';
-  const _ddCls=_dd.pct===0?'':_dd.pct<5?'green':_dd.pct<15?'gold':'red';
-  const statDefs=[
-    {l:'Win Rate',v:`${s.winRate}%`,sub:`${s.wins}W · ${s.losses}L · ${s.be}BE`,c:s.winRate>=60?'green':s.winRate>=40?'':'red',dk:'Win',bar:s.winRate,barCol:s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'},
-    {l:'Expectancy',v:_exp===0?'—':(_exp>0?'+$':'-$')+Math.abs(_exp).toFixed(2),sub:'par trade fermé',c:_expCls,extra:'expectancy'},
-    {l:'Max Drawdown',v:_dd.pct>0?`${_dd.pct}%`:'—',sub:_dd.abs>0?`-$${_dd.abs.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:'aucun drawdown',c:_ddCls,extra:'maxdd'},
-    {l:'Total Trades',v:s.total,sub:`RR moy. ${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,c:'',dk:'all'},
-  ];
-  document.getElementById('dashStats').innerHTML=statDefs.map(x=>{
-    const click=x.dk?` onclick="onStatCard(this)" data-dk="${x.dk}" style="cursor:pointer"`:'';
-    const progressBar=x.bar!==undefined?`<div style="margin-top:9px;height:3px;background:var(--border2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(x.bar,100)}%;height:100%;background:${x.barCol};border-radius:3px;transition:width .4s"></div></div>`:'';
-    const extraCls=x.extra?` ${x.extra}`:'';
-    return `<div class="stat-card ${x.c}${extraCls}"${click}>
-      <div class="stat-label">${x.l}</div>
-      <div class="stat-value ${x.c}">${x.v}</div>
-      <div class="stat-delta">${x.sub}</div>
-      ${progressBar}
-    </div>`;
-  }).join('');
+  const disc=getDisciplineAudit(f);
 
-  renderDisciplineBanner(f);
+  // Capital card (single account only)
+  let capHtml='';
+  if(_singleAccObj){
+    const allAccTrades=DB.trades.filter(t=>t.compte===_singleAccObj.name&&t.resultat!=='En cours');
+    const accPnl=allAccTrades.reduce((s2,t)=>s2+(parseFloat(t.gainPerte)||0),0);
+    const accCF=(DB.cashflow||[]).filter(c=>c.compte===_singleAccObj.name);
+    const cfNet=accCF.filter(c=>c.type==='depot').reduce((s2,c)=>s2+(c.montantUSD||0),0)-accCF.filter(c=>c.type==='payout').reduce((s2,c)=>s2+(c.montantUSD||0),0);
+    const curCap=parseFloat(_singleAccObj.startCapital||0)+accPnl+cfNet;
+    const capCls=curCap>=parseFloat(_singleAccObj.startCapital||0)?'green':'red';
+    capHtml=`<div class="kpi-cell kpi-cell-cap">
+      <div class="kpi-label">Capital</div>
+      <div class="kpi-value ${capCls}">$${curCap.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="kpi-sub">${esc(_singleAccObj.name)}</div>
+    </div>`;
+  }
+
+  const pnlAbs=Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pnlStr=(s.pnl>=0?'+$':'-$')+pnlAbs;
+  const pnlCls=s.pnl>0?'green':s.pnl<0?'red':'';
+
+  document.getElementById('dashKpiBand').innerHTML=`
+    ${capHtml}
+    <div class="kpi-cell kpi-cell-pnl" onclick="onStatCard(this)" data-dk="all" style="cursor:pointer">
+      <div class="kpi-label">P&L Net</div>
+      <div class="kpi-value kpi-value-lg ${pnlCls}">${pnlStr}</div>
+      <div class="kpi-sub">${s.total} trades · ${s.wins}W ${s.losses}L ${s.be}BE</div>
+    </div>
+    <div class="kpi-cell" onclick="onStatCard(this)" data-dk="Win" style="cursor:pointer">
+      <div class="kpi-label">Win Rate</div>
+      <div class="kpi-value ${s.winRate>=60?'green':s.winRate>=40?'':'red'}">${s.winRate}%</div>
+      <div class="kpi-sub">${s.wins}W / ${closed.length} fermés</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${Math.min(s.winRate,100)}%;background:${s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'}"></div></div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-label">RR Moyen</div>
+      <div class="kpi-value ${s.avgRR>=1.5?'green':s.avgRR>=0?'':'red'}">${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R</div>
+      <div class="kpi-sub">Expectancy ${_exp>=0?'+':''}$${Math.abs(_exp).toFixed(2)}</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-label">Profit Factor</div>
+      <div class="kpi-value ${pf>=1.5?'green':pf>=1?'':'red'}">${pf>0?fmtN(pf,2):'—'}</div>
+      <div class="kpi-sub">${totalWin>0?'+$'+fmtN(totalWin,0):'$0'} / ${totalLoss>0?'-$'+fmtN(totalLoss,0):'$0'}</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-label">Max Drawdown</div>
+      <div class="kpi-value ${_dd.pct===0?'':_dd.pct<5?'green':_dd.pct<15?'gold':'red'}">${_dd.pct>0?_dd.pct+'%':'—'}</div>
+      <div class="kpi-sub">${_dd.abs>0?'-$'+fmtN(_dd.abs,2):'aucun'}</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-label">Discipline</div>
+      <div class="kpi-value ${disc.score>=80?'green':disc.score>=60?'gold':'red'}">${disc.score}%</div>
+      <div class="kpi-sub">${disc.total-disc.undisciplined.length}/${disc.total} conformes</div>
+    </div>`;
+
   renderCharts(f);
   renderEnCours(f);
-  renderAICoach(f);
+  renderDashInsights(f);
+}
+
+function renderTodayStrip(){
+  const el=document.getElementById('dashToday');if(!el)return;
+  const today=new Date().toISOString().slice(0,10);
+  const _activeNames=new Set(getActiveAccounts().map(a=>a.name));
+  const todayTrades=DB.trades.filter(t=>t.date===today&&_activeNames.has(t.compte)&&t.resultat!=='En cours');
+  if(!todayTrades.length){el.innerHTML='';return;}
+  const ts=stats(todayTrades);
+  const pnl=todayTrades.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  // Streak
+  const allClosed=DB.trades.filter(t=>t.resultat==='Win'||t.resultat==='Loss').sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));
+  let streak=0,streakType='';
+  if(allClosed.length){
+    streakType=allClosed[0].resultat;
+    for(const t of allClosed){if(t.resultat===streakType)streak++;else break;}
+  }
+  const streakCls=streakType==='Win'?'green':'red';
+  const streakTxt=streak>1?`${streak}${streakType==='Win'?'W':'L'} consécutifs`:'';
+  el.innerHTML=`
+    <div class="today-item"><span class="today-label">Aujourd'hui</span></div>
+    <div class="today-item"><span class="today-val">${ts.total}</span><span class="today-label">trades</span></div>
+    <div class="today-item"><span class="today-val ${pnl>0?'green':pnl<0?'red':''}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</span></div>
+    <div class="today-item"><span class="today-val">${ts.winRate}%</span><span class="today-label">WR</span></div>
+    ${streakTxt?`<div class="today-item"><span class="today-val ${streakCls}">${streakTxt}</span></div>`:''}`;
+}
+
+let dashInsightTab='patterns';
+function renderDashInsights(f){
+  const el=document.getElementById('dashInsights');if(!el)return;
+  const tabs=['patterns','edge','score'];
+  const labels=['Patterns','Edge Map','Score'];
+  let tabsHtml=tabs.map((t,i)=>`<button class="di-tab ${dashInsightTab===t?'active':''}" onclick="dashInsightTab='${t}';renderDashInsights(window._dashF)">${labels[i]}</button>`).join('');
+  let content='';
+  if(dashInsightTab==='patterns'){content=getPatternsHTML(f);}
+  else if(dashInsightTab==='edge'){content=getEdgeMatrixHTML(f);}
+  else{content=renderTraderScore(f);}
+  el.innerHTML=`<div class="card"><div class="di-tabs">${tabsHtml}</div><div class="di-content">${content}</div></div>`;
 }
 function getDisciplineAudit(f){
   const closed=f.filter(t=>t.resultat!=='En cours');
@@ -495,45 +544,6 @@ function getDisciplineAudit(f){
   const cntNoReason=closed.filter(t=>!t.pourquoiEntrer||!t.pourquoiEntrer.trim()).length;
   return{score,leak,total:closed.length,undisciplined,cntHz,cntFrag,cntConf,cntNoReason};
 }
-function renderDisciplineBanner(f){
-  const el=document.getElementById('dashDiscipline');if(!el)return;
-  const d=getDisciplineAudit(f);
-  if(!d.total){el.innerHTML='';return;}
-  const scoreCls=d.score>=80?'var(--green)':d.score>=60?'var(--text)':'var(--red)';
-  const totalPnl=f.filter(t=>t.resultat!=='En cours').reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
-  const potential=totalPnl+d.leak;
-  const pct=totalPnl!==0?((d.leak/Math.abs(totalPnl))*100).toFixed(0):0;
-  const msg=d.leak>0
-    ?`Votre indiscipline coûte $${fmtN(d.leak,2)} — avec un plan respecté, votre capital serait ${pct}% plus élevé`
-    :`Discipline parfaite sur la période — continuez sur cette lancée`;
-  // Bullets de détail
-  const T=d.total;
-  const bullets=[
-    d.cntHz>0?`${d.cntHz} trade${d.cntHz>1?'s':''} sur ${T} pris hors killzone (Londres 11h–14h / NY 16h30–19h30 GMT+4)`:'',
-    d.cntConf>0?`${d.cntConf} trade${d.cntConf>1?'s':''} sur ${T} avec une conviction faible (inférieure à 3★)`:'',
-    d.cntFrag>0?`${d.cntFrag} trade${d.cntFrag>1?'s':''} sur ${T} forcés sur une structure jugée "Fragile"`:'',
-    d.cntNoReason>0?`${d.cntNoReason} trade${d.cntNoReason>1?'s':''} sur ${T} sans raison d'entrée documentée (trading impulsif)`:'',
-  ].filter(Boolean);
-  const bulletsHtml=bullets.length?`<ul style="margin:8px 0 0;padding-left:16px;list-style:disc;display:flex;flex-direction:column;gap:3px">${bullets.map(b=>`<li style="font-size:11px;color:var(--amber);opacity:.85">${b}</li>`).join('')}</ul>`:'';
-  el.innerHTML=`<div class="disc-banner">
-    <div class="disc-banner-item">
-      <div class="disc-banner-label">Discipline Score</div>
-      <div class="disc-banner-value" style="color:${scoreCls}">${d.score}%</div>
-      <div class="disc-banner-sub">${d.total-d.undisciplined.length}/${d.total} trades conformes</div>
-    </div>
-    <div class="disc-banner-item">
-      <div class="disc-banner-label">Equity Leak</div>
-      <div class="disc-banner-value" style="color:var(--amber)">-$${fmtN(d.leak,2)}</div>
-      <div class="disc-banner-sub">pertes sur trades indisciplinés</div>
-    </div>
-    <div class="disc-banner-item">
-      <div class="disc-banner-label">Capital théorique</div>
-      <div class="disc-banner-value" style="color:var(--green)">${potential>=0?'+':''}$${fmtN(Math.abs(potential),2)}</div>
-      <div class="disc-banner-sub">si plan respecté</div>
-    </div>
-    <div class="disc-banner-msg">⚡ ${msg}${bulletsHtml}</div>
-  </div>`;
-}
 function onStatCard(el){
   const dk=el.dataset.dk;if(!window._dashF)return;
   if(dk==='all')openTradeListModal(window._dashF,'Tous les trades');
@@ -543,7 +553,7 @@ function renderPills(){
   const allSel=dashFilters.has('all');
   let h=`<span style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-right:4px">Compte :</span>`;
   h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleDF('all')">Tous</button>`;
-  DB.accounts.forEach(a=>{const ok=!allSel&&dashFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleDF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  getActiveAccounts().forEach(a=>{const ok=!allSel&&dashFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleDF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
   document.getElementById('dashPills').innerHTML=h;
 }
 function toggleDF(name){
@@ -626,7 +636,8 @@ function setTheme(t){
   Object.values(Chart.instances||{}).forEach(c=>{try{c.update();}catch(e){}});
 }
 (function(){
-  const saved=localStorage.getItem('tl_theme')||'light';
+  let saved=localStorage.getItem('tl_theme')||'light';
+  if(saved!=='light'&&saved!=='dark')saved='light';
   document.body.dataset.theme=(saved==='light'?'':saved);
 })();
 
@@ -639,19 +650,18 @@ Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--text3')
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function getChartTheme(){
-  const t=document.body.dataset.theme||'light';
-  const dk=t==='dark',gd=t==='gold';
+  const dk=(document.body.dataset.theme||'')==='dark';
   return{
-    win:       dk?'#26a69a':gd?'#26a69a':'#276A44',
-    loss:      dk?'#ef5350':gd?'#ef5350':'#8A3530',
-    winBg:     dk?'rgba(38,166,154,.80)':gd?'rgba(38,166,154,.75)':'rgba(39,106,68,.82)',
-    lossBg:    dk?'rgba(239,83,80,.75)':gd?'rgba(239,83,80,.72)':'rgba(138,53,48,.78)',
-    winFill:   dk?'rgba(38,166,154,.12)':gd?'rgba(38,166,154,.10)':'rgba(39,106,68,.10)',
-    lossFill:  dk?'rgba(239,83,80,.12)':gd?'rgba(239,83,80,.10)':'rgba(138,53,48,.12)',
-    midBg:     dk?'rgba(255,152,0,.70)':gd?'rgba(197,160,89,.70)':'rgba(138,94,18,.75)',
-    emptyBg:   dk?'rgba(255,255,255,.08)':gd?'rgba(197,160,89,.12)':'rgba(180,180,180,.25)',
-    grid:      dk?'rgba(42,46,57,.9)':gd?'rgba(45,38,26,.9)':'rgba(28,24,16,.06)',
-    ttBorder:  dk?'rgba(77,126,255,.32)':gd?'rgba(197,160,89,.35)':'rgba(37,88,206,.15)'
+    win:       dk?'#2DD4A8':'#0E7C6B',
+    loss:      dk?'#F87171':'#C0392B',
+    winBg:     dk?'rgba(45,212,168,.70)':'rgba(14,124,107,.75)',
+    lossBg:    dk?'rgba(248,113,113,.65)':'rgba(192,57,43,.70)',
+    winFill:   dk?'rgba(45,212,168,.10)':'rgba(14,124,107,.08)',
+    lossFill:  dk?'rgba(248,113,113,.10)':'rgba(192,57,43,.08)',
+    midBg:     dk?'rgba(251,191,36,.55)':'rgba(139,105,20,.60)',
+    emptyBg:   dk?'rgba(255,255,255,.06)':'rgba(160,165,176,.20)',
+    grid:      dk?'rgba(45,48,57,.9)':'rgba(28,43,58,.06)',
+    ttBorder:  dk?'rgba(74,144,226,.30)':'rgba(26,93,198,.15)'
   };
 }
 
@@ -1765,7 +1775,8 @@ function renderReportFilter(){
 }
 function renderReport(){
   const el=document.getElementById('page-report');if(!el)return;
-  let f=dashFilters.has('all')?DB.trades:DB.trades.filter(t=>dashFilters.has(t.compte));
+  const _activeNames=new Set(getActiveAccounts().map(a=>a.name));
+  let f=dashFilters.has('all')?DB.trades.filter(t=>_activeNames.has(t.compte)):DB.trades.filter(t=>dashFilters.has(t.compte));
   const _dr=getDashRange();if(_dr.from)f=f.filter(t=>t.date>=_dr.from);if(_dr.to)f=f.filter(t=>t.date<=_dr.to);
   const s=stats(f);
   renderReportPills();
@@ -1840,7 +1851,7 @@ function renderJAccPills(){
   const allSel=jAccFilters.has('all');
   let h=`<span style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-right:4px">Compte :</span>`;
   h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleJAF('all')">Tous</button>`;
-  DB.accounts.forEach(a=>{const ok=!allSel&&jAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleJAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  getActiveAccounts().forEach(a=>{const ok=!allSel&&jAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleJAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
   const el=document.getElementById('jAccPills');if(el)el.innerHTML=h;
 }
 function toggleJAF(name){
@@ -1909,7 +1920,7 @@ function isHorsSession(heure){
   const inNY=mins>=16*60+30&&mins<19*60;
   return!(inLondres||inNY);
 }
-function getFT(){return DB.trades.filter(t=>{if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;if(f.rNonProfitable==='rnp'&&!isRNonProfitable(t))return false;if(f.rNonProfitable==='profitable'&&isRNonProfitable(t))return false;if(f.horsSession==='hors'&&!isHorsSession(t.heure))return false;if(f.horsSession==='en'&&isHorsSession(t.heure))return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
+function getFT(){const _an=new Set(getActiveAccounts().map(a=>a.name));return DB.trades.filter(t=>{if(!_an.has(t.compte))return false;if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;if(f.rNonProfitable==='rnp'&&!isRNonProfitable(t))return false;if(f.rNonProfitable==='profitable'&&isRNonProfitable(t))return false;if(f.horsSession==='hors'&&!isHorsSession(t.heure))return false;if(f.horsSession==='en'&&isHorsSession(t.heure))return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
 
 function renderJSummary(){
   const trades=getFT();
@@ -2014,6 +2025,7 @@ function renderJTable(){
       <div class="jl-cell jl-hide-xs">${rrStr}</div>
       <div class="jl-cell">${gpStr}</div>
       <div class="jl-actions" onclick="event.stopPropagation()">
+        <button class="btn-ghost btn-sm" onclick="dupTrade('${t.id}')" title="Dupliquer" style="padding:4px 6px">⧉</button>
         <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier" style="padding:4px 6px">✎</button>
         <button class="btn-ghost btn-sm" style="color:var(--red);padding:4px 6px" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
       </div>
@@ -2034,58 +2046,46 @@ function renderJCards(){
     const gp=parseFloat(t.gainPerte)||0;
     const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
     const isUndisciplined=t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
-    // Screenshot priority: LTF > MTF > HTF > avant
     const scrLTF=(t.screenshotLTF||'').trim();
     const scrMTF=(t.screenshotMTF||t.screenshotApres||'').trim();
     const scrHTF=(t.screenshotHTF||t.screenshotAvant||t.screenshot||'').trim();
     const scrUrl=scrLTF||scrMTF||scrHTF;
-    const scrLabel=scrLTF?'LTF':scrMTF?'MTF':scrHTF?'HTF':'';
     const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
-    const safeUrl=scrUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const resClass=t.resultat==='Win'?'jc-win':t.resultat==='Loss'?'jc-loss':t.resultat==='Breakeven'?'jc-be':t.resultat==='En cours'?'jc-encours':'';
     const resColor=t.resultat==='Win'?'var(--green)':t.resultat==='Loss'?'var(--red)':t.resultat==='Breakeven'?'var(--amber)':'var(--blue)';
     const gpColor=gp>0?'var(--green)':gp<0?'var(--red)':'var(--text3)';
     const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
     const dirIcon=t.direction==='Long'?'↑':t.direction==='Short'?'↓':'';
     const dirColor=t.direction==='Long'?'var(--green)':t.direction==='Short'?'var(--red)':'';
-    const starsHtml=sv?[1,2,3,4,5].map(n=>`<span style="color:${n<=sv?'var(--amber)':'var(--border2)'};font-size:11px;line-height:1">★</span>`).join(''):'';
-    const rrStr=rr!==null?`<span style="font-size:11px;color:${rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)'};font-family:'DM Mono',monospace;font-weight:600">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:'';
+    const rrStr=rr!==null?`<span class="jc-rr" style="color:${rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)'}">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:'';
     const auditReasons=isUndisciplined&&t.resultat!=='En cours'?getAuditReasons(t):[];
-    const disciplineBdg=auditReasons.length?`<span class="_audit-badge" style="font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);cursor:help;white-space:nowrap" data-audit="${esc(auditReasons.map(r=>'• '+r).join('\n'))}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">⚠ INDISCIPLINE</span>`:'';
-    const rnpBdg=isRNonProfitable(t)?`<span style="font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue);white-space:nowrap">R NON PROFIT.</span>`:'';
-    const resTagStyle=`background:${resColor}14;border:1px solid ${resColor}30;color:${resColor}`;
+    const disciplineBdg=auditReasons.length?`<span class="_audit-badge jc-badge-warn" data-audit="${esc(auditReasons.map(r=>'• '+r).join('\n'))}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">INDISC.</span>`:'';
+    const rnpBdg=isRNonProfitable(t)?`<span class="jc-badge-info">R NON P.</span>`:'';
+    const resBdg=t.resultat?`<span class="jc-result" style="background:${resColor}12;color:${resColor}">${t.resultat}</span>`:'';
+    const thumbHtml=hasImg
+      ?`<div class="jc-thumb"><img src="${scrUrl}" alt="" loading="lazy" onerror="this.parentElement.classList.add('jc-thumb-err');this.remove()"/></div>`
+      :`<div class="jc-thumb jc-thumb-empty"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
     h+=`<div class="j-card ${resClass}" onclick="openAlbumView('${t.id}')">
-      <div class="j-card-thumb">
-        ${hasImg
-          ?`<img src="${scrUrl}" alt="" loading="lazy" onerror="this.parentElement.classList.add('j-card-thumb-err');this.remove()"/>`
-          :`<div class="j-card-no-img"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Pas de capture</span></div>`
-        }
-        <div class="j-card-thumb-overlay"></div>
-        ${scrLabel?`<div class="j-card-scr-label">${scrLabel}</div>`:''}
-      </div>
-      <div class="j-card-body">
-        <div class="j-card-top">
-          <div class="j-card-instr">
-            ${ac?`<span class="j-card-acc-dot" style="background:${ac.color}"></span>`:''}
-            <span class="j-card-instr-name">${esc(t.instrument||'—')}</span>
-            ${dirIcon?`<span class="j-card-dir" style="color:${dirColor}">${dirIcon}</span>`:''}
+      ${thumbHtml}
+      <div class="jc-content">
+        <div class="jc-row1">
+          <div class="jc-instr-row">
+            ${ac?`<span class="jc-acc-dot" style="background:${ac.color}"></span>`:''}
+            <span class="jc-instr">${esc(t.instrument||'—')}</span>
+            ${dirIcon?`<span class="jc-dir" style="color:${dirColor}">${dirIcon}</span>`:''}
           </div>
-          ${starsHtml?`<div class="j-card-stars">${starsHtml}</div>`:''}
+          <span class="jc-pnl" style="color:${gpColor}">${gpStr}</span>
         </div>
-        <div class="j-card-pnl" style="color:${gpColor}">${gpStr}</div>
-        <div class="j-card-meta">
-          <span>${fmtD(t.date)}${t.heure?` · ${t.heure}`:''}</span>
-          ${t.session?`<span class="j-card-dot">·</span><span>${esc(t.session)}</span>`:''}
+        <div class="jc-row2">
+          <span class="jc-meta">${fmtD(t.date)}${t.heure?' · '+t.heure:''}${t.session?' · '+esc(t.session):''}</span>
+          ${rrStr}
         </div>
-        ${(disciplineBdg||rnpBdg)?`<div class="j-card-badges">${disciplineBdg}${rnpBdg}</div>`:''}
-        <div class="j-card-footer" onclick="event.stopPropagation()">
-          <div style="display:flex;align-items:center;gap:6px">
-            ${t.resultat?`<span class="j-card-result-tag" style="${resTagStyle}">${t.resultat}</span>`:''}
-            ${rrStr}
-          </div>
-          <div class="j-card-actions">
-            <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier" style="padding:4px 9px">✎</button>
-            <button class="btn-ghost btn-sm" style="color:var(--red);padding:4px 9px" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
+        <div class="jc-row3">
+          <div class="jc-badges">${resBdg}${disciplineBdg}${rnpBdg}</div>
+          <div class="jc-actions" onclick="event.stopPropagation()">
+            <button class="btn-ghost btn-sm" onclick="dupTrade('${t.id}')" title="Dupliquer">⧉</button>
+            <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier">✎</button>
+            <button class="btn-ghost btn-sm" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">🗑</button>
           </div>
         </div>
       </div>
@@ -2100,6 +2100,16 @@ function openNew(){
   editId=null;ss=null;tConf=3;tScrHTF='';tScrMTF='';tScrLTF='';tDir='';
   document.getElementById('tmTitle').textContent='Nouveau trade';
   buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',direction:'',structure:null,montantRisque:'',gainPerte:'',resultat:'',etat:'',stars:3,horsZone:false,pourquoiEntrer:'',douteHesitation:'',screenshotHTF:'',screenshotMTF:'',screenshotLTF:''});
+  document.getElementById('tradeModal').classList.add('open');
+}
+function dupTrade(id){
+  const t=DB.trades.find(t=>t.id===id);if(!t)return;
+  editId=null;ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
+  tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
+  tScrHTF='';tScrMTF='';tScrLTF='';tDir=t.direction||'';
+  document.getElementById('tmTitle').textContent='Dupliquer le trade';
+  const dup=Object.assign({},t,{id:Date.now().toString(),date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),gainPerte:'',resultat:'',screenshotHTF:'',screenshotMTF:'',screenshotLTF:'',screenshotAvant:'',screenshotApres:'',screenshot:''});
+  buildForm(dup);
   document.getElementById('tradeModal').classList.add('open');
 }
 function openEdit(id){
@@ -2372,7 +2382,7 @@ function openDetail(id){
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────
-function getCalTrades(){return calAccFilters.has('all')?DB.trades:DB.trades.filter(t=>calAccFilters.has(t.compte));}
+function getCalTrades(){const _an=new Set(getActiveAccounts().map(a=>a.name));return calAccFilters.has('all')?DB.trades.filter(t=>_an.has(t.compte)):DB.trades.filter(t=>calAccFilters.has(t.compte));}
 function renderCal(){
   renderCalAccPills();
   const allTrades=getCalTrades();
@@ -2453,7 +2463,7 @@ function renderCalAccPills(){
   const allSel=calAccFilters.has('all');
   let h=`<span style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-right:4px">Compte :</span>`;
   h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleCAF('all')">Tous</button>`;
-  DB.accounts.forEach(a=>{const ok=!allSel&&calAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  getActiveAccounts().forEach(a=>{const ok=!allSel&&calAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
   const el=document.getElementById('calAccPills');if(el)el.innerHTML=h;
 }
 function toggleCAF(name){
@@ -2532,7 +2542,7 @@ function renderCFAccPills(){
   const allSel=cfAccFilters.has('all');
   let h=`<span style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-right:4px">Compte :</span>`;
   h+=`<button class="acc-pill ${allSel?'active':''}" style="${allSel?'background:var(--text);border-color:var(--text)':''}" onclick="toggleCFAF('all')">Tous</button>`;
-  DB.accounts.forEach(a=>{const ok=!allSel&&cfAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCFAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
+  getActiveAccounts().forEach(a=>{const ok=!allSel&&cfAccFilters.has(a.name);h+=`<button class="acc-pill ${ok?'active':''}" style="${ok?`background:${a.color};border-color:${a.color}`:''}" onclick="toggleCFAF('${esc(a.name)}')"><span style="width:7px;height:7px;border-radius:50%;background:${a.color};display:inline-block"></span>${esc(a.name)}</button>`;});
   const el=document.getElementById('cfAccPills');if(el)el.innerHTML=h;
 }
 function toggleCFAF(name){
@@ -2541,7 +2551,9 @@ function toggleCFAF(name){
   renderCashflow();
 }
 function getCFFiltered(){
+  const _an=new Set(getActiveAccounts().map(a=>a.name));
   return(DB.cashflow||[]).filter(c=>{
+    if(!_an.has(c.compte))return false;
     if(!cfAccFilters.has('all')&&!cfAccFilters.has(c.compte))return false;
     if(cfFilters.type&&c.type!==cfFilters.type)return false;
     return true;
@@ -2611,7 +2623,8 @@ function renderAccounts(){
     const s=stats(at);
     const totalPnl=at.reduce((sum,t)=>sum+calcPnl(t),0);
     const pp=acc.startCapital&&totalPnl!==0?(totalPnl/parseFloat(acc.startCapital)*100).toFixed(1):null;
-    h+=`<div class="acc-card" style="border-color:${acc.color}40">
+    const _disabled=isAccDisabled(acc.id);
+    h+=`<div class="acc-card" style="border-color:${acc.color}40;${_disabled?'opacity:.45;filter:grayscale(.6)':''}">
       <div class="acc-bar" style="background:linear-gradient(90deg,${acc.color},${acc.color}80)"></div>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
         <div style="flex:1;min-width:0">
@@ -2621,7 +2634,10 @@ function renderAccounts(){
             <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:10px" onclick="openEditCap('${acc.id}')">Modifier</button>
           </div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="font-size:11px;margin-left:8px;flex-shrink:0" onclick="openRenameAcc('${acc.id}')">✎ Renommer</button>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
+          <button class="btn btn-secondary btn-sm" style="font-size:11px" onclick="openRenameAcc('${acc.id}')">✎ Renommer</button>
+          <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:3px 8px;${isAccDisabled(acc.id)?'opacity:.5':''}" onclick="event.stopPropagation();toggleAccDisabled('${acc.id}')" title="${isAccDisabled(acc.id)?'Activer':'Désactiver'} ce compte">${isAccDisabled(acc.id)?'Désactivé':'Actif'}</button>
+        </div>
       </div>
       ${pp!==null?`<div class="pnl-badge" style="background:${parseFloat(pp)>=0?'var(--green-bg)':'var(--red-bg)'};border:1px solid ${parseFloat(pp)>=0?'var(--green-bd)':'var(--red-bd)'};color:${parseFloat(pp)>=0?'var(--green)':'var(--red)'}">${parseFloat(pp)>=0?'+':''}${pp}% P&L</div>`:''}
       <div class="acc-sg">${[['Trades',s.total],['Win rate',s.winRate+'%'],['RR moyen',(s.avgRR>=0?'+':'')+fmtN(s.avgRR,2)+'R'],['P&L total',(totalPnl>=0?'+':'')+totalPnl.toFixed(2)+'$']].map(([l,v])=>`<div class="acc-sb"><div class="acc-sl">${l}</div><div class="acc-sv">${v}</div></div>`).join('')}</div>
@@ -2665,36 +2681,122 @@ async function saveRenameAcc(){
 }
 
 // ── RULES ─────────────────────────────────────────────────────────────────
-function renderRules(){renderRTab();renderCTab();}
-function switchTab(t){activeTab=t;document.querySelectorAll('.tab').forEach((e,i)=>e.classList.toggle('active',(i===0&&t==='rules')||(i===1&&t==='checklist')));document.getElementById('tab-rules').style.display=t==='rules'?'block':'none';document.getElementById('tab-checklist').style.display=t==='checklist'?'block':'none';}
-function renderRTab(){
-  let h=`<div class="card" style="margin-bottom:14px">`;
-  if(!DB.rules.length)h+='<div class="empty"><p>Aucune règle définie</p></div>';
-  DB.rules.forEach((r,i)=>{h+=`<div class="rule-item"><div class="rule-num">${i+1}</div><div style="flex:1;font-size:13px;line-height:1.6">${esc(r.text)}</div><button class="btn-ghost btn-sm" style="color:var(--red)" onclick="delRule(${r.id})">🗑</button></div>`;});
-  h+=`</div><div class="card" style="padding:14px"><div style="font-size:12px;font-weight:600;margin-bottom:9px">Nouvelle règle</div><div class="inline-add"><input id="nri" placeholder="Ex: Ne jamais trader pendant les news…" onkeydown="if(event.key==='Enter')addRule()"/><button class="btn btn-primary btn-sm" onclick="addRule()">+ Ajouter</button></div></div>`;
-  document.getElementById('tab-rules').innerHTML=h;
+function renderRules(){renderStrategy();}
+function renderStrategy(){
+  const el=document.getElementById('strategyContent');if(!el)return;
+  el.innerHTML=`
+  <div class="strat-header">
+    <div class="strat-header-left">
+      <div class="strat-title">Pullback Model</div>
+      <div class="strat-subtitle">Processus d'identification et d'exécution</div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="copyStrategy()" id="copyStratBtn" style="font-size:10px;padding:4px 10px">Copier pour TradingView</button>
+  </div>
+
+  <div class="strat-timeline">
+
+    <div class="strat-node" data-color="var(--accent)">
+      <div class="strat-node-head">
+        <span class="strat-step">1</span>
+        <span class="strat-step-title">TREND</span>
+        <span class="strat-badge strat-b-accent">Pro-HTF</span>
+        <span class="strat-badge strat-b-accent">Pro-MTF</span>
+      </div>
+      <div class="strat-node-body">
+        Trend pro-HTF et pro-MTF, mais en attente d'un potentiel pullback.
+      </div>
+    </div>
+
+    <div class="strat-node" data-color="var(--amber)">
+      <div class="strat-node-head">
+        <span class="strat-step">2</span>
+        <span class="strat-step-title">PULLBACK</span>
+        <span class="strat-badge strat-b-warn">Counter-HTF</span>
+        <span class="strat-badge strat-b-accent">Pro-MTF</span>
+      </div>
+      <div class="strat-node-body">
+        On recherche des <strong>sells</strong>. On peut chercher une entrée (agressive ou non) mais manage l'expectation du TP sachant que le pullback peut s'arrêter à tout moment.
+      </div>
+    </div>
+
+    <div class="strat-node strat-node-sub" data-color="var(--amber)">
+      <div class="strat-node-head">
+        <span class="strat-step strat-step-sm">2A</span>
+        <span class="strat-step-title">TRANSITION</span>
+        <span class="strat-badge strat-b-accent">Pro-HTF</span>
+        <span class="strat-badge strat-b-warn">Counter-MTF</span>
+      </div>
+      <div class="strat-node-body">
+        <div class="strat-rule"><span class="strat-cond">Si aligné HTF</span> on peut être plus agressif</div>
+        <div class="strat-rule"><span class="strat-cond">Si fin de pullback HTF</span> attendre <strong>ChoCH MTF</strong> avant de chercher une entrée</div>
+      </div>
+    </div>
+
+    <div class="strat-node" data-color="var(--green)">
+      <div class="strat-node-head">
+        <span class="strat-step">3</span>
+        <span class="strat-step-title">RÉALIGNEMENT</span>
+        <span class="strat-badge strat-b-go">Swing ↔ Internal</span>
+      </div>
+      <div class="strat-node-body">
+        Après ChoCH MTF, au retour sur MTF zone, on passe en <strong>LTF directement</strong>.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="strat-foot">
+    <div class="strat-foot-item"><kbd>Agressif</kbd> Passer en LTF directement sans attendre un ChoCH MTF</div>
+    <div class="strat-foot-item"><kbd>Non agressif</kbd> Attendre un ChoCH MTF</div>
+  </div>`;
 }
-function addRule(){const v=document.getElementById('nri').value.trim();if(!v)return;DB.rules.push({id:Date.now(),text:v});saveDB();renderRTab();}
-function delRule(id){DB.rules=DB.rules.filter(r=>r.id!==id);saveDB();renderRTab();}
-function renderCTab(){
-  const done=Object.values(checkedItems).filter(Boolean).length,pct=DB.checklists.length?done/DB.checklists.length*100:0;
-  let h=`<div class="card" style="margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px"><span style="font-size:13px;font-weight:600">${done} / ${DB.checklists.length} validés</span><div style="display:flex;gap:5px"><button class="btn-ghost btn-sm" onclick="resetChk()">Réinitialiser</button><button class="btn-ghost btn-sm" onclick="chkAll()">Tout cocher</button></div></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pct===100?'var(--green)':'var(--accent)'}"></div></div><div style="margin-top:12px">`;
-  DB.checklists.forEach(c=>{const on=checkedItems[c.id];h+=`<div class="check-item" onclick="togChk(${c.id})"><div class="check-box ${on?'on':''}">${on?'✓':''}</div><span style="font-size:13px;flex:1;${on?'color:var(--text3);text-decoration:line-through':''}">${esc(c.text)}</span><button class="btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();delChk(${c.id})">🗑</button></div>`;});
-  h+=`</div></div><div class="card" style="padding:14px"><div style="font-size:12px;font-weight:600;margin-bottom:9px">Nouvel élément</div><div class="inline-add"><input id="nci" placeholder="Ex: Confirmation sur M15…" onkeydown="if(event.key==='Enter')addChk()"/><button class="btn btn-primary btn-sm" onclick="addChk()">+ Ajouter</button></div></div>`;
-  document.getElementById('tab-checklist').innerHTML=h;
+function copyStrategy(){
+  const t=`── PULLBACK MODEL ──────────────────────────────
+
+1. TREND  [Pro-HTF · Pro-MTF]
+   Trend pro-HTF et pro-MTF
+   mais en attente d'un potentiel pullback.
+
+2. PULLBACK  [Counter-HTF · Pro-MTF]
+   On recherche des sells.
+   On peut chercher une entrée (agressive ou non)
+   mais manage l'expectation du TP sachant que
+   le pullback peut s'arrêter à tout moment.
+
+  2A. TRANSITION  [Pro-HTF · Counter-MTF]
+      Si aligné HTF → plus agressif.
+      Si fin de pullback HTF → attendre ChoCH MTF
+      avant de chercher une entrée.
+
+3. RÉALIGNEMENT  [Swing ↔ Internal]
+   Après ChoCH MTF, au retour sur MTF zone,
+   on passe en LTF directement.
+
+────────────────────────────────────────────────
+* Agressif     = LTF directement (sans ChoCH MTF)
+* Non agressif = Attendre un ChoCH MTF`;
+  navigator.clipboard.writeText(t).then(()=>{
+    const btn=document.getElementById('copyStratBtn');
+    btn.textContent='Copié ✓';btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='Copier pour TradingView';btn.style.color='';},2000);
+  });
 }
-function togChk(id){checkedItems[id]=!checkedItems[id];renderCTab();}
-function resetChk(){checkedItems={};renderCTab();}
-function chkAll(){DB.checklists.forEach(c=>checkedItems[c.id]=true);renderCTab();}
-function addChk(){const v=document.getElementById('nci').value.trim();if(!v)return;DB.checklists.push({id:Date.now(),text:v});saveDB();renderCTab();}
-function delChk(id){DB.checklists=DB.checklists.filter(c=>c.id!==id);saveDB();renderCTab();}
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────
+function saveLimitsFromSettings(){
+  const lim={
+    maxTradesDay:parseInt(document.getElementById('lim_maxTrades')?.value)||3,
+    maxDailyLoss:parseFloat(document.getElementById('lim_maxLoss')?.value)||150,
+    minStars:parseInt(document.getElementById('lim_minStars')?.value)||3,
+    requireReason:true
+  };
+  saveTradingLimits(lim);
+  toast('Limites enregistr\u00e9es \u2713','success');
+}
 function renderSettings(){
   const it=DB.instruments.map(i=>`<span class="tag">${esc(i)}<button onclick="rmInstr('${i}')">×</button></span>`).join('');
-  const sidebarLight=localStorage.getItem('sidebarLight')==='1';
-  const sidebarCollapsed=localStorage.getItem('sidebarCollapsed')==='1';
   const curTheme=localStorage.getItem('tl_theme')||'light';
+  const lim=getTradingLimits();
 
   function toggleBtn(on,onClick,id=''){
     return `<button ${id?`id="${id}"`:''}onclick="${onClick}" class="toggle-switch" style="background:${on?'var(--accent)':'var(--bg2)'}">
@@ -2703,9 +2805,8 @@ function renderSettings(){
   }
 
   const themes=[
-    {id:'light',name:'Light',   sb:'#1C3461',bg:'#F5F7FA',accent:'#2558CE',bar:'#60A5FA'},
-    {id:'dark', name:'Sombre',  sb:'#080A0F',bg:'#0C0E14',accent:'#3B82F6',bar:'#3B82F6'},
-    {id:'gold', name:'Gold',    sb:'#3A2208',bg:'#F7F3EA',accent:'#D4A84C',bar:'#D4A84C'},
+    {id:'light',name:'Light',   sb:'#1E293B',bg:'#ECEEF1',accent:'#1D4ED8',bar:'#3B82F6'},
+    {id:'dark', name:'Dark',    sb:'#131620',bg:'#09090B',accent:'#3B82F6',bar:'#3B82F6'},
   ];
   const themeCards=themes.map(t=>`
     <div class="theme-card ${curTheme===t.id?'active':''}" onclick="setTheme('${t.id}');renderSettings()" title="${t.name}">
@@ -2760,21 +2861,6 @@ function renderSettings(){
       <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px">Thème de couleur</div>
       <div style="display:flex;gap:10px;margin-bottom:20px">${themeCards}</div>
 
-      <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px">Menu latéral</div>
-      <div class="settings-toggle-row">
-        <div class="settings-toggle-info">
-          <span class="settings-toggle-label">Menu compact</span>
-          <span class="settings-toggle-sub">Réduire la sidebar aux icônes uniquement</span>
-        </div>
-        ${toggleBtn(sidebarCollapsed,'toggleSidebarCollapsed()')}
-      </div>
-      <div class="settings-toggle-row">
-        <div class="settings-toggle-info">
-          <span class="settings-toggle-label">Menu fond clair</span>
-          <span class="settings-toggle-sub">Afficher la sidebar en mode light</span>
-        </div>
-        ${toggleBtn(sidebarLight,'toggleSidebarLight()')}
-      </div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -2783,6 +2869,30 @@ function renderSettings(){
       <div style="display:flex;gap:8px">
         <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ Exporter en CSV</button>
         <button class="btn btn-primary btn-sm" onclick="exportJSON()">↓ Exporter en JSON</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span style="font-size:14px;font-weight:700">Limites de Trading</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Param\u00e8tres du Pre-Trade Gate et du Kill Switch. Ces limites d\u00e9clenchent des alertes et peuvent bloquer l'ajout de nouveaux trades.</div>
+      <div class="form-grid" style="gap:10px">
+        <div class="field">
+          <label>Max trades / jour</label>
+          <input type="number" id="lim_maxTrades" value="${lim.maxTradesDay}" min="1" max="20" style="width:100%"/>
+        </div>
+        <div class="field">
+          <label>Perte max / jour ($)</label>
+          <input type="number" id="lim_maxLoss" value="${lim.maxDailyLoss}" min="0" step="10" style="width:100%"/>
+        </div>
+        <div class="field">
+          <label>Confiance min (1-5)</label>
+          <input type="number" id="lim_minStars" value="${lim.minStars}" min="1" max="5" style="width:100%"/>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="saveLimitsFromSettings()">Enregistrer les limites</button>
       </div>
     </div>
     <div class="card">
@@ -2794,31 +2904,471 @@ function renderSettings(){
       </div>
     </div>`;
 }
-function toggleSidebarLight(){
-  const on=localStorage.getItem('sidebarLight')==='1';
-  localStorage.setItem('sidebarLight',on?'0':'1');
-  applySidebarLight();
+const SB_COLORS=[
+  {id:'slate',name:'Slate',from:'#1E293B',to:'#334155'},
+];
+function getSbColorCards(){
+  const cur=localStorage.getItem('tl_sb_color')||'default';
+  return SB_COLORS.map(c=>`
+    <div onclick="setSbColor('${c.id}')" title="${c.name}" style="
+      cursor:pointer;width:44px;height:32px;border-radius:5px;
+      background:linear-gradient(180deg,${c.from},${c.to});
+      border:2px solid ${cur===c.id?'var(--accent)':'transparent'};
+      box-shadow:${cur===c.id?'0 0 0 1px var(--accent-bd)':'none'};
+      transition:border .12s,box-shadow .12s;
+      position:relative;
+    "><span style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:7px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.2px">${c.name}</span></div>`).join('');
+}
+function setSbColor(id){
+  localStorage.setItem('tl_sb_color',id);
+  applySbColor();
   renderSettings();
 }
-function applySidebarLight(){
-  if(localStorage.getItem('sidebarLight')==='1'){
-    document.body.classList.add('sidebar-light');
-  }else{
-    document.body.classList.remove('sidebar-light');
-  }
+function applySbColor(){
+  const id=localStorage.getItem('tl_sb_color')||'default';
+  const c=SB_COLORS.find(x=>x.id===id)||SB_COLORS[0];
+  document.documentElement.style.setProperty('--sb-bg',`linear-gradient(180deg,${c.from},${c.to})`);
+  document.documentElement.style.setProperty('--sb-bg-solid',c.from);
 }
-function toggleSidebarCollapsed(){
-  const collapsed=document.body.classList.toggle('sidebar-collapsed');
-  localStorage.setItem('sidebarCollapsed',collapsed?'1':'0');
-  renderSettings();
-}
-function applySidebarCollapsed(){
-  if(localStorage.getItem('sidebarCollapsed')==='1'){
-    document.body.classList.add('sidebar-collapsed');
-  }
-}
+function toggleSidebarLight(){}
+function applySidebarLight(){}
+function toggleSidebarCollapsed(){}
+function applySidebarCollapsed(){}
 function addInstr(){const v=document.getElementById('nii').value.trim().toUpperCase();if(!v||DB.instruments.includes(v))return;DB.instruments.push(v);saveDB();renderSettings();}
 function rmInstr(i){DB.instruments=DB.instruments.filter(x=>x!==i);saveDB();renderSettings();}
+
+// ══════════════════════════════════════════════════════════════════════
+// ██  STEP 1 — PRE-TRADE GATE + PATTERN DETECTION                    ██
+// ══════════════════════════════════════════════════════════════════════
+
+// Trading Limits (stored in localStorage)
+function getTradingLimits(){
+  try{return JSON.parse(localStorage.getItem('tl_limits')||'null')||{maxTradesDay:3,maxDailyLoss:150,minStars:3,requireReason:true};}
+  catch{return{maxTradesDay:3,maxDailyLoss:150,minStars:3,requireReason:true};}
+}
+function saveTradingLimits(lim){localStorage.setItem('tl_limits',JSON.stringify(lim));}
+
+// Pattern Detection Engine
+function detectPatterns(trades){
+  const today=new Date().toISOString().split('T')[0];
+  const closed=trades.filter(t=>t.resultat!=='En cours');
+  const todayTrades=closed.filter(t=>t.date===today);
+  const recent=[...closed].sort((a,b)=>(b.date+' '+(b.heure||'')).localeCompare(a.date+' '+(a.heure||''))).slice(0,10);
+  const patterns=[];
+  const lim=getTradingLimits();
+
+  // 1. Overtrading
+  if(todayTrades.length>=lim.maxTradesDay){
+    patterns.push({type:'overtrading',severity:'high',
+      title:'Overtrading',
+      msg:`${todayTrades.length} trades aujourd'hui (limite: ${lim.maxTradesDay}). Arr\u00eate de trader.`,
+      icon:'\ud83d\uded1'});
+  }
+
+  // 2. Daily loss limit hit
+  const todayPnl=todayTrades.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+  if(todayPnl<=-lim.maxDailyLoss){
+    patterns.push({type:'killswitch',severity:'critical',
+      title:'Kill Switch \u2014 Perte maximale atteinte',
+      msg:`Perte du jour: -$${Math.abs(todayPnl).toFixed(2)} (limite: -$${lim.maxDailyLoss}). STOP. Reviens demain.`,
+      icon:'\ud83d\udd34'});
+  }
+
+  // 3. Revenge trading
+  if(recent.length>=2){
+    const last2=recent.slice(0,2);
+    if(last2[0].resultat!=='Win'&&last2[1].resultat==='Loss'&&last2[0].date===last2[1].date){
+      const t0=parseInt((last2[1].heure||'00:00').replace(':',''),10);
+      const t1=parseInt((last2[0].heure||'00:00').replace(':',''),10);
+      if(t1-t0<100&&t1-t0>=0){
+        patterns.push({type:'revenge',severity:'high',
+          title:'Revenge Trading',
+          msg:`Tu as repris un trade trop vite apr\u00e8s une perte. Respire, analyse, attends.`,
+          icon:'\u26a1'});
+      }
+    }
+  }
+
+  // 4. Tilt detection
+  let consecLoss=0;
+  for(const t of recent){
+    if(t.resultat==='Loss')consecLoss++;else break;
+  }
+  if(consecLoss>=3){
+    patterns.push({type:'tilt',severity:'high',
+      title:'Tilt D\u00e9tect\u00e9 \u2014 S\u00e9rie de pertes',
+      msg:`${consecLoss} pertes cons\u00e9cutives. Tu es probablement en tilt. Fais une pause.`,
+      icon:'\ud83c\udf21\ufe0f'});
+  }
+
+  // 5. Size escalation
+  if(recent.length>=3){
+    const lastRisk=parseFloat(recent[0].montantRisque)||0;
+    const avgRisk=recent.slice(1,6).reduce((s,t)=>s+(parseFloat(t.montantRisque)||0),0)/Math.min(recent.length-1,5);
+    if(lastRisk>0&&avgRisk>0&&lastRisk>avgRisk*2){
+      patterns.push({type:'sizeEscalation',severity:'medium',
+        title:'Taille de Position Anormale',
+        msg:`Dernier risque: $${lastRisk.toFixed(0)} vs moyenne $${avgRisk.toFixed(0)} \u2014 tu doubles la mise apr\u00e8s une perte ?`,
+        icon:'\ud83d\udcca'});
+    }
+  }
+
+  return patterns;
+}
+
+function getPatternsHTML(f){
+  const patterns=detectPatterns(f);
+  if(!patterns.length)return'<div style="padding:16px;text-align:center;font-size:12px;color:var(--text4)">Aucun pattern détecté</div>';
+  const sevOrder={critical:0,high:1,medium:2,low:3};
+  patterns.sort((a,b)=>(sevOrder[a.severity]||3)-(sevOrder[b.severity]||3));
+  return patterns.map(p=>{
+    const cls=p.severity==='critical'?'gate-alert-critical':p.severity==='high'?'gate-alert-high':'gate-alert-medium';
+    return`<div class="gate-alert ${cls}" style="margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">${p.icon}</span>
+        <div>
+          <div style="font-weight:700;font-size:13px">${p.title}</div>
+          <div style="font-size:11.5px;opacity:.85;margin-top:2px">${p.msg}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderPatterns(f){
+  const el=document.getElementById('dashPatterns');if(!el)return;
+  el.innerHTML=getPatternsHTML(f);
+}
+
+// Pre-Trade Gate
+function openPreTradeGate(){
+  const patterns=detectPatterns(DB.trades);
+  const lim=getTradingLimits();
+  const today=new Date().toISOString().split('T')[0];
+  const todayTrades=DB.trades.filter(t=>t.date===today&&t.resultat!=='En cours');
+  const todayPnl=todayTrades.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+
+  const hasKillSwitch=patterns.some(p=>p.type==='killswitch');
+
+  const checks=DB.checklists||[];
+  const checkItems=checks.map((c,i)=>`
+    <label class="gate-item" onclick="this.classList.toggle('checked')">
+      <div class="gate-check"></div>
+      <span>${esc(c.text)}</span>
+    </label>`).join('');
+
+  const warningsHtml=patterns.map(p=>{
+    const cls=p.severity==='critical'?'gate-alert-critical':p.severity==='high'?'gate-alert-high':'gate-alert-medium';
+    return`<div class="gate-alert ${cls}">
+      <span style="font-size:16px">${p.icon}</span>
+      <div>
+        <div style="font-weight:700;font-size:12px">${p.title}</div>
+        <div style="font-size:11px;opacity:.85">${p.msg}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const statusHtml=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      <div class="gate-status-card">
+        <div class="gate-status-val ${todayTrades.length>=lim.maxTradesDay?'red':todayTrades.length>=lim.maxTradesDay-1?'amber':'green'}">${todayTrades.length}/${lim.maxTradesDay}</div>
+        <div class="gate-status-lbl">Trades aujourd'hui</div>
+      </div>
+      <div class="gate-status-card">
+        <div class="gate-status-val ${todayPnl<=-lim.maxDailyLoss?'red':todayPnl<0?'amber':'green'}">${todayPnl>=0?'+':''}$${todayPnl.toFixed(0)}</div>
+        <div class="gate-status-lbl">P&L du jour</div>
+      </div>
+      <div class="gate-status-card">
+        <div class="gate-status-val">-$${lim.maxDailyLoss}</div>
+        <div class="gate-status-lbl">Perte max</div>
+      </div>
+    </div>`;
+
+  document.getElementById('gateBody').innerHTML=`
+    <div class="gate-screen">
+      ${statusHtml}
+      ${warningsHtml?`<div style="margin-bottom:14px">${warningsHtml}</div>`:''}
+      ${checks.length?`
+        <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Checklist pr\u00e9-trade</div>
+        <div class="gate-checklist">${checkItems}</div>
+        <div class="gate-progress" id="gateProgress">
+          <div class="gate-progress-fill" style="width:0%"></div>
+        </div>
+      `:''}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)">
+        <button class="btn btn-secondary" onclick="closeModal('gateModal')">Annuler</button>
+        <button class="btn btn-primary" id="gatePassBtn" onclick="passGate()">
+          Ouvrir le formulaire
+        </button>
+      </div>
+    </div>`;
+
+  setTimeout(()=>{
+    const items=document.querySelectorAll('.gate-item');
+    const fill=document.querySelector('.gate-progress-fill');
+    if(!items.length)return;
+    const update=()=>{
+      const checked=document.querySelectorAll('.gate-item.checked').length;
+      const pct=Math.round(checked/items.length*100);
+      if(fill)fill.style.width=pct+'%';
+    };
+    items.forEach(it=>it.addEventListener('click',()=>setTimeout(update,10)));
+  },50);
+
+  document.getElementById('gateModal').classList.add('open');
+}
+
+function passGate(){
+  closeModal('gateModal');
+  openNew();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ██  STEP 2 — EDGE MAP + OPTIMAL STOP RULES                         ██
+// ══════════════════════════════════════════════════════════════════════
+
+// Edge Matrix
+function buildEdgeMatrix(trades){
+  const closed=trades.filter(t=>t.resultat!=='En cours'&&t.instrument&&t.session);
+  const instruments=[...new Set(closed.map(t=>t.instrument))].sort();
+  const sessions=['Asian','London','New York'];
+  const matrix={};
+  instruments.forEach(instr=>{
+    matrix[instr]={};
+    sessions.forEach(sess=>{
+      const cell=closed.filter(t=>t.instrument===instr&&t.session===sess);
+      const wins=cell.filter(t=>t.resultat==='Win').length;
+      const total=cell.length;
+      const wr=total>=2?Math.round(wins/total*100):null;
+      const pnl=cell.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+      matrix[instr][sess]={wins,total,wr,pnl};
+    });
+  });
+  return{instruments,sessions,matrix};
+}
+
+function getEdgeMatrixHTML(f){
+  const closed=f.filter(t=>t.resultat!=='En cours');
+  if(closed.length<5)return'<div style="padding:16px;text-align:center;font-size:12px;color:var(--text4)">Pas assez de trades (min 5)</div>';
+
+  const{instruments,sessions,matrix}=buildEdgeMatrix(f);
+  if(!instruments.length)return'';
+
+  const filteredInstr=instruments.filter(i=>sessions.some(s=>matrix[i][s].total>=2));
+  if(!filteredInstr.length)return'<div style="padding:16px;text-align:center;font-size:12px;color:var(--text4)">Pas assez de données par paire</div>';
+
+  function heatColor(wr,n){
+    if(n<2)return'transparent';
+    if(wr>=70)return'var(--green-bg)';if(wr>=60)return'rgba(27,140,78,.03)';
+    if(wr<=30)return'var(--red-bg)';if(wr<40)return'rgba(212,42,42,.03)';
+    return'transparent';
+  }
+  function heatBorder(wr,n){
+    if(n<2)return'var(--border2)';
+    if(wr>=60)return'var(--green-bd)';if(wr<40)return'var(--red-bd)';
+    return'var(--border2)';
+  }
+
+  const thS='padding:6px 10px;font-size:9px;font-weight:700;color:var(--text4);letter-spacing:.6px;text-transform:uppercase;text-align:center';
+
+  let rows=filteredInstr.map(instr=>{
+    const cells=sessions.map(sess=>{
+      const c=matrix[instr][sess];
+      if(c.total<2)return`<td style="padding:4px;text-align:center"><div style="padding:6px 4px;font-size:11px;color:var(--text4);border-radius:var(--r)">\u2014</div></td>`;
+      const bg=heatColor(c.wr,c.total);const bd=heatBorder(c.wr,c.total);
+      const txtCol=c.wr>=60?'var(--green)':c.wr<40?'var(--red)':'var(--text2)';
+      return`<td style="padding:4px;text-align:center">
+        <div style="padding:6px 4px;border-radius:var(--r);background:${bg};border:1px solid ${bd}">
+          <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${txtCol}">${c.wr}%</div>
+          <div style="font-size:9px;color:var(--text4);margin-top:1px">${c.total}t</div>
+        </div></td>`;
+    }).join('');
+    const allCell=closed.filter(t=>t.instrument===instr);
+    const allWins=allCell.filter(t=>t.resultat==='Win').length;
+    const allWR=allCell.length>=2?Math.round(allWins/allCell.length*100):null;
+    const allPnl=allCell.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
+    const bg=allWR!==null?heatColor(allWR,allCell.length):'transparent';
+    const bd=allWR!==null?heatBorder(allWR,allCell.length):'var(--border2)';
+    const totCol=allWR!==null?(allWR>=60?'var(--green)':allWR<40?'var(--red)':'var(--text2)'):'var(--text4)';
+    return`<tr>
+      <td style="padding:4px 10px;font-weight:700;font-family:var(--mono);font-size:12px;white-space:nowrap">${esc(instr)}</td>
+      ${cells}
+      <td style="padding:4px;text-align:center"><div style="padding:6px 4px;border-radius:var(--r);background:${bg};border:1px solid ${bd}">
+        <div style="font-size:13px;font-weight:700;font-family:var(--mono);color:${totCol}">${allWR!==null?allWR+'%':'\u2014'}</div>
+        <div style="font-size:9px;color:${allPnl>=0?'var(--green)':'var(--red)'};margin-top:1px">${allPnl>=0?'+':''}$${Math.abs(allPnl).toFixed(0)}</div>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  return`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table class="edge-matrix" style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="${thS};text-align:left">Pair</th>
+        ${sessions.map(s=>`<th style="${thS}">${s}</th>`).join('')}
+        <th style="${thS}">Total</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+function renderEdgeMatrix(f){
+  const el=document.getElementById('dashEdgeMatrix');if(!el)return;
+  const closed=f.filter(t=>t.resultat!=='En cours');
+  if(closed.length<5){el.innerHTML='';return;}
+  el.innerHTML=`<div class="card"><div class="card-head"><span class="card-head-title">Edge Map</span><span class="card-head-sub" style="font-size:10px;color:var(--text4)">Win rate \u00b7 min 2 trades</span></div>${getEdgeMatrixHTML(f)}</div>`;
+}
+
+// Optimal Stop Rules (data-driven)
+function calcOptimalStops(trades){
+  const closed=trades.filter(t=>t.resultat!=='En cours'&&!isNaN(parseFloat(t.gainPerte)));
+  if(closed.length<5)return null;
+
+  const wins=closed.filter(t=>t.resultat==='Win');
+  const losses=closed.filter(t=>t.resultat==='Loss');
+  const avgWin=wins.length?wins.reduce((s,t)=>s+parseFloat(t.gainPerte),0)/wins.length:0;
+  const avgLoss=losses.length?Math.abs(losses.reduce((s,t)=>s+parseFloat(t.gainPerte),0)/losses.length):0;
+
+  const winRRs=wins.map(t=>calcRR(t)).filter(r=>r!==null&&isFinite(r));
+  const lossRRs=losses.map(t=>calcRR(t)).filter(r=>r!==null&&isFinite(r));
+  const avgWinRR=winRRs.length?winRRs.reduce((s,r)=>s+r,0)/winRRs.length:0;
+  const avgLossRR=lossRRs.length?Math.abs(lossRRs.reduce((s,r)=>s+r,0)/lossRRs.length):0;
+
+  const sessionPerf={};
+  SESSIONS.filter(s=>s!=='Hors session').forEach(s=>{
+    const st=closed.filter(t=>t.session===s);
+    const w=st.filter(t=>t.resultat==='Win').length;
+    sessionPerf[s]={wr:st.length>=3?Math.round(w/st.length*100):null,n:st.length,pnl:st.reduce((a,t)=>a+(parseFloat(t.gainPerte)||0),0)};
+  });
+  const bestSession=Object.entries(sessionPerf).filter(([,v])=>v.wr!==null).sort((a,b)=>b[1].pnl-a[1].pnl)[0];
+
+  const wr=wins.length/closed.length;
+  const payoff=avgLoss>0?avgWin/avgLoss:0;
+  const kelly=payoff>0?Math.max(0,wr-(1-wr)/payoff):0;
+  const suggestedRisk=Math.min(kelly*100,5);
+
+  return{avgWin,avgLoss,avgWinRR,avgLossRR,bestSession,suggestedRisk:suggestedRisk.toFixed(1),kelly:(kelly*100).toFixed(1),wr:Math.round(wr*100),payoff:payoff.toFixed(2)};
+}
+
+function renderStopRules(f){
+  const el=document.getElementById('dashStopRules');if(!el)return;
+  const data=calcOptimalStops(f);
+  if(!data){el.innerHTML='';return;}
+
+  const rules=[
+    {label:'Gain moyen',value:`+$${data.avgWin.toFixed(2)}`,sub:`${data.avgWinRR.toFixed(2)}R`,color:'var(--green)'},
+    {label:'Perte moyenne',value:`-$${data.avgLoss.toFixed(2)}`,sub:`${data.avgLossRR.toFixed(2)}R`,color:'var(--red)'},
+    {label:'Payoff Ratio',value:`${data.payoff}:1`,sub:`${data.wr}% win rate`,color:parseFloat(data.payoff)>=1.5?'var(--green)':'var(--amber)'},
+    {label:'Kelly %',value:`${data.kelly}%`,sub:`risque sugg\u00e9r\u00e9: ${data.suggestedRisk}%`,color:'var(--accent)'},
+  ];
+
+  el.innerHTML=`<div class="card">
+    <div class="card-head">
+      <span class="card-head-title">Optimal Stop Rules \u2014 Data-Driven</span>
+      <span class="card-head-sub" style="font-size:10px;color:var(--text4)">calcul\u00e9 sur ${f.filter(t=>t.resultat!=='En cours').length} trades</span>
+    </div>
+    <div class="stop-rules">
+      ${rules.map(r=>`
+        <div class="stop-rule">
+          <div class="stop-rule-label">${r.label}</div>
+          <div class="stop-rule-value" style="color:${r.color}">${r.value}</div>
+          <div class="stop-rule-sub">${r.sub}</div>
+        </div>`).join('')}
+    </div>
+    ${data.bestSession?`<div style="margin-top:10px;padding:10px 14px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:var(--r);font-size:12px">
+      <strong style="color:var(--green)">Meilleure session :</strong> ${data.bestSession[0]}
+      \u2014 ${data.bestSession[1].wr}% WR, ${data.bestSession[1].n} trades,
+      <span style="color:${data.bestSession[1].pnl>=0?'var(--green)':'var(--red)'}">${data.bestSession[1].pnl>=0?'+':''}$${data.bestSession[1].pnl.toFixed(2)}</span>
+    </div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ██  STEP 3 — SCORING MULTIDIMENSIONNEL                              ██
+// ══════════════════════════════════════════════════════════════════════
+
+function calcTraderScore(trades){
+  const closed=trades.filter(t=>t.resultat!=='En cours');
+  if(closed.length<3)return null;
+
+  const s=stats(closed);
+  const disc=getDisciplineAudit(closed);
+
+  // Axis 1: Discipline (0-100)
+  const discipline=disc.score;
+
+  // Axis 2: Risk Management
+  const wins=closed.filter(t=>t.resultat==='Win');
+  const losses=closed.filter(t=>t.resultat==='Loss');
+  const avgWin=wins.length?wins.reduce((a,t)=>a+Math.abs(parseFloat(t.gainPerte)||0),0)/wins.length:0;
+  const avgLoss=losses.length?losses.reduce((a,t)=>a+Math.abs(parseFloat(t.gainPerte)||0),0)/losses.length:0;
+  const payoff=avgLoss>0?avgWin/avgLoss:0;
+  const riskMgmt=Math.min(100,Math.round(payoff*40)+10);
+
+  // Axis 3: Consistency
+  const consistency=Math.min(100,Math.round(s.winRate*1.3));
+
+  // Axis 4: Execution
+  const documented=closed.filter(t=>t.pourquoiEntrer&&t.pourquoiEntrer.trim().length>5).length;
+  const solide=closed.filter(t=>t.structure==='solide').length;
+  const execution=Math.round((documented/closed.length*50)+(solide/closed.length*50));
+
+  // Axis 5: Edge
+  const exp=expectancy(closed);
+  const edge=exp>0?Math.min(100,Math.round(30+exp*2)):Math.max(0,Math.round(30+exp));
+
+  const overall=Math.round((discipline+riskMgmt+consistency+execution+edge)/5);
+
+  return{discipline,riskMgmt,consistency,execution,edge,overall,
+    labels:['Discipline','Risk Mgmt','Consistance','Ex\u00e9cution','Edge']};
+}
+
+function renderTraderScore(f){
+  const score=calcTraderScore(f);
+  if(!score)return'';
+  const axes=[
+    {label:'Discipline',value:score.discipline},
+    {label:'Risk Mgmt',value:score.riskMgmt},
+    {label:'Consistance',value:score.consistency},
+    {label:'Ex\u00e9cution',value:score.execution},
+    {label:'Edge',value:score.edge}
+  ];
+  const overallCls=score.overall>=70?'green':score.overall>=50?'amber':'red';
+
+  const bars=axes.map(a=>{
+    const col=a.value>=70?'var(--green)':a.value>=50?'var(--amber)':'var(--red)';
+    return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="width:80px;font-size:11px;font-weight:600;color:var(--text2);text-align:right;flex-shrink:0">${a.label}</span>
+      <div style="flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${a.value}%;background:${col};border-radius:4px;transition:width .4s ease"></div>
+      </div>
+      <span style="width:32px;font-size:12px;font-weight:700;font-family:var(--mono);color:${col};text-align:right">${a.value}</span>
+    </div>`;
+  }).join('');
+
+  // Include stop rules data
+  const stopData=calcOptimalStops(f);
+  let stopHtml='';
+  if(stopData){
+    const rules=[
+      {label:'Gain moyen',value:`+$${stopData.avgWin.toFixed(2)}`,sub:`${stopData.avgWinRR.toFixed(2)}R`,color:'var(--green)'},
+      {label:'Perte moyenne',value:`-$${stopData.avgLoss.toFixed(2)}`,sub:`${stopData.avgLossRR.toFixed(2)}R`,color:'var(--red)'},
+      {label:'Payoff Ratio',value:`${stopData.payoff}:1`,sub:`${stopData.wr}% win rate`,color:parseFloat(stopData.payoff)>=1.5?'var(--green)':'var(--amber)'},
+      {label:'Kelly %',value:`${stopData.kelly}%`,sub:`risque sugg\u00e9r\u00e9: ${stopData.suggestedRisk}%`,color:'var(--accent)'},
+    ];
+    stopHtml=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+      <div style="font-size:9px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Optimal Stops</div>
+      <div class="stop-rules">${rules.map(r=>`<div class="stop-rule"><div class="stop-rule-label">${r.label}</div><div class="stop-rule-value" style="color:${r.color}">${r.value}</div><div class="stop-rule-sub">${r.sub}</div></div>`).join('')}</div>
+      ${stopData.bestSession?`<div style="margin-top:8px;padding:8px 12px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:var(--r);font-size:11px">
+        <strong style="color:var(--green)">Meilleure session :</strong> ${stopData.bestSession[0]} \u2014 ${stopData.bestSession[1].wr}% WR, ${stopData.bestSession[1].n}t, <span style="color:${stopData.bestSession[1].pnl>=0?'var(--green)':'var(--red)'}">${stopData.bestSession[1].pnl>=0?'+':''}$${stopData.bestSession[1].pnl.toFixed(2)}</span>
+      </div>`:''}
+    </div>`;
+  }
+
+  return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:9px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:.5px">Score Trader</span>
+      <span style="font-weight:700;font-family:var(--mono);color:var(--${overallCls})">${score.overall}/100</span>
+    </div>
+    <div>${bars}</div>
+    ${stopHtml}`;
+}
 
 // ── CSV EXPORT ────────────────────────────────────────────────────────────
 function exportCSV(){
@@ -3037,8 +3587,7 @@ async function loadApp(){
     saveDB();
   }catch(e){
     console.error('Init error:',e);
-    document.getElementById('syncDot').className='sync-dot err';
-    document.getElementById('syncLbl').textContent='Mode local';
+    const sd=document.getElementById('syncDot');if(sd)sd.className='topbar-sync';if(sd)sd.style.background='var(--red)';
     toast('Supabase indisponible — mode local','error');
   }
   hideLoadingScreen();
@@ -3069,6 +3618,7 @@ async function init(){
   if(cached&&cached.promptVer!==AI_PROMPT_VER)localStorage.removeItem(AI_CACHE_KEY);
   applySidebarLight();
   applySidebarCollapsed();
+  applySbColor();
   // Check if already logged in (existing session)
   const{data:{session}}=await sb.auth.getSession();
   if(session){
