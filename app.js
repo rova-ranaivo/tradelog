@@ -298,12 +298,36 @@ function closeSidebar(){
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
 const PTitles={dashboard:'Dashboard',report:'Rapport & Analyse',journal:'Journal de trades',calendar:'Calendrier',cashflow:'Dépôts & Retraits',accounts:'Gestion des comptes',rules:'Règles & Checklist',settings:'Paramètres'};
+function toggleMobileMore(e){
+  e&&e.stopPropagation();
+  const m=document.getElementById('mobileMoreMenu');
+  if(m.classList.contains('open')){closeMobileMore();return;}
+  m.classList.add('open');
+  setTimeout(()=>document.addEventListener('click',closeMobileMore,{once:true}),10);
+}
+function closeMobileMore(){
+  const m=document.getElementById('mobileMoreMenu');
+  if(m)m.classList.remove('open');
+}
+function syncMobileNav(p){
+  document.querySelectorAll('.mn-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.mn-more-item').forEach(t=>t.classList.remove('active'));
+  const tab=document.querySelector('#mobileNav .mn-tab[data-page="'+p+'"]');
+  if(tab){tab.classList.add('active');}
+  else{
+    // page is in "more" menu — highlight the more button + the item
+    const moreBtn=document.querySelector('.mn-more-btn');
+    if(moreBtn)moreBtn.classList.add('active');
+    const item=document.querySelector('.mn-more-item[data-page="'+p+'"]');
+    if(item)item.classList.add('active');
+  }
+}
 function showPage(p){
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   document.querySelectorAll('[data-page="'+p+'"]').forEach(e=>e.classList.add('active'));
-  closeSidebar();
+  closeSidebar();syncMobileNav(p);
   curPage=p;
   document.getElementById('pageTitle').textContent=PTitles[p]||p;
   document.getElementById('pageSub').textContent=`${DB.trades.length} trade${DB.trades.length>1?'s':''} · ${DB.accounts.length} compte${DB.accounts.length>1?'s':''}`;
