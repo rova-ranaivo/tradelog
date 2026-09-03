@@ -347,29 +347,28 @@
     </button>
   </div>
 </nav>
-<button id="fab" onclick="openPreTradeGate()" title="Nouveau trade">
+<button id="fab" onclick="openNew()" title="Nouveau trade">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 </button>
 
-<!-- ─── PRE-TRADE GATE ─── -->
-<div class="overlay" id="gateModal">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-header">
-      <span class="modal-title">Pre-Trade Gate</span>
-      <button class="modal-close" onclick="closeModal('gateModal')">✕</button>
-    </div>
-    <div class="modal-body" id="gateBody"></div>
-  </div>
-</div>
 
-<!-- ─── TRADE MODAL ─── -->
-<div class="overlay" id="tradeModal">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="tmTitle">Nouveau trade</span>
+<!-- ─── TRADE DRAWER ─── -->
+<div class="trade-drawer-overlay" id="tradeModal">
+  <div id="imgExpandPanel" class="img-expand-panel" onclick="if(event.target===this)closeImgExpand()">
+    <img id="imgExpandEl" src="" alt="" onclick="event.stopPropagation()"/>
+    <div id="imgExpandLabel" class="img-expand-label" onclick="event.stopPropagation()"></div>
+  </div>
+  <div class="trade-drawer">
+    <div class="trade-drawer-header">
+      <div id="tmTitle" class="modal-title">Nouveau trade</div>
+      <div id="tmNav" class="drawer-nav" style="display:none">
+        <button class="btn-ghost btn-sm drawer-nav-btn" id="tmNavPrev" onclick="prevDetail()" title="Précédent">‹</button>
+        <span id="tmNavCount" class="drawer-nav-count"></span>
+        <button class="btn-ghost btn-sm drawer-nav-btn" id="tmNavNext" onclick="nextDetail()" title="Suivant">›</button>
+      </div>
       <button class="modal-close" onclick="closeModal('tradeModal')">✕</button>
     </div>
-    <div class="modal-body" id="tmBody"></div>
+    <div class="trade-drawer-body" id="tmBody"></div>
   </div>
 </div>
 

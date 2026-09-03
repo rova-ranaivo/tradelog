@@ -24,7 +24,7 @@
 // ║  L.1588    renderJTable()                                                ║
 // ║  L.1650  TRADE MODAL (openTradeModal, saveTradeModal…)                  ║
 // ║  L.1685    buildForm()                                                   ║
-// ║  L.1894  DETAIL MODAL (openDetailModal)                                  ║
+// ║  L.2388  DETAIL VIEW (openDetail → trade drawer)                         ║
 // ║  L.1926  CALENDAR (renderCalendar)                                       ║
 // ║  L.2043  CASHFLOW PAGE (renderCashflow)                                  ║
 // ║  L.2158  ACCOUNTS PAGE (renderAccounts)                                  ║
@@ -116,7 +116,7 @@ const LIQUIDITES=['Inducement','ChoCH','EQL (Equal Lows)','EQH (Equal Highs)'];
 const FORM_INSTRUMENTS=['GER40','EURUSD','XAUUSD','GBPUSD'];
 const WARN_INSTRUMENTS=['USDJPY','EURJPY'];
 const ACC_COLORS=['#2558CE','#8E6B1E','#2B8A4E','#8A5E12','#1E6A9A','#6B4F8A','#B05020','#4A6880'];
-const SH=['ID','Compte','Date','Heure','Session','Instrument','Direction','Confiance (★)','Structure','Hors Zone','Montant Risqué','Gain/Perte','Capital','Résultat','RR','État','Pourquoi Entrer','Doute/Hésitation'];
+const SH=['ID','Compte','Date','Heure','Session','Instrument','Direction','Confiance (★)','Hors Zone','Montant Risqué','Gain/Perte','Capital','Résultat','RR','Pourquoi Entrer','Doute/Hésitation'];
 
 let DB=loadLocalDB(),curPage='dashboard';
 let dashFilters=new Set(['all']),jAccFilters=new Set(['all']),calAccFilters=new Set(['all']),cfAccFilters=new Set(['all']);
@@ -132,10 +132,12 @@ let jViewMode='table'; // 'table' | 'cards'
 let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0]||'#2558CE';
-let editId=null,ss=null,tConf=3,tScrHTF='',tScrMTF='',tScrLTF='',tTags=[],tDir='';
+let editId=null,tConf=3,tScrHTF='',tScrMTF='',tScrLTF='',tTags=[],tDir='';
 let albumTrades=[],albumIdx=0,albumImgMode='htf';
 let editCapId=null,renameAccId=null,editCFId=null;
 let charts={};
+let _detailNavIds=[],_detailNavIdx=-1; // nav prev/next in detail drawer
+let _imgScale=1,_pinchStartDist=0,_pinchStartScale=1; // image zoom state
 
 function loadLocalDB(){
   try{
@@ -192,11 +194,7 @@ function calcSession(heure){
   if(h>=13&&h<18)return'New York';
   return'Hors session';
 }
-function updateSessionDisplay(){
-  const h=document.getElementById('f_h')?.value;
-  const el=document.getElementById('f_session_display');
-  if(el)el.textContent=h?'Session : '+calcSession(h):'';
-}
+
 function calcRR(t){
   const gp=parseFloat(t.gainPerte);
   const mr=parseFloat(t.montantRisque);
@@ -259,17 +257,24 @@ document.addEventListener('keydown',function(e){
     if(e.key==='ArrowRight'){e.preventDefault();albumNav(1);return;}
   }
   if(e.key==='Escape'){
-    ['gateModal','tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+    const ip=document.getElementById('imgExpandPanel');
+    if(ip&&ip.classList.contains('open')){ip.classList.remove('open');return;}
+    ['tradeModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
       const el=document.getElementById(id);
       if(el&&el.classList.contains('open'))el.classList.remove('open');
     });
   }
 });
 // Click outside modal to close (all except tradeModal — risque de fermeture accidentelle)
-['gateModal','cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
+// Click on trade drawer backdrop (not on the drawer itself) to close
+(function(){
+  const el=document.getElementById('tradeModal');
+  if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal('tradeModal');});
+})();
 
 // ── REFRESH ───────────────────────────────────────────────────────────────
 async function refreshApp(){
@@ -505,9 +510,23 @@ function renderDash(){
       <div class="kpi-sub">${_dd.abs>0?'-$'+fmtN(_dd.abs,2):'aucun'}</div>
     </div>
     <div class="kpi-cell">
-      <div class="kpi-label">Discipline</div>
-      <div class="kpi-value ${disc.score>=80?'green':disc.score>=60?'gold':'red'}">${disc.score}%</div>
-      <div class="kpi-sub">${disc.total-disc.undisciplined.length}/${disc.total} conformes</div>
+      <div class="kpi-label">Process</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+            <span style="font-size:9px;color:var(--text4);font-weight:600;text-transform:uppercase;letter-spacing:.3px">Stratégie</span>
+            <span style="font-size:14px;font-weight:700;font-family:var(--mono);color:${disc.pctStrategie>=80?'var(--green)':disc.pctStrategie>=50?'var(--amber)':'var(--red)'}">${disc.pctStrategie}%</span>
+          </div>
+          <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${disc.pctStrategie}%;background:${disc.pctStrategie>=80?'var(--green)':disc.pctStrategie>=50?'var(--amber)':'var(--red)'}"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+            <span style="font-size:9px;color:var(--text4);font-weight:600;text-transform:uppercase;letter-spacing:.3px">Raison</span>
+            <span style="font-size:14px;font-weight:700;font-family:var(--mono);color:${disc.pctReason>=80?'var(--green)':disc.pctReason>=50?'var(--amber)':'var(--red)'}">${disc.pctReason}%</span>
+          </div>
+          <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${disc.pctReason}%;background:${disc.pctReason>=80?'var(--green)':disc.pctReason>=50?'var(--amber)':'var(--red)'}"></div></div>
+        </div>
+      </div>
     </div>`;
 
   renderCharts(f);
@@ -554,19 +573,20 @@ function renderDashInsights(f){
 }
 function getDisciplineAudit(f){
   const closed=f.filter(t=>t.resultat!=='En cours');
-  if(!closed.length)return{score:100,leak:0,total:0,undisciplined:[],cntHz:0,cntConf:0,cntFrag:0,cntNoReason:0};
+  if(!closed.length)return{score:100,leak:0,total:0,undisciplined:[],cntHz:0,cntConf:0,cntNoReason:0,cntNoStrategie:0,pctStrategie:100,pctReason:100};
   const undisciplined=closed.filter(t=>{
     const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
-    return t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
+    return t.horsZone===true||(sv!==null&&sv<3);
   });
   const score=Math.round((1-undisciplined.length/closed.length)*100);
   const leak=Math.abs(undisciplined.reduce((s,t)=>{const gp=parseFloat(t.gainPerte)||0;return s+(gp<0?gp:0);},0));
-  // Compteurs détaillés (sur tous trades fermés, pas seulement les indisciplinés)
   const cntHz=closed.filter(t=>t.horsZone===true).length;
-  const cntFrag=closed.filter(t=>t.structure==='fragile').length;
   const cntConf=closed.filter(t=>{const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);return sv!==null&&sv<3;}).length;
   const cntNoReason=closed.filter(t=>!t.pourquoiEntrer||!t.pourquoiEntrer.trim()).length;
-  return{score,leak,total:closed.length,undisciplined,cntHz,cntFrag,cntConf,cntNoReason};
+  const cntNoStrategie=closed.filter(t=>!t.strategie).length;
+  const pctStrategie=Math.round((closed.length-cntNoStrategie)/closed.length*100);
+  const pctReason=Math.round((closed.length-cntNoReason)/closed.length*100);
+  return{score,leak,total:closed.length,undisciplined,cntHz,cntConf,cntNoReason,cntNoStrategie,pctStrategie,pctReason};
 }
 function onStatCard(el){
   const dk=el.dataset.dk;if(!window._dashF)return;
@@ -676,12 +696,12 @@ function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function getChartTheme(){
   const dk=(document.body.dataset.theme||'')==='dark';
   return{
-    win:       dk?'#2DD4A8':'#0E7C6B',
-    loss:      dk?'#F87171':'#C0392B',
-    winBg:     dk?'rgba(45,212,168,.70)':'rgba(14,124,107,.75)',
-    lossBg:    dk?'rgba(248,113,113,.65)':'rgba(192,57,43,.70)',
-    winFill:   dk?'rgba(45,212,168,.10)':'rgba(14,124,107,.08)',
-    lossFill:  dk?'rgba(248,113,113,.10)':'rgba(192,57,43,.08)',
+    win:       dk?'#2DD4A8':'#0D9488',
+    loss:      dk?'#F59E0B':'#B45309',
+    winBg:     dk?'rgba(45,212,168,.70)':'rgba(13,148,136,.75)',
+    lossBg:    dk?'rgba(245,158,11,.65)':'rgba(180,83,9,.70)',
+    winFill:   dk?'rgba(45,212,168,.10)':'rgba(13,148,136,.08)',
+    lossFill:  dk?'rgba(245,158,11,.10)':'rgba(180,83,9,.08)',
     midBg:     dk?'rgba(251,191,36,.55)':'rgba(139,105,20,.60)',
     emptyBg:   dk?'rgba(255,255,255,.06)':'rgba(160,165,176,.20)',
     grid:      dk?'rgba(45,48,57,.9)':'rgba(28,43,58,.06)',
@@ -801,7 +821,6 @@ function _buildAIPrompt(trades){
   const be=closed.filter(t=>t.resultat==='Breakeven').length;
   const totalPnl=closed.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
   const hzCount=closed.filter(t=>t.horsZone===true).length;
-  const fragCount=closed.filter(t=>t.structure==='fragile').length;
 
   const tradeLines=closed.map((t,i)=>{
     const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
@@ -816,7 +835,6 @@ function _buildAIPrompt(trades){
       `PnL:${gp>=0?'+':''}$${gp.toFixed(2)}`,
       rr!==null?`RR:${rr>=0?'+':''}${rr.toFixed(2)}R`:null,
       sv?`Confiance:${sv}★`:null,
-      t.structure?`Structure:${t.structure.toUpperCase()}`:null,
       t.horsZone?'HORS-ZONE':null,
       t.pourquoiEntrer?`Raison:"${t.pourquoiEntrer.slice(0,100)}"`:null,
     ].filter(Boolean);
@@ -1998,6 +2016,7 @@ function toggleJView(mode){jViewMode=mode;renderJFilters();renderJTable();}
 function renderJTable(){
   if(jViewMode==='cards'){renderJCards();return;}
   const trades=getFT();
+  _detailNavIds=trades.map(t=>t.id);
   if(!trades.length){document.getElementById('jTable').innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
   let h=`<div class="jl-wrap">
   <div class="jl-head jl-cols">
@@ -2036,7 +2055,7 @@ function renderJTable(){
     const thumbHtml=hasImg
       ?`<div class="j-thumb" onclick="event.stopPropagation();openImgPreview('${safeUrl}','${safeLabel}')"><img src="${scrUrl}" alt="" onerror="this.parentElement.className='j-thumb-empty';this.parentElement.innerHTML='<svg width=14 height=14 viewBox=\\'0 0 24 24\\' fill=none stroke=currentColor stroke-width=1.5><rect x=3 y=3 width=18 height=18 rx=2/><circle cx=8.5 cy=8.5 r=1.5/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"/></div>`
       :`<div class="j-thumb-empty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-    h+=`<div class="jl-row jl-cols ${cls}" onclick="openAlbumView('${t.id}')">
+    h+=`<div class="jl-row jl-cols ${cls}" onclick="openDetail('${t.id}')">
       <div class="jl-thumb-cell jl-hide-xs">${thumbHtml}</div>
       <div class="jl-cell jl-instr">
         ${ac?`<span style="width:7px;height:7px;border-radius:50%;background:${ac.color};flex-shrink:0;display:inline-block"></span>`:''}
@@ -2061,6 +2080,7 @@ function renderJTable(){
 
 function renderJCards(){
   const trades=getFT();
+  _detailNavIds=trades.map(t=>t.id);
   const el=document.getElementById('jTable');
   if(!trades.length){el.innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
   let h='<div class="j-cards-grid">';
@@ -2089,7 +2109,7 @@ function renderJCards(){
     const thumbHtml=hasImg
       ?`<div class="jc-thumb"><img src="${scrUrl}" alt="" loading="lazy" onerror="this.parentElement.classList.add('jc-thumb-err');this.remove()"/></div>`
       :`<div class="jc-thumb jc-thumb-empty"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-    h+=`<div class="j-card ${resClass}" onclick="openAlbumView('${t.id}')">
+    h+=`<div class="j-card ${resClass}" onclick="openDetail('${t.id}')">
       ${thumbHtml}
       <div class="jc-content">
         <div class="jc-row1">
@@ -2121,14 +2141,17 @@ function renderJCards(){
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
 function openNew(){
-  editId=null;ss=null;tConf=3;tScrHTF='';tScrMTF='';tScrLTF='';tDir='';
+  closeImgExpand();editId=null;tConf=3;tScrHTF='';tScrMTF='';tScrLTF='';tDir='';
+  _detailNavIdx=-1;
+  const _nav=document.getElementById('tmNav');if(_nav)_nav.style.display='none';
   document.getElementById('tmTitle').textContent='Nouveau trade';
-  buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',direction:'',structure:null,montantRisque:'',gainPerte:'',resultat:'',etat:'',stars:3,horsZone:false,pourquoiEntrer:'',douteHesitation:'',screenshotHTF:'',screenshotMTF:'',screenshotLTF:''});
+  buildForm({id:Date.now().toString(),compte:'',date:new Date().toISOString().split('T')[0],heure:new Date().toTimeString().slice(0,5),session:'',instrument:'',direction:'',montantRisque:'',gainPerte:'',resultat:'',stars:3,horsZone:false,pourquoiEntrer:'',douteHesitation:'',screenshotHTF:'',screenshotMTF:'',screenshotLTF:''});
   document.getElementById('tradeModal').classList.add('open');
 }
 function dupTrade(id){
   const t=DB.trades.find(t=>t.id===id);if(!t)return;
-  editId=null;ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
+  editId=null;_detailNavIdx=-1;
+  const _nav=document.getElementById('tmNav');if(_nav)_nav.style.display='none';
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
   tScrHTF='';tScrMTF='';tScrLTF='';tDir=t.direction||'';
   document.getElementById('tmTitle').textContent='Dupliquer le trade';
@@ -2137,10 +2160,10 @@ function dupTrade(id){
   document.getElementById('tradeModal').classList.add('open');
 }
 function openEdit(id){
-  const t=DB.trades.find(t=>t.id===id);if(!t)return;
+  closeImgExpand();const t=DB.trades.find(t=>t.id===id);if(!t)return;
+  _detailNavIdx=-1;
+  const _nav=document.getElementById('tmNav');if(_nav)_nav.style.display='none';
   editId=id;
-  // backward compat: structureSolide bool → structure string
-  ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
   // backward compat: confiance 1-10 → stars 1-5
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
   tScrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';tScrMTF=t.screenshotMTF||t.screenshotApres||'';tScrLTF=t.screenshotLTF||'';tDir=t.direction||'';
@@ -2153,9 +2176,9 @@ function scrBlock(idPrefix,label,url){
   return `<div style="flex:1;min-width:0">
     <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${label}</div>
     ${hasImg?`<div style="position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface3)">
-      <img src="${url}" style="width:100%;height:110px;object-fit:cover;cursor:pointer;display:block" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${label}')" onerror="this.parentElement.innerHTML='<div style=\\'padding:12px;font-size:11px;color:var(--red)\\'>Image inaccessible</div>'"/>
+      <img src="${url}" style="width:100%;height:160px;object-fit:cover;cursor:zoom-in;display:block" onclick="openImgExpand('${url.replace(/'/g,"\\'")}','${label}')" onerror="this.parentElement.innerHTML='<div style=\\'padding:12px;font-size:11px;color:var(--red)\\'>Image inaccessible</div>'"/>
       <div style="position:absolute;top:6px;right:6px;display:flex;gap:3px">
-        <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${label}')">🔍</button>
+        <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px" onclick="openImgExpand('${url.replace(/'/g,"\\'")}','${label}')">🔍</button>
         <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px;color:var(--red)" onclick="clearScrField('${idPrefix}')">✕</button>
       </div>
     </div>`:`<div style="display:flex;flex-direction:column;gap:6px">
@@ -2167,7 +2190,6 @@ function scrBlock(idPrefix,label,url){
 function buildForm(t){
   tScrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';tScrMTF=t.screenshotMTF||t.screenshotApres||'';tScrLTF=t.screenshotLTF||'';
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
-  ss=t.structure||(t.structureSolide===true?'solide':t.structureSolide===false?'fragile':null);
   tDir=t.direction||'';
   const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${t.compte===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
   const currentRR=calcRR(t);
@@ -2178,19 +2200,32 @@ function buildForm(t){
 
   document.getElementById('tmBody').innerHTML=`
     <div class="sdiv"><span>Informations générales</span></div>
-    <div class="form-grid-3">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
       <div class="field"><label>Compte</label><select id="f_c"><option value="">Sélectionner</option>${ao}</select></div>
       <div class="field"><label>Date</label><input type="date" id="f_d" value="${t.date}"/></div>
       <div class="field"><label>Heure</label>
-        <input type="time" id="f_h" value="${t.heure||''}" oninput="updateSessionDisplay();updateHorsZoneDisplay()"/>
-        <div id="f_session_display" style="margin-top:4px;font-size:11px;color:var(--text4);font-family:'DM Mono',monospace;letter-spacing:.3px">${t.heure?'Session : '+calcSession(t.heure):''}</div>
-        <div id="f_hz_badge">${hzBadge}</div>
+        <input type="time" id="f_h" value="${t.heure||''}"/>
       </div>
-      <div class="field"><label>Instrument</label><select id="f_i" onchange="handleInstrSelect(this)"><option value="">Sélectionner</option>${FORM_INSTRUMENTS.map(i=>`<option value="${i}" ${t.instrument===i?'selected':''}>${WARN_INSTRUMENTS.includes(i)?'⚠️ ':''}${i}</option>`).join('')}<option value="Autre" ${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?'selected':''}>Autre</option></select><input id="f_i_custom" type="text" placeholder="Ex: NZDCAD" style="display:${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?'block':'none'};margin-top:6px;text-transform:uppercase" value="${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?esc(t.instrument):''}" oninput="this.value=this.value.toUpperCase();document.getElementById('f_i_err')&&(document.getElementById('f_i_err').style.display='none')"/><div id="f_i_warn" style="display:${WARN_INSTRUMENTS.includes(t.instrument)?'flex':'none'};align-items:center;gap:6px;margin-top:6px;padding:7px 10px;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.25);border-radius:5px;font-size:11.5px;color:var(--red)">⚠️ Edge non prouvé sur cette paire</div><div id="f_i_err" style="display:none;margin-top:5px;font-size:11.5px;color:var(--red);font-weight:500">Instrument requis</div></div>
-      <div class="field"><label>État</label><select id="f_e"><option value="">Sélectionner</option>${ETATS.map(e=>`<option ${t.etat===e?'selected':''}>${e}</option>`).join('')}</select></div>
     </div>
-    <div class="sdiv"><span>Analyse & Setup</span></div>
-    <div class="form-grid">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="field"><label>Instrument</label>
+        <select id="f_i" onchange="handleInstrSelect(this)"><option value="">Sélectionner</option>${FORM_INSTRUMENTS.map(i=>`<option value="${i}" ${t.instrument===i?'selected':''}>${WARN_INSTRUMENTS.includes(i)?'⚠️ ':''}${i}</option>`).join('')}<option value="Autre" ${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?'selected':''}>Autre</option></select>
+        <input id="f_i_custom" type="text" placeholder="Ex: NZDCAD" style="display:${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?'block':'none'};margin-top:6px;text-transform:uppercase" value="${!FORM_INSTRUMENTS.includes(t.instrument)&&t.instrument?esc(t.instrument):''}" oninput="this.value=this.value.toUpperCase();document.getElementById('f_i_err')&&(document.getElementById('f_i_err').style.display='none')"/>
+        <div id="f_i_warn" style="display:${WARN_INSTRUMENTS.includes(t.instrument)?'flex':'none'};align-items:center;gap:6px;margin-top:6px;padding:7px 10px;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.25);border-radius:5px;font-size:11.5px;color:var(--red)">⚠️ Edge non prouvé sur cette paire</div>
+        <div id="f_i_err" style="display:none;margin-top:5px;font-size:11.5px;color:var(--red);font-weight:500">Instrument requis</div>
+      </div>
+      <div class="field"><label>Stratégie</label>
+        <select id="f_strat">
+          <option value="">Sélectionner</option>
+          <option value="1-trend" ${t.strategie==='1-trend'?'selected':''}>1 · TREND — Pro-HTF · Pro-MTF</option>
+          <option value="2-pullback" ${t.strategie==='2-pullback'?'selected':''}>2 · PULLBACK — Counter-HTF · Pro-MTF</option>
+          <option value="2a-transition" ${t.strategie==='2a-transition'?'selected':''}>2A · TRANSITION — Pro-HTF · Counter-MTF</option>
+          <option value="3-realignement" ${t.strategie==='3-realignement'?'selected':''}>3 · RÉALIGNEMENT — Swing ↔ Internal</option>
+        </select>
+      </div>
+    </div>
+    <div class="sdiv" style="margin-top:24px"><span>Analyse & Setup</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="field"><label>Direction</label>
         <div class="toggle-group" style="margin-top:5px">
           <button type="button" class="toggle-btn ${tDir==='Long'?'along':''}" id="dirL" onclick="togDir('Long')">↑ Long</button>
@@ -2201,41 +2236,34 @@ function buildForm(t){
         <div class="star-rating" id="confStars">${[1,2,3,4,5].map(n=>`<span data-v="${n}" class="${tConf>=n?'lit':''}" onclick="setConfStars(${n})" onmouseover="previewConfStars(${n})" onmouseout="resetConfStars()">★</span>`).join('')}</div>
       </div>
     </div>
-    <div class="field" style="margin-top:12px"><label>Structure du trade</label>
-      <div class="struct-seg">
-        <button type="button" class="struct-btn ${ss==='solide'?'active-solide':''}" id="struS" onclick="setStructure('solide')">✓ SOLIDE (Alignée)</button>
-        <button type="button" class="struct-btn ${ss==='fragile'?'active-fragile':''}" id="struF" onclick="setStructure('fragile')">⚠ FRAGILE (Contre-tendance)</button>
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="field"><label>Pourquoi entrer ?</label><textarea id="f_p" placeholder="Décris ta raison d'entrer..." style="height:110px;resize:vertical">${esc(t.pourquoiEntrer||'')}</textarea></div>
+      <div class="field"><label>Doute ou hésitation</label><textarea id="f_dh" placeholder="Qu'est-ce qui t'a fait hésiter ?" style="height:110px;resize:vertical">${esc(t.douteHesitation||'')}</textarea></div>
     </div>
-    <div class="field" style="margin-top:12px"><label>Pourquoi entrer ?</label><textarea id="f_p" placeholder="Décris ta raison d'entrer...">${esc(t.pourquoiEntrer||'')}</textarea></div>
-    <div class="field" style="margin-top:10px"><label>Doute ou hésitation</label><textarea id="f_dh" placeholder="Qu'est-ce qui t'a fait hésiter ?">${esc(t.douteHesitation||'')}</textarea></div>
-    <div class="sdiv"><span>Gestion & Résultat</span></div>
-    <div class="form-grid-3">
+    <div class="sdiv" style="margin-top:24px"><span>Gestion & Résultat</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
       <div class="field"><label>Montant risqué ($)</label><input type="number" id="f_m" value="${t.montantRisque||''}" placeholder="0.00" oninput="updateRRDisplay()"/></div>
       <div class="field"><label>Gain / Perte ($)</label><input type="number" id="f_gp" value="${t.gainPerte!==undefined&&t.gainPerte!==''?t.gainPerte:''}" placeholder="ex: 150 ou -50" step="0.01" oninput="updateRRDisplay()"/></div>
       <div class="field"><label>Résultat</label><select id="f_r"><option value="">Sélectionner</option>${RESULTATS.map(r=>`<option ${t.resultat===r?'selected':''}>${r}</option>`).join('')}</select></div>
     </div>
-    <div style="margin-top:10px">
-      <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">RR calculé automatiquement</div>
-      <div class="rr-display" id="rrDisplay">
-        <div>
-          <div class="rr-display-val" id="rrAutoVal" style="color:${rrColor}">${rrDisplay}</div>
-          <div class="rr-display-lbl">= Gain/Perte ÷ |Montant risqué| (signé)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="field"><label>RR attendu</label><input type="number" id="f_err" value="${t.expectedRR||''}" placeholder="ex: 2.5" step="0.1" min="0"/></div>
+      <div class="field"><label>RR calculé</label>
+        <div class="rr-display" id="rrDisplay" style="margin-top:0;height:38px;align-items:center">
+          <div class="rr-display-val" id="rrAutoVal" style="color:${rrColor};font-size:18px">${rrDisplay}</div>
         </div>
       </div>
     </div>
-    <div class="sdiv"><span>Captures d'écran (liens TradingView)</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px" id="scrSec">
+    <div class="sdiv" style="margin-top:24px"><span>Captures d'écran (liens TradingView)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px" id="scrSec">
       ${scrBlock('scr_htf','HTF — Vue macro',tScrHTF)}
       ${scrBlock('scr_mtf','MTF — Vue intermédiaire',tScrMTF)}
       ${scrBlock('scr_ltf','LTF — Entrée précise',tScrLTF)}
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid var(--border2)">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:28px;padding-top:18px;border-top:1px solid var(--border2)">
       <button class="btn btn-secondary" onclick="closeModal('tradeModal')">Annuler</button>
       <button class="btn btn-primary" onclick="saveTrade()">Enregistrer</button>
     </div>`;
-  // Apply modal hz border
-  updateHorsZoneDisplay();
 }
 
 function updateRRDisplay(){
@@ -2257,12 +2285,6 @@ function handleInstrSelect(sel){
   if(err)err.style.display='none';
 }
 function getInstrValue(){const sel=document.getElementById('f_i');const ci=document.getElementById('f_i_custom');if(sel&&sel.value==='Autre')return(ci&&ci.value.trim().toUpperCase())||'';return sel?sel.value:'';}
-function setStructure(v){
-  ss=(ss===v)?null:v;
-  const s=document.getElementById('struS'),f=document.getElementById('struF');
-  if(s)s.className='struct-btn'+(ss==='solide'?' active-solide':'');
-  if(f)f.className='struct-btn'+(ss==='fragile'?' active-fragile':'');
-}
 function setConfStars(n){tConf=n;document.getElementById('cVal').textContent=n;document.querySelectorAll('#confStars span').forEach(s=>s.className=parseInt(s.dataset.v)<=n?'lit':'');}
 function previewConfStars(n){document.querySelectorAll('#confStars span').forEach(s=>s.style.color=parseInt(s.dataset.v)<=n?'#F59E0B':'');}
 function resetConfStars(){document.querySelectorAll('#confStars span').forEach(s=>s.style.color='');}
@@ -2301,14 +2323,6 @@ function _posAuditTip(el){
   tip.style.top=top+'px';tip.style.left=Math.max(8,left)+'px';
 }
 function hideAuditTip(){const tip=document.getElementById('audit-tip');if(tip)tip.classList.remove('show');}
-function updateHorsZoneDisplay(){
-  const heure=document.getElementById('f_h')?.value||'';
-  const hz=calcHorsZone(heure);
-  const badge=document.getElementById('f_hz_badge');
-  if(badge)badge.innerHTML=hz?`<div class="hz-alert">⚠ HORS ZONE — Trade hors killzone</div>`:'';
-  const modal=document.querySelector('#tradeModal .modal');
-  if(modal)modal.className='modal'+(hz?' modal-hz':'');
-}
 function togDir(v){tDir=(tDir===v)?'':v;const l=document.getElementById('dirL'),s=document.getElementById('dirS');if(l)l.className='toggle-btn'+(tDir==='Long'?' along':'');if(s)s.className='toggle-btn'+(tDir==='Short'?' ashort':'');}
 function previewScrUrl(pfx){const url=document.getElementById(pfx+'_url').value.trim();const prev=document.getElementById(pfx+'_prev');if(!url){prev.style.display='none';return;}prev.style.display='block';prev.innerHTML=`<img src="${url}" style="width:100%;height:90px;object-fit:cover;border-radius:7px;border:1px solid var(--border);cursor:pointer" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','Aperçu')" onerror="this.style.display='none'"/>`;}
 function clearScrField(pfx){
@@ -2319,6 +2333,15 @@ function clearScrField(pfx){
     scrBlock('scr_ltf','LTF — Entrée précise',tScrLTF);
 }
 function openImgPreview(url,label){document.getElementById('imgModalSrc').src=url;document.getElementById('imgModalLabel').textContent=label;document.getElementById('imgModal').classList.add('open');}
+function openImgExpand(url,label){
+  if(window.innerWidth<=600){openImgPreview(url,label);return;}
+  const el=document.getElementById('imgExpandEl');
+  el.src=url;
+  _imgScale=1;el.style.transform='scale(1)';el.style.cursor='zoom-in';
+  document.getElementById('imgExpandLabel').textContent=label||'';
+  document.getElementById('imgExpandPanel').classList.add('open');
+}
+function closeImgExpand(){const p=document.getElementById('imgExpandPanel');if(p)p.classList.remove('open');}
 
 async function saveTrade(){
   const htfEl=document.getElementById('scr_htf_url'),mtfEl=document.getElementById('scr_mtf_url'),ltfEl=document.getElementById('scr_ltf_url');
@@ -2340,13 +2363,13 @@ async function saveTrade(){
     session:calcSession(document.getElementById('f_h').value),
     instrument:getInstrValue(),
     direction:tDir,
-    structure:ss,
+    strategie:document.getElementById('f_strat').value,
     horsZone:calcHorsZone(document.getElementById('f_h').value),
     stars:tConf,
     montantRisque,gainPerte,
     rr:rr!==null?String(rr.toFixed(4)):'',
+    expectedRR:document.getElementById('f_err').value,
     resultat:document.getElementById('f_r').value,
-    etat:document.getElementById('f_e').value,
     pourquoiEntrer:document.getElementById('f_p').value,
     douteHesitation:document.getElementById('f_dh').value,
     screenshotHTF:tScrHTF,screenshotMTF:tScrMTF,screenshotLTF:tScrLTF,
@@ -2373,36 +2396,80 @@ async function delTrade(id){
   if(curPage==='journal')renderJournal();if(curPage==='dashboard')renderDash();if(curPage==='calendar')renderCal();
 }
 
-// ── DETAIL MODAL ──────────────────────────────────────────────────────────
+// ── DETAIL VIEW (drawer) ───────────────────────────────────────────────────
+function _updateDetailNav(){
+  const nav=document.getElementById('tmNav');if(!nav)return;
+  const hasNav=_detailNavIds.length>1&&_detailNavIdx>=0;
+  nav.style.display=hasNav?'flex':'none';
+  if(hasNav){
+    document.getElementById('tmNavCount').textContent=`${_detailNavIdx+1} / ${_detailNavIds.length}`;
+    document.getElementById('tmNavPrev').disabled=_detailNavIdx<=0;
+    document.getElementById('tmNavNext').disabled=_detailNavIdx>=_detailNavIds.length-1;
+  }
+}
+function prevDetail(){if(_detailNavIdx>0){_detailNavIdx--;openDetail(_detailNavIds[_detailNavIdx]);}}
+function nextDetail(){if(_detailNavIdx<_detailNavIds.length-1){_detailNavIdx++;openDetail(_detailNavIds[_detailNavIdx]);}}
+
 function openDetail(id){
   const t=DB.trades.find(t=>t.id===id);if(!t)return;
-  const bdg=t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:'';
-  document.getElementById('detailHead').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="modal-title">${esc(t.instrument||'Trade')} — ${fmtD(t.date)}</span>${bdg}</div>`;
+  closeImgExpand();
+  // Update nav index (nav list set by renderJTable/renderJCards)
+  const idx=_detailNavIds.indexOf(id);
+  if(idx>=0)_detailNavIdx=idx;
+  _updateDetailNav();
+  // Header
+  const bdgCls=t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be';
+  const bdg=t.resultat?`<span class="badge badge-${bdgCls}">${t.resultat}</span>`:'';
+  document.getElementById('tmTitle').innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${esc(t.instrument||'Trade')} <span style="color:var(--text3);font-weight:400;font-size:14px">${fmtD(t.date)}</span>${bdg}</div>`;
+  // Stats
   const gp=parseFloat(t.gainPerte)||0;
   const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''?(gp>=0?`+$${Math.abs(gp).toFixed(2)}`:`-$${Math.abs(gp).toFixed(2)}`):'—';
+  const gpColor=gp>0?'var(--green)':gp<0?'var(--red)':'var(--text2)';
   const rr=calcRR(t);
   const rrStr=rr!==null?(rr>0?'+':'')+fmtN(rr,2)+'R':'—';
   const starsVal=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
-  const structStr=t.structure==='solide'?'✓ SOLIDE (Alignée)':t.structure==='fragile'?'⚠ FRAGILE (Contre-tendance)':t.structureSolide===true?'✓ Solide':t.structureSolide===false?'⚠ Fragile':'—';
+  const stratLabel={'1-trend':'1 · TREND','2-pullback':'2 · PULLBACK','2a-transition':'2A · TRANSITION','3-realignement':'3 · RÉALIGNEMENT'};
   const cells=[
-    ['Compte',t.compte],['Session',t.session],['Heure',t.heure],
-    ['Direction',t.direction||'—'],['Hors Zone',t.horsZone?'⚠ Hors killzone':'✓ En zone'],
-    ['Confiance',starsVal?'★'.repeat(starsVal)+'☆'.repeat(5-starsVal):'—'],
-    ['Structure',structStr],
-    ['Montant risqué',t.montantRisque?`$${t.montantRisque}`:'—'],
-    ['Gain / Perte',gpStr],
-    ['RR',rrStr],
-    ['État',t.etat]
+    ['Compte',t.compte,null],
+    ['Session',t.session,null],
+    ['Heure',t.heure,null],
+    ['Direction',t.direction||'—',null],
+    ['Stratégie',t.strategie?stratLabel[t.strategie]||t.strategie:'—',null],
+    ['Confiance',starsVal?`<span style="color:var(--amber);letter-spacing:1px">${'★'.repeat(starsVal)}</span><span style="color:var(--border);letter-spacing:1px">${'★'.repeat(5-starsVal)}</span>`:null,null],
+    ['Montant risqué',t.montantRisque?`$${t.montantRisque}`:'—',null],
+    ['Gain / Perte',gpStr,gpColor],
+    ['RR attendu',t.expectedRR?'+'+fmtN(parseFloat(t.expectedRR),2)+'R':'—',null],
+    ['RR réalisé',rrStr,rr!==null?(rr>0?'var(--green)':rr<0?'var(--red)':'var(--text2)'):null],
   ];
-  let h=`<div class="detail-grid">${cells.map(([l,v])=>`<div class="dc"><div class="dcl">${l}</div><div class="dcv">${esc(v||'—')}</div></div>`).join('')}</div>`;
-  if(t.pourquoiEntrer)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Pourquoi entrer</div><p style="font-size:13px;line-height:1.6;background:var(--surface3);padding:11px 13px;border-radius:7px">${esc(t.pourquoiEntrer)}</p></div>`;
-  if(t.tags&&t.tags.length)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">Tags setup</div><div style="display:flex;flex-wrap:wrap;gap:5px">${t.tags.map(tag=>`<span style="padding:3px 10px;border-radius:20px;background:var(--accent-bg);border:1.5px solid var(--accent-bd);color:var(--accent);font-size:11.5px;font-weight:600">${esc(tag)}</span>`).join('')}</div></div>`;
-  if(t.douteHesitation)h+=`<div style="margin-bottom:11px"><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Doute / Hésitation</div><p style="font-size:13px;line-height:1.6;background:var(--surface3);padding:11px 13px;border-radius:7px">${esc(t.douteHesitation)}</p></div>`;
+  let h=`<div class="detail-grid">${cells.map(([l,v,c])=>`<div class="dc"><div class="dcl">${l}</div><div class="dcv"${c?` style="color:${c}"`:''}>${v||'—'}</div></div>`).join('')}</div>`;
+  // Text blocks side by side (flex-wrap: collapse naturally on narrow screens)
+  if(t.pourquoiEntrer||t.douteHesitation){
+    h+=`<div class="detail-text-grid">`;
+    if(t.pourquoiEntrer)h+=`<div class="detail-text-col"><div class="detail-section-label">Pourquoi entrer</div><p class="detail-text-block">${esc(t.pourquoiEntrer)}</p></div>`;
+    if(t.douteHesitation)h+=`<div class="detail-text-col"><div class="detail-section-label">Doute / Hésitation</div><p class="detail-text-block">${esc(t.douteHesitation)}</p></div>`;
+    h+=`</div>`;
+  }
+  // Tags
+  if(t.tags&&t.tags.length)h+=`<div style="margin-bottom:16px"><div class="detail-section-label">Tags</div><div style="display:flex;flex-wrap:wrap;gap:5px">${t.tags.map(tag=>`<span style="padding:3px 10px;border-radius:20px;background:var(--accent-bg);border:1.5px solid var(--accent-bd);color:var(--accent);font-size:11.5px;font-weight:600">${esc(tag)}</span>`).join('')}</div></div>`;
+  // Screenshots — click expands on left panel (mobile: openImgPreview fallback)
   const scrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'',scrMTF=t.screenshotMTF||t.screenshotApres||'',scrLTF=t.screenshotLTF||'';
   const scrs=[['HTF',scrHTF],['MTF',scrMTF],['LTF',scrLTF]].filter(([,u])=>u&&(u.startsWith('http')||u.startsWith('//')||u.startsWith('data:')));
-  if(scrs.length){h+=`<div><div style="font-size:9.5px;font-weight:600;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:9px">Captures d'écran</div><div style="display:flex;gap:9px;flex-wrap:wrap">`;scrs.forEach(([lbl,url])=>{h+=`<div style="flex:1;min-width:130px"><div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">${lbl}</div><img src="${url}" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:pointer;object-fit:cover;height:120px" onclick="openImgPreview('${url.replace(/'/g,"\\'")}','${lbl}')" onerror="this.style.opacity='.3'"/></div>`;});h+=`</div></div>`;}
-  h+=`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)"><button class="btn btn-secondary" onclick="closeModal('detailModal');openEdit('${t.id}')">✎ Modifier</button><button class="btn btn-secondary" onclick="closeModal('detailModal')">Fermer</button></div>`;
-  document.getElementById('detailBody').innerHTML=h;document.getElementById('detailModal').classList.add('open');
+  if(scrs.length){
+    h+=`<div style="margin-bottom:16px"><div class="detail-section-label">Captures d'écran</div><div class="detail-scr-grid detail-scr-cols-${scrs.length}">`;
+    scrs.forEach(([lbl,url])=>{
+      const safeUrl=url.replace(/'/g,"\\'");
+      h+=`<div><div class="detail-scr-label">${lbl}</div>`+
+        `<img src="${url}" class="detail-scr-img" onclick="openImgExpand('${safeUrl}','${lbl}')" onerror="this.style.opacity='.2'"/></div>`;
+    });
+    h+=`</div></div>`;
+  }
+  // Actions
+  h+=`<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border2)">
+    <button class="btn btn-secondary" onclick="closeModal('tradeModal')">Fermer</button>
+    <button class="btn btn-primary" onclick="openEdit('${t.id}')">✎ Modifier</button>
+  </div>`;
+  document.getElementById('tmBody').innerHTML=h;
+  document.getElementById('tradeModal').classList.add('open');
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────
@@ -3063,88 +3130,6 @@ function renderPatterns(f){
   el.innerHTML=getPatternsHTML(f);
 }
 
-// Pre-Trade Gate
-function openPreTradeGate(){
-  const patterns=detectPatterns(DB.trades);
-  const lim=getTradingLimits();
-  const today=new Date().toISOString().split('T')[0];
-  const todayTrades=DB.trades.filter(t=>t.date===today&&t.resultat!=='En cours');
-  const todayPnl=todayTrades.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);
-
-  const hasKillSwitch=patterns.some(p=>p.type==='killswitch');
-
-  const checks=DB.checklists||[];
-  const checkItems=checks.map((c,i)=>`
-    <label class="gate-item" onclick="this.classList.toggle('checked')">
-      <div class="gate-check"></div>
-      <span>${esc(c.text)}</span>
-    </label>`).join('');
-
-  const warningsHtml=patterns.map(p=>{
-    const cls=p.severity==='critical'?'gate-alert-critical':p.severity==='high'?'gate-alert-high':'gate-alert-medium';
-    return`<div class="gate-alert ${cls}">
-      <span style="font-size:16px">${p.icon}</span>
-      <div>
-        <div style="font-weight:700;font-size:12px">${p.title}</div>
-        <div style="font-size:11px;opacity:.85">${p.msg}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  const statusHtml=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-      <div class="gate-status-card">
-        <div class="gate-status-val ${todayTrades.length>=lim.maxTradesDay?'red':todayTrades.length>=lim.maxTradesDay-1?'amber':'green'}">${todayTrades.length}/${lim.maxTradesDay}</div>
-        <div class="gate-status-lbl">Trades aujourd'hui</div>
-      </div>
-      <div class="gate-status-card">
-        <div class="gate-status-val ${todayPnl<=-lim.maxDailyLoss?'red':todayPnl<0?'amber':'green'}">${todayPnl>=0?'+':''}$${todayPnl.toFixed(0)}</div>
-        <div class="gate-status-lbl">P&L du jour</div>
-      </div>
-      <div class="gate-status-card">
-        <div class="gate-status-val">-$${lim.maxDailyLoss}</div>
-        <div class="gate-status-lbl">Perte max</div>
-      </div>
-    </div>`;
-
-  document.getElementById('gateBody').innerHTML=`
-    <div class="gate-screen">
-      ${statusHtml}
-      ${warningsHtml?`<div style="margin-bottom:14px">${warningsHtml}</div>`:''}
-      ${checks.length?`
-        <div style="font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Checklist pr\u00e9-trade</div>
-        <div class="gate-checklist">${checkItems}</div>
-        <div class="gate-progress" id="gateProgress">
-          <div class="gate-progress-fill" style="width:0%"></div>
-        </div>
-      `:''}
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)">
-        <button class="btn btn-secondary" onclick="closeModal('gateModal')">Annuler</button>
-        <button class="btn btn-primary" id="gatePassBtn" onclick="passGate()">
-          Ouvrir le formulaire
-        </button>
-      </div>
-    </div>`;
-
-  setTimeout(()=>{
-    const items=document.querySelectorAll('.gate-item');
-    const fill=document.querySelector('.gate-progress-fill');
-    if(!items.length)return;
-    const update=()=>{
-      const checked=document.querySelectorAll('.gate-item.checked').length;
-      const pct=Math.round(checked/items.length*100);
-      if(fill)fill.style.width=pct+'%';
-    };
-    items.forEach(it=>it.addEventListener('click',()=>setTimeout(update,10)));
-  },50);
-
-  document.getElementById('gateModal').classList.add('open');
-}
-
-function passGate(){
-  closeModal('gateModal');
-  openNew();
-}
 
 // ══════════════════════════════════════════════════════════════════════
 // ██  STEP 2 — EDGE MAP + OPTIMAL STOP RULES                         ██
@@ -3400,8 +3385,7 @@ function exportCSV(){
   const rows=t.map(t=>{
     const rr=calcRR(t);
     const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
-    const structStr=t.structure||(t.structureSolide===true?'Solide':t.structureSolide===false?'Fragile':'');
-    return [t.id,t.compte,t.date,t.heure,t.session,t.instrument,t.direction||'',sv?sv+'★':'',structStr,t.horsZone?'Oui':'Non',t.montantRisque,t.gainPerte,t.capital,t.resultat,rr!==null?(rr>0?'+':'')+fmtN(rr,4):'',t.etat,t.pourquoiEntrer,t.douteHesitation].map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
+    return [t.id,t.compte,t.date,t.heure,t.session,t.instrument,t.direction||'',sv?sv+'★':'',t.horsZone?'Oui':'Non',t.montantRisque,t.gainPerte,t.capital,t.resultat,rr!==null?(rr>0?'+':'')+fmtN(rr,4):'',t.pourquoiEntrer,t.douteHesitation].map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
   });
   const csv=[SH,...rows].map(r=>r.join(',')).join('\n');
   const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
@@ -3540,7 +3524,6 @@ function _renderAlbum(){
     <div class="album-field"><div class="album-field-lbl">Confiance</div><div class="album-field-val" style="color:#F59E0B;letter-spacing:2px;font-size:13px">${starsHtml}</div></div>
     <div class="album-field"><div class="album-field-lbl">Structure</div><div class="album-field-val" style="color:${structColor}">${structStr}</div></div>
     <div class="album-field"><div class="album-field-lbl">Zone</div><div class="album-field-val" style="color:${hzColor};font-size:11px">${hzStr}</div></div>
-    <div class="album-field"><div class="album-field-lbl">État</div><div class="album-field-val">${esc(t.etat||'—')}</div></div>
   </div>`;
   if(t.pourquoiEntrer){det+=`<div class="album-text-block"><div class="album-text-lbl">Pourquoi entrer</div><div class="album-text-content">${esc(t.pourquoiEntrer)}</div></div>`;}
   if(t.douteHesitation){det+=`<div class="album-text-block"><div class="album-text-lbl">Doute / Hésitation</div><div class="album-text-content">${esc(t.douteHesitation)}</div></div>`;}
@@ -3665,6 +3648,47 @@ async function init(){
     toggleSidebar();
   },{passive:false});
 })();
+
+// ── IMAGE ZOOM (expand panel) ──────────────────────────────────────────────
+(function(){
+  const el=document.getElementById('imgExpandEl');
+  if(!el)return;
+  // Mouse wheel zoom
+  el.addEventListener('wheel',e=>{
+    e.preventDefault();
+    _imgScale=Math.min(5,Math.max(0.5,_imgScale-e.deltaY*0.0015));
+    el.style.transform=`scale(${_imgScale})`;
+    el.style.cursor=_imgScale>1?'move':'zoom-in';
+  },{passive:false});
+  // Double-click to reset
+  el.addEventListener('dblclick',()=>{
+    _imgScale=1;el.style.transform='scale(1)';el.style.cursor='zoom-in';
+  });
+  // Pinch to zoom (mobile)
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      _pinchStartDist=Math.hypot(e.touches[0].pageX-e.touches[1].pageX,e.touches[0].pageY-e.touches[1].pageY);
+      _pinchStartScale=_imgScale;
+    }
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    if(e.touches.length===2){
+      e.preventDefault();
+      const d=Math.hypot(e.touches[0].pageX-e.touches[1].pageX,e.touches[0].pageY-e.touches[1].pageY);
+      _imgScale=Math.min(5,Math.max(0.5,_pinchStartScale*d/_pinchStartDist));
+      el.style.transform=`scale(${_imgScale})`;
+    }
+  },{passive:false});
+})();
+
+// Keyboard navigation in detail drawer (← / →), only when in detail mode
+document.addEventListener('keydown',e=>{
+  if(_detailNavIds.length<2||_detailNavIdx<0)return;
+  if(!document.getElementById('tradeModal')?.classList.contains('open'))return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  if(e.key==='ArrowLeft'){e.preventDefault();prevDetail();}
+  else if(e.key==='ArrowRight'){e.preventDefault();nextDetail();}
+});
 
 let _resizeTm;
 window.addEventListener('resize',()=>{
