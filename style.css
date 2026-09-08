@@ -1620,30 +1620,5 @@ input:focus:not([type=checkbox]):not([type=radio]),select:focus,textarea:focus{
 /* ─── TOAST — pill style ────────────────────────────────────────── */
 #toast{border-radius:24px!important}
 
-/* ─── DARK THEME auto via OS (fallback si pas de toggle manuel) ──── */
-@media(prefers-color-scheme:dark){
-  body:not([data-theme="light"]):not([data-theme="dark"]) {
-    --bg:#0F0D0B;
-    --bg2:#1A1714;
-    --surface:#16140F;
-    --surface2:#1A1714;
-    --surface3:#2B2620;
-    --border:#2B2620;
-    --border2:#21191F;
-    --text:#F5F1ED;
-    --text2:#A89E94;
-    --text3:#7A7268;
-    --text4:#4A4238;
-    --accent:#E8B34D;
-    --accent2:#F0B955;
-    --accent-bg:rgba(232,179,77,.10);
-    --accent-bd:rgba(232,179,77,.22);
-    --green:#4ADE80;
-    --red:#F87171;
-    --amber:#FBBF24;
-    --blue:#60A5FA;
-    --sh:0 1px 2px rgba(0,0,0,.4);
-    --shl:0 4px 16px rgba(0,0,0,.5);
-    --header-bg:rgba(9,9,11,.92);
-  }
-}
+/* Note: dark mode géré manuellement via body[data-theme="dark"] — pas de media query OS
+   pour éviter le conflit avec data-theme="" (light) qui serait faussement détecté */
