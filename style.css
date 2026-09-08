@@ -5,41 +5,43 @@
 ══════════════════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-/* ── Light — Institutional ────────────────────────────────────────────── */
+/* ── Light — Warm Institutional ───────────────────────────────────────────── */
 :root{
-  --bg:#F4F6F9;
-  --bg2:#E8ECF2;
+  --bg:#FBFAF8;
+  --bg2:#F5F3EF;
   --surface:#FFFFFF;
-  --surface2:#F8F9FC;
-  --surface3:#F0F2F6;
-  --border:rgba(15,26,42,.09);
-  --border2:rgba(15,26,42,.05);
-  --text:#0F1A2A;
-  --text2:#3D4F65;
-  --text3:#64748B;
-  --text4:#94A3B8;
-  --accent:#1D4ED8;
-  --accent2:#1E40AF;
-  --accent-bg:rgba(29,78,216,.05);
-  --accent-bd:rgba(29,78,216,.14);
-  --green:#0D9488;
-  --green-bg:rgba(13,148,136,.05);
-  --green-bd:rgba(13,148,136,.15);
-  --red:#B45309;
-  --red-bg:rgba(180,83,9,.05);
-  --red-bd:rgba(180,83,9,.14);
-  --amber:#8B6914;
-  --amber-bg:rgba(139,105,20,.05);
-  --amber-bd:rgba(139,105,20,.12);
+  --surface2:#F9F8F6;
+  --surface3:#F5F3EF;
+  --border:#E7E3DC;
+  --border2:#EDE9E3;
+  --text:#1C1A17;
+  --text2:#4A483E;
+  --text3:#6B6560;
+  --text4:#8B8680;
+  --accent:#B45309;
+  --accent2:#A04E08;
+  --accent-bg:rgba(180,83,9,.06);
+  --accent-bd:rgba(180,83,9,.16);
+  --green:#15803D;
+  --green-bg:rgba(21,128,61,.06);
+  --green-bd:rgba(21,128,61,.16);
+  --red:#B91C1C;
+  --red-bg:rgba(185,28,28,.06);
+  --red-bd:rgba(185,28,28,.16);
+  --amber:#CA8A04;
+  --amber-bg:rgba(202,138,4,.06);
+  --amber-bd:rgba(202,138,4,.15);
   --blue:#1D4ED8;
-  --blue-bg:rgba(29,78,216,.05);
-  --blue-bd:rgba(29,78,216,.12);
-  --gold:#8B6914;
-  --gold-bg:rgba(139,105,20,.05);
-  --gold-bd:rgba(139,105,20,.12);
-  --r:5px;
-  --rl:8px;
-  --rxl:12px;
+  --blue-bg:rgba(29,78,216,.06);
+  --blue-bd:rgba(29,78,216,.15);
+  --gold:#B45309;
+  --gold-bg:rgba(180,83,9,.06);
+  --gold-bd:rgba(180,83,9,.15);
+  --r:10px;
+  --rl:14px;
+  --rxl:16px;
+  --rxl2:22px;
+  --spring:cubic-bezier(0.32,0.72,0,1);
   --sh:0 1px 2px rgba(0,0,0,.04),0 2px 6px rgba(0,0,0,.03);
   --shl:0 4px 16px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04);
   --shfocus:0 0 0 3px rgba(29,78,216,.16);
@@ -48,8 +50,8 @@
   --sans:'Inter',-apple-system,system-ui,sans-serif;
   --display:'Inter',-apple-system,system-ui,sans-serif;
   --sidebar-w:220px;
-  --sb-bg:linear-gradient(160deg,#161F30 0%,#1E2D44 100%);
-  --sb-bg-solid:#161F30;
+  --sb-bg:linear-gradient(160deg,#2A2218 0%,#3D3027 100%);
+  --sb-bg-solid:#2A2218;
   --sb-hover:rgba(255,255,255,.06);
   --sb-active-bg:rgba(59,130,246,.12);
   --sb-active-text:#FFFFFF;
@@ -58,44 +60,44 @@
   --sb-active-bar:#60A5FA;
 }
 
-/* ── Dark — Terminal ─────────────────────────────────────────────────── */
+/* ── Dark — Warm Terminal ──────────────────────────────────────────────── */
 body[data-theme="dark"]{
-  --bg:#09090B;
-  --bg2:#18181B;
-  --surface:#111113;
-  --surface2:#18181B;
-  --surface3:#27272A;
-  --border:#27272A;
-  --border2:#1F1F23;
-  --text:#FAFAFA;
-  --text2:#A1A1AA;
-  --text3:#71717A;
-  --text4:#3F3F46;
-  --accent:#3B82F6;
-  --accent2:#60A5FA;
-  --accent-bg:rgba(59,130,246,.08);
-  --accent-bd:rgba(59,130,246,.20);
-  --green:#2DD4A8;
-  --green-bg:rgba(45,212,168,.07);
-  --green-bd:rgba(45,212,168,.18);
-  --red:#F59E0B;
-  --red-bg:rgba(245,158,11,.07);
-  --red-bd:rgba(245,158,11,.18);
+  --bg:#0F0D0B;
+  --bg2:#1A1714;
+  --surface:#16140F;
+  --surface2:#1A1714;
+  --surface3:#2B2620;
+  --border:#2B2620;
+  --border2:#21191F;
+  --text:#F5F1ED;
+  --text2:#A89E94;
+  --text3:#7A7268;
+  --text4:#4A4238;
+  --accent:#E8B34D;
+  --accent2:#F0B955;
+  --accent-bg:rgba(232,179,77,.10);
+  --accent-bd:rgba(232,179,77,.22);
+  --green:#4ADE80;
+  --green-bg:rgba(74,222,128,.08);
+  --green-bd:rgba(74,222,128,.20);
+  --red:#F87171;
+  --red-bg:rgba(248,113,113,.08);
+  --red-bd:rgba(248,113,113,.20);
   --amber:#FBBF24;
-  --amber-bg:rgba(251,191,36,.06);
-  --amber-bd:rgba(251,191,36,.14);
-  --blue:#3B82F6;
-  --blue-bg:rgba(59,130,246,.06);
-  --blue-bd:rgba(59,130,246,.16);
-  --gold:#FBBF24;
-  --gold-bg:rgba(251,191,36,.06);
-  --gold-bd:rgba(251,191,36,.14);
+  --amber-bg:rgba(251,191,36,.08);
+  --amber-bd:rgba(251,191,36,.18);
+  --blue:#60A5FA;
+  --blue-bg:rgba(96,165,250,.07);
+  --blue-bd:rgba(96,165,250,.16);
+  --gold:#E8B34D;
+  --gold-bg:rgba(232,179,77,.08);
+  --gold-bd:rgba(232,179,77,.18);
   --sh:0 1px 2px rgba(0,0,0,.4);
   --shl:0 4px 16px rgba(0,0,0,.5);
   --shfocus:0 0 0 3px rgba(59,130,246,.25);
   --header-bg:rgba(9,9,11,.92);
-  --sb-bg:linear-gradient(180deg,#131620 0%,#1C2030 100%);
-  --sb-bg-solid:#131620;
+  --sb-bg:linear-gradient(180deg,#1A140F 0%,#2A2218 100%);
+  --sb-bg-solid:#1A140F;
   --sb-hover:rgba(255,255,255,.06);
   --sb-active-bg:rgba(59,130,246,.12);
   --sb-active-text:#FFFFFF;
@@ -151,9 +153,9 @@ input,select,textarea{font-family:inherit}
 }
 .sb-logo{
   width:30px;height:30px;border-radius:8px;
-  background:linear-gradient(135deg,#2563EB,#1D4ED8);
+  background:linear-gradient(135deg,#CA8A04,#B45309);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  box-shadow:0 2px 6px rgba(37,99,235,.35);
+  box-shadow:0 2px 6px rgba(180,83,9,.35);
 }
 .sb-logo svg{display:block}
 .sb-name{
@@ -1411,4 +1413,237 @@ tr.tr-data:hover td{background:var(--accent-bg);cursor:pointer}
   .detail-scr-cols-2,.detail-scr-cols-3{grid-template-columns:1fr}
   .detail-scr-img{height:110px}
   .detail-text-col{min-width:100%} /* force single column */
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   APPLE HIG LAYER — iOS-native feel
+   Overrides via cascade (placé en dernier)
+══════════════════════════════════════════════════════════════════════ */
+
+/* ─── SPRING KEYFRAMES ───────────────────────────────────────────── */
+@keyframes iosSlideUp{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
+@keyframes iosFadeIn{
+  from{opacity:0;transform:scale(.97) translateY(4px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+/* ─── PAGE TRANSITION ────────────────────────────────────────────── */
+.page.active{animation:iosFadeIn .22s var(--spring) both!important}
+
+/* ─── CARDS — Inset Grouped (16px radius) ───────────────────────── */
+.card{
+  border-radius:16px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)!important;
+}
+body[data-theme="dark"] .card{
+  box-shadow:0 2px 12px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.25)!important;
+}
+.card:hover{box-shadow:0 4px 18px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.05)!important}
+.card:active{transform:scale(.99)!important;transition:transform .1s ease!important}
+
+/* ─── BUTTONS — iOS style ────────────────────────────────────────── */
+.btn{
+  border-radius:10px!important;
+  transition:transform .12s var(--spring),opacity .12s,box-shadow .12s!important;
+}
+.btn:active{transform:scale(.95)!important}
+.btn-primary{
+  background:var(--accent)!important;
+  background-image:none!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.14)!important;
+}
+.btn-primary:hover{
+  transform:none!important;
+  opacity:.9!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.2)!important;
+}
+body[data-theme="dark"] .btn-primary{background:var(--accent)!important;color:#000!important}
+
+/* ─── LARGE TITLE — scroll collapse (mobile only) ───────────────── */
+@media(max-width:768px){
+  .page-title{
+    font-size:20px!important;
+    font-weight:700!important;
+    letter-spacing:-.4px!important;
+    transition:font-size .22s ease,letter-spacing .22s ease!important;
+  }
+  .page-header{
+    transition:padding .22s ease!important;
+  }
+  .page-header.header-compact .page-title{
+    font-size:15px!important;
+    font-weight:600!important;
+    letter-spacing:-.15px!important;
+  }
+  .page-header.header-compact{
+    padding-top:10px!important;
+    padding-bottom:9px!important;
+  }
+}
+
+/* ─── DRAWER HANDLE ──────────────────────────────────────────────── */
+.drawer-handle{
+  display:none;
+  width:36px;height:4px;
+  background:var(--border);
+  border-radius:2px;
+  margin:10px auto -2px;
+  flex-shrink:0;
+  cursor:grab;
+}
+
+/* ─── BOTTOM SHEET — Trade Drawer on mobile ──────────────────────── */
+@media(max-width:600px){
+  .drawer-handle{display:block}
+
+  .trade-drawer-overlay.open{
+    animation:none!important;
+    background:rgba(0,0,0,.5)!important;
+  }
+  .trade-drawer{
+    top:auto!important;
+    bottom:0!important;
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:93dvh!important;
+    border-left:none!important;
+    border-radius:20px 20px 0 0!important;
+    animation:iosSlideUp .35s var(--spring) both!important;
+    box-shadow:0 -8px 40px rgba(0,0,0,.22)!important;
+    display:flex;flex-direction:column;
+  }
+  .trade-drawer-header{
+    padding:6px 20px 14px!important;
+    justify-content:center!important;
+    position:relative!important;
+  }
+  .trade-drawer-header .modal-close{
+    position:absolute!important;
+    right:16px!important;top:50%!important;
+    transform:translateY(-50%)!important;
+  }
+  .trade-drawer-header #tmNav{
+    position:absolute!important;
+    left:16px!important;top:50%!important;
+    transform:translateY(-50%)!important;
+  }
+}
+
+/* ─── BOTTOM SHEET — Overlay modals on mobile ───────────────────── */
+@media(max-width:600px){
+  .overlay{
+    align-items:flex-end!important;
+    padding:0!important;
+  }
+  .modal{
+    width:100%!important;
+    max-width:100%!important;
+    border-radius:20px 20px 0 0!important;
+    max-height:90dvh!important;
+    overflow-y:auto!important;
+    animation:iosSlideUp .35s var(--spring) both!important;
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)!important;
+    margin:0!important;
+  }
+  .modal-header{
+    border-radius:20px 20px 0 0!important;
+    padding-top:18px!important;
+  }
+}
+
+/* ─── MOBILE NAV — Glassmorphism Tab Bar ────────────────────────── */
+@media(max-width:768px){
+  #mobileNav{
+    background:rgba(252,251,249,.88)!important;
+    backdrop-filter:blur(20px) saturate(180%)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(180%)!important;
+    border-top:.5px solid rgba(0,0,0,.12)!important;
+    box-shadow:none!important;
+  }
+  body[data-theme="dark"] #mobileNav{
+    background:rgba(15,13,11,.88)!important;
+    border-top-color:rgba(255,255,255,.07)!important;
+  }
+  .mn-tab{
+    padding:8px 4px 5px!important;
+    font-size:10px!important;
+    font-weight:500!important;
+    letter-spacing:0!important;
+    gap:3px!important;
+    transition:color .15s ease,transform .18s var(--spring)!important;
+  }
+  .mn-tab.active{color:var(--accent)!important}
+  .mn-tab.active svg{stroke:var(--accent)!important}
+  .mn-tab svg{transition:stroke .15s ease,transform .18s var(--spring)!important}
+  .mn-tab.active svg{transform:scale(1.08)!important}
+  .mn-tab:active{transform:scale(.92)!important}
+}
+
+/* ─── FORMS — iOS-style inputs ───────────────────────────────────── */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+select,textarea{
+  border-radius:10px!important;
+  transition:border-color .2s ease,box-shadow .2s ease!important;
+}
+input:focus:not([type=checkbox]):not([type=radio]),select:focus,textarea:focus{
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 3px var(--accent-bg)!important;
+  outline:none!important;
+}
+
+/* ─── INTERACTIVE PRESS — cartes et KPI ─────────────────────────── */
+.j-card,.acc-card{
+  transition:transform .12s var(--spring),box-shadow .15s ease!important;
+}
+.j-card:active,.acc-card:active{transform:scale(.985)!important}
+.kpi-cell{transition:background .12s ease,transform .1s ease!important}
+.kpi-cell:active{transform:scale(.97)!important}
+
+/* ─── KPI BAND — radius harmonisé ───────────────────────────────── */
+.dash-kpi-band{border-radius:16px!important}
+
+/* ─── DASH TOOLBAR & TODAY ───────────────────────────────────────── */
+.dash-toolbar{border-radius:16px!important}
+.dash-today{border-radius:14px!important}
+
+/* ─── OVERLAY backdrop blur ──────────────────────────────────────── */
+.overlay{
+  backdrop-filter:blur(6px)!important;
+  -webkit-backdrop-filter:blur(6px)!important;
+}
+
+/* ─── TOAST — pill style ────────────────────────────────────────── */
+#toast{border-radius:24px!important}
+
+/* ─── DARK THEME auto via OS (fallback si pas de toggle manuel) ──── */
+@media(prefers-color-scheme:dark){
+  body:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg:#0F0D0B;
+    --bg2:#1A1714;
+    --surface:#16140F;
+    --surface2:#1A1714;
+    --surface3:#2B2620;
+    --border:#2B2620;
+    --border2:#21191F;
+    --text:#F5F1ED;
+    --text2:#A89E94;
+    --text3:#7A7268;
+    --text4:#4A4238;
+    --accent:#E8B34D;
+    --accent2:#F0B955;
+    --accent-bg:rgba(232,179,77,.10);
+    --accent-bd:rgba(232,179,77,.22);
+    --green:#4ADE80;
+    --red:#F87171;
+    --amber:#FBBF24;
+    --blue:#60A5FA;
+    --sh:0 1px 2px rgba(0,0,0,.4);
+    --shl:0 4px 16px rgba(0,0,0,.5);
+    --header-bg:rgba(9,9,11,.92);
+  }
 }

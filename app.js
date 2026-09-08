@@ -328,6 +328,7 @@ function syncMobileNav(p){
   }
 }
 function showPage(p){
+  if(navigator.vibrate)navigator.vibrate(8);
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
@@ -2141,6 +2142,7 @@ function renderJCards(){
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
 function openNew(){
+  if(navigator.vibrate)navigator.vibrate(10);
   closeImgExpand();editId=null;tConf=3;tScrHTF='';tScrMTF='';tScrLTF='';tDir='';
   _detailNavIdx=-1;
   const _nav=document.getElementById('tmNav');if(_nav)_nav.style.display='none';
@@ -3701,3 +3703,48 @@ window.addEventListener('resize',()=>{
   },150);
 });
 init();
+
+// ── LARGE TITLE — scroll collapse ────────────────────────────────────────
+(function(){
+  const content=document.querySelector('.page-content');
+  const header=document.querySelector('.page-header');
+  if(!content||!header)return;
+  content.addEventListener('scroll',function(){
+    header.classList.toggle('header-compact',content.scrollTop>48);
+  },{passive:true});
+})();
+
+// ── SWIPE TO CLOSE — Trade Drawer (bottom sheet sur mobile) ──────────────
+(function(){
+  const overlay=document.getElementById('tradeModal');
+  const drawer=overlay?overlay.querySelector('.trade-drawer'):null;
+  if(!drawer)return;
+  let startY=0,startTime=0,isDragging=false;
+  function isSwipeZone(target){
+    const handle=drawer.querySelector('.drawer-handle');
+    const header=drawer.querySelector('.trade-drawer-header');
+    return(handle&&handle.contains(target))||(header&&header.contains(target)&&!target.closest('button')&&!target.closest('input'));
+  }
+  drawer.addEventListener('touchstart',function(e){
+    if(window.innerWidth>600)return;
+    if(!isSwipeZone(e.target))return;
+    startY=e.touches[0].clientY;startTime=Date.now();isDragging=true;
+  },{passive:true});
+  drawer.addEventListener('touchmove',function(e){
+    if(!isDragging)return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy>0){drawer.style.transform='translateY('+dy+'px)';drawer.style.transition='none';}
+  },{passive:true});
+  drawer.addEventListener('touchend',function(e){
+    if(!isDragging)return;
+    isDragging=false;
+    const dy=e.changedTouches[0].clientY-startY;
+    const dt=Date.now()-startTime;
+    drawer.style.transition='';
+    drawer.style.transform='';
+    if(dy>120||(dy>50&&dt<350)){
+      closeModal('tradeModal');
+      if(navigator.vibrate)navigator.vibrate(10);
+    }
+  },{passive:true});
+})();
