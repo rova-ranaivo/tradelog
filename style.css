@@ -1620,5 +1620,46 @@ input:focus:not([type=checkbox]):not([type=radio]),select:focus,textarea:focus{
 /* ─── TOAST — pill style ────────────────────────────────────────── */
 #toast{border-radius:24px!important}
 
+/* ─── iOS TOGGLE SWITCH ─────────────────────────────────────────── */
+.ios-switch{
+  position:relative;display:inline-flex;
+  width:44px;height:26px;flex-shrink:0;
+  cursor:pointer;
+}
+.ios-switch input{
+  opacity:0;width:0;height:0;
+  position:absolute;pointer-events:none;
+}
+.ios-switch-track{
+  position:absolute;inset:0;
+  background:var(--border);
+  border-radius:13px;
+  cursor:pointer;
+  transition:background .22s var(--spring);
+}
+.ios-switch-track::after{
+  content:'';
+  position:absolute;
+  top:2px;left:2px;
+  width:22px;height:22px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.22);
+  transition:transform .22s var(--spring);
+}
+.ios-switch input:checked+.ios-switch-track{
+  background:var(--green);
+}
+.ios-switch input:checked+.ios-switch-track::after{
+  transform:translateX(18px);
+}
+.ios-switch:active .ios-switch-track::after{
+  width:26px;
+}
+.ios-switch input:checked:focus+.ios-switch-track,
+.ios-switch input:focus+.ios-switch-track{
+  outline:3px solid var(--accent-bg);
+}
+
 /* Note: dark mode géré manuellement via body[data-theme="dark"] — pas de media query OS
    pour éviter le conflit avec data-theme="" (light) qui serait faussement détecté */
