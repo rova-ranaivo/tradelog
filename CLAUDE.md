@@ -111,6 +111,15 @@ ct.ttBorder               // bordure tooltip
 ```
 
 **Toujours mettre à jour `getChartTheme()` si on change les couleurs P&L d'un thème.**
+`getChartTheme()` lit désormais les tokens CSS (`--green`, `--red`, `--amber`, `--accent`) via `_cssVar()` : les charts suivent automatiquement le thème.
+
+### Finitions des charts
+- Barres en dégradé (pleine couleur à l'extrémité, adoucie vers zéro) : `backgroundColor:_gradArr(couleurs, horizontal)` — gère aussi les barres flottantes `[début, fin]`.
+- Courbe de capital : remplissage en dégradé (`capGradPlugin`). Animation d'entrée 800 ms et style de tooltip communs posés sur `Chart.defaults`.
+- Tooltips enrichis : capital (trade du point, R, variation), cascade (instrument, résultat, R, cumul, compte), R multiples (P&L de la tranche), instruments (`mkGainChart(..., groups)` → win rate + RR moyen), confiance et W/L/BE (P&L).
+- `cTrades` = **cascade** (waterfall, carte « Progression du P&L ») : chaque barre va du cumul précédent au nouveau cumul, connecteurs `wfLink`, échelle calée sur le cumul. **Regroupement automatique** pour rester lisible (~25 barres max) : trade (≤25) → jour (≤20) → semaine (≤26) → mois ; la granularité s'affiche dans le sous-titre ; clic = trade (detail) ou liste des trades du groupe.
+- `rHour` n'est plus un canvas : **bande de chaleur HTML** dans `#rHourWrap` (une case par heure, sessions au-dessus, intensité = |P&L|, clic → `openTradeListModal`, survol → `showAuditTip`). Styles `.hs-*`.
+- Helpers : `_cssVar(name)`, `_rgba(couleur, alpha)` (hex ou rgb).
 
 ---
 
@@ -243,9 +252,18 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 
 ---
 
+## Calculateur de position (`#pcModal`, section `CALCULATEUR DE POSITION` dans `app.js`)
+
+- Ouvert par `openPosCalc()` : touche **P**, entrée « Calculateur » de la sidebar, menu « Plus » mobile.
+- Compte en USD : `lots = risque$ ÷ (distance × valeur $/unité/lot)`, arrondi à 0.01 **inférieur**. Specs dans `PC_INSTR` :
+  EURUSD/GBPUSD 10 $/pip · XAUUSD `oz/lot` $ par 1,00 $ (défaut 100) · GER40 `€/point/lot` (défaut 1) × EUR/USD.
+- Tailles de contrat modifiables dans le calculateur (`localStorage.tl_pc_specs`). Taux EUR/USD : BCE via `api.frankfurter.app` (cache 6 h, `tl_eurusd`), saisie manuelle possible.
+- Risque en % du **solde** (`getAccBalance` = capital de départ + P&L, hors cashflow) ou en $. Préférences dans `tl_pc` ; les prix ne sont pas persistés.
+- Mode Prix (entrée/stop/TP → sens Long/Short déduit, R:R) ou Distance. « Créer le trade » ouvre le formulaire pré-rempli (compte, instrument, sens, montant risqué réel, RR attendu).
+
 ## Raccourcis clavier (desktop)
 
-`N` nouveau trade · `D` Dashboard · `R` Rapport · `J` Journal · `C` Calendrier · `A` Anomalies.
+`N` nouveau trade · `P` calculateur de position · `D` Dashboard · `R` Rapport · `J` Journal · `C` Calendrier · `A` Anomalies.
 Inactifs pendant la saisie (input/select/textarea) et quand un modal/drawer/visionneuse est ouvert.
 
 ---
@@ -345,12 +363,12 @@ Compat ascendante : `screenshotAvant`/`screenshot` → HTF, `screenshotApres` �
 |---|---|---|
 | `cCapital` | Dashboard | Courbe capital réelle + rigueur |
 | `cDrawdown` | Dashboard | Drawdown sous la courbe capital |
-| `cTrades` | Dashboard | P&L par trade |
+| `cTrades` | Dashboard | Progression du P&L en cascade (trade / jour / semaine / mois selon le volume) |
 | `cRDist` | Dashboard | Distribution des R multiples |
 | `rInstr` | Rapport | Gain net par instrument (barres horizontales) |
 | `rDist` | Rapport | Distribution W/L/BE |
 | `rStars` | Rapport | Win rate par niveau ★ |
-| `rHour` | Rapport | Gain net par heure |
+| `rHour` | Rapport | Gain net par heure — **bande de chaleur HTML** (plus de canvas) |
 
 Toujours appeler `dc(id)` avant de rendre dans un canvas existant.
 

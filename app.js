@@ -280,14 +280,14 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     const ip=document.getElementById('imgExpandPanel');
     if(ip&&ip.classList.contains('open')){ip.classList.remove('open');return;}
-    ['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+    ['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal','pcModal'].forEach(id=>{
       const el=document.getElementById(id);
       if(el&&el.classList.contains('open'))el.classList.remove('open');
     });
   }
 });
 // Click outside modal to close (all except tradeModal — risque de fermeture accidentelle)
-['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal'].forEach(id=>{
+['cfModal','accModal','renameAccModal','editCapModal','detailModal','imgModal','albumModal','pcModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el)el.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
@@ -796,22 +796,55 @@ Chart.defaults.font.weight='400';
 Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--text3').trim()||'#4A6080';
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+// Couleurs des charts lues dans les tokens du thème → toujours cohérentes avec l'interface
+const _cssVar=n=>getComputedStyle(document.body).getPropertyValue(n).trim();
+function _rgba(color,a){
+  const c=(color||'').trim();
+  if(c.startsWith('#')){
+    let h=c.slice(1);if(h.length===3)h=h.split('').map(x=>x+x).join('');if(h.length===8)h=h.slice(0,6);
+    const n=parseInt(h,16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+  }
+  const m=c.match(/rgba?\(([^)]+)\)/);
+  return m?`rgba(${m[1].split(',').slice(0,3).join(',')},${a})`:c;
+}
 function getChartTheme(){
   const dk=(document.body.dataset.theme||'')==='dark';
+  const win=_cssVar('--green')||'#1F8A3B',loss=_cssVar('--red')||'#E0281E',
+        mid=_cssVar('--amber')||'#C26A00',accent=_cssVar('--accent')||'#0071E3';
   return{
-    // Palette système Apple (systemGreen / systemRed / systemOrange)
-    win:       dk?'#30D158':'#28A745',
-    loss:      dk?'#FF453A':'#FF3B30',
-    winBg:     dk?'rgba(48,209,88,.85)':'rgba(52,199,89,.85)',
-    lossBg:    dk?'rgba(255,69,58,.85)':'rgba(255,59,48,.82)',
-    winFill:   dk?'rgba(48,209,88,.12)':'rgba(52,199,89,.10)',
-    lossFill:  dk?'rgba(255,69,58,.12)':'rgba(255,59,48,.08)',
-    midBg:     dk?'rgba(255,159,10,.75)':'rgba(255,149,0,.75)',
-    emptyBg:   dk?'rgba(118,118,128,.24)':'rgba(118,118,128,.12)',
-    grid:      dk?'rgba(255,255,255,.07)':'rgba(0,0,0,.05)',
-    ttBorder:  dk?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)'
+    win,loss,mid,accent,
+    winBg:_rgba(win,.88),lossBg:_rgba(loss,.85),midBg:_rgba(mid,.8),
+    winFill:_rgba(win,dk?.16:.12),lossFill:_rgba(loss,dk?.16:.10),
+    emptyBg:dk?'rgba(118,118,128,.24)':'rgba(118,118,128,.12)',
+    grid:dk?'rgba(255,255,255,.07)':'rgba(0,0,0,.05)',
+    ttBorder:dk?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)'
   };
 }
+// Dégradé doux sur chaque barre : couleur pleine à l'extrémité, adoucie vers la ligne de zéro
+function _barGrad(base,horizontal){
+  return c=>{
+    const ch=c.chart,ca=ch.chartArea;
+    if(!ca||c.type!=='data')return base;
+    const sc=horizontal?ch.scales.x:ch.scales.y;if(!sc)return base;
+    const raw=c.raw;
+    const v0=Array.isArray(raw)?raw[0]:0,v1=Array.isArray(raw)?raw[1]:raw;
+    if(v1==null||isNaN(v1))return base;
+    const p0=sc.getPixelForValue(v0),p1=sc.getPixelForValue(v1);
+    if(Math.abs(p1-p0)<2)return base;
+    const g=horizontal?ch.ctx.createLinearGradient(p0,0,p1,0):ch.ctx.createLinearGradient(0,p0,0,p1);
+    g.addColorStop(0,_rgba(base,.5));g.addColorStop(1,_rgba(base,1));
+    return g;
+  };
+}
+const _gradArr=(arr,horizontal)=>c=>_barGrad(arr[c.dataIndex%arr.length],horizontal)(c);
+// Animation d'entrée douce + style de tooltip commun
+Chart.defaults.animation.duration=800;
+Chart.defaults.animation.easing='easeOutQuart';
+Object.assign(Chart.defaults.plugins.tooltip,{
+  padding:12,caretSize:6,boxPadding:4,usePointStyle:true,
+  titleFont:{size:12.5,weight:'600'},bodyFont:{size:12},footerFont:{size:11.5,weight:'400'},
+  footerColor:'rgba(255,255,255,.6)',footerMarginTop:6
+});
 
 function mkBar(id,labels,data,colors,onClickFn){
   dc(id);
@@ -825,7 +858,7 @@ function mkBar(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:5,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -863,7 +896,7 @@ function mkBarGain(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:bgs,borderRadius:5,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -1161,9 +1194,20 @@ function renderCharts(f){
     c.restore();
   }};
 
+  // Remplissage en dégradé sous la courbe : dense près de la ligne, transparent vers le capital de départ
+  const capGradPlugin={id:'capGrad',afterLayout(chart){
+    const{chartArea:ca,scales}=chart;if(!ca||!scales.y)return;
+    const c=chart.ctx,y0=Math.min(Math.max(scales.y.getPixelForValue(startCap),ca.top),ca.bottom);
+    const up=c.createLinearGradient(0,ca.top,0,y0);
+    up.addColorStop(0,_rgba(_cct.win,.30));up.addColorStop(1,_rgba(_cct.win,0));
+    const dn=c.createLinearGradient(0,y0,0,ca.bottom);
+    dn.addColorStop(0,_rgba(_cct.loss,0));dn.addColorStop(1,_rgba(_cct.loss,.26));
+    const fl=chart.data.datasets[0].fill;if(fl){fl.above=up;fl.below=dn;}
+  }};
+
   charts['cCapital']=new Chart(ctx,{
     type:'line',
-    plugins:[capRefPlugin],
+    plugins:[capRefPlugin,capGradPlugin],
     data:{labels:cl,datasets:[
       {label:'Courbe Réelle',data:cv,
        borderColor:isUp?_cct.win:_cct.loss,borderWidth:2,tension:0.35,
@@ -1181,7 +1225,17 @@ function renderCharts(f){
           backgroundColor:'rgba(29,29,31,.92)',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
           borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
-          callbacks:{label:v=>`${v.dataset.label}  $${v.parsed.y.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`}
+          callbacks:{
+            title:items=>{const i=items[0].dataIndex,t=closedF[i-1];return t?`${fmtD(t.date)}${t.heure?' · '+t.heure:''}`:'Départ';},
+            label:v=>` ${v.dataset.label} : ${fmtUSD(v.parsed.y,false)}`,
+            // Le trade qui a produit ce point
+            footer:items=>{
+              const i=items[0].dataIndex,t=closedF[i-1];if(!t)return'';
+              const gp=parseFloat(t.gainPerte)||0,rr=calcRR(t);
+              return[`${t.instrument||'—'}${t.direction?' · '+t.direction:''}  ${fmtUSD(gp)}${rr!==null?'  ('+(rr>0?'+':'')+fmtN(rr,2)+'R)':''}`,
+                     `Variation depuis le départ : ${fmtUSD(cv[i]-cv[0])}`];
+            }
+          }
         }
       },
       scales:{
@@ -1247,14 +1301,50 @@ function renderCharts(f){
     const ct_tr=getChartTheme();
     const trTrades=[...f].filter(t=>t.resultat!=='En cours'&&t.gainPerte!==''&&t.gainPerte!==undefined&&!isNaN(parseFloat(t.gainPerte))&&t.date)
       .sort((a,b)=>a.date.localeCompare(b.date)||((a.heure||'').localeCompare(b.heure||'')));
-    const trData=trTrades.map(t=>parseFloat(t.gainPerte));
-    const trBgs=trTrades.map(t=>t.resultat==='Win'?ct_tr.winBg:t.resultat==='Loss'?ct_tr.lossBg:ct_tr.midBg);
-    const trLabels=trTrades.map((t,i)=>`#${i+1}`);
-    const showLbl=trTrades.length<=35;
+    // Regroupement automatique pour rester lisible (~25 barres max) :
+    // trade (≤25) → jour (≤20) → semaine (≤26) → mois
+    const _iso=dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const _monday=d=>{const[y,m,dd]=d.split('-').map(Number);const dt=new Date(y,m-1,dd);dt.setDate(dt.getDate()-((dt.getDay()+6)%7));return _iso(dt);};
+    const _groupBy=fn=>{const m=new Map();trTrades.forEach((t,i)=>{const k=fn(t,i);if(!m.has(k))m.set(k,[]);m.get(k).push(t);});return[...m.entries()];};
+    let gran='trade',groups=_groupBy((t,i)=>String(i));
+    if(groups.length>25){gran='day';groups=_groupBy(t=>t.date);}
+    if(gran==='day'&&groups.length>20){gran='week';groups=_groupBy(t=>_monday(t.date));}
+    if(gran==='week'&&groups.length>26){gran='month';groups=_groupBy(t=>t.date.slice(0,7));}
+    const MOIS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+    const MOIS_L=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    const _dShort=d=>{const[,m,dd]=d.split('-').map(Number);return`${dd} ${MOIS[m-1]}`;};
+    const gLabel=([k],i)=>gran==='trade'?`#${i+1}`:gran==='month'?`${MOIS[+k.slice(5,7)-1]} ${k.slice(2,4)}`:_dShort(k);
+    const gTitle=([k,ts],i)=>{
+      if(gran==='trade'){const t=ts[0];return`Trade #${i+1} · ${fmtD(t.date)}${t.heure?' · '+t.heure:''}`;}
+      if(gran==='day'){const[y,m,d]=k.split('-').map(Number);const s=new Date(y,m-1,d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});return s.charAt(0).toUpperCase()+s.slice(1);}
+      if(gran==='week')return`Semaine du ${_dShort(k)}`;
+      return`${MOIS_L[+k.slice(5,7)-1].replace(/^./,c=>c.toUpperCase())} ${k.slice(0,4)}`;
+    };
+    const trData=groups.map(([,ts])=>+ts.reduce((s,t)=>s+parseFloat(t.gainPerte),0).toFixed(2));
+    // Cascade : chaque barre part du cumul précédent → le P&L se construit étape par étape
+    let _cum=0;
+    const trRanges=trData.map(v=>{const a=_cum;_cum+=v;return[+a.toFixed(2),+_cum.toFixed(2)];});
+    const trBgs=groups.map(([,ts],i)=>{
+      if(gran==='trade'){const t=ts[0];return t.resultat==='Win'?ct_tr.winBg:t.resultat==='Loss'?ct_tr.lossBg:ct_tr.midBg;}
+      return trData[i]>0?ct_tr.winBg:trData[i]<0?ct_tr.lossBg:ct_tr.midBg;
+    });
+    const trLabels=groups.map(gLabel);
+    const showLbl=groups.length<=25;
+    // Connecteurs fins entre la fin d'une barre et le départ de la suivante
+    const wfLink={id:'wf_link',beforeDatasetsDraw(chart){
+      const meta=chart.getDatasetMeta(0),c=chart.ctx,ys=chart.scales.y;
+      c.save();c.strokeStyle=_cssVar('--text4')||'#8E8E93';c.globalAlpha=.4;c.lineWidth=1;
+      for(let i=0;i<meta.data.length-1;i++){
+        const b=meta.data[i],n=meta.data[i+1];if(!b||!n)continue;
+        const py=Math.round(ys.getPixelForValue(trRanges[i][1]))+.5;
+        c.beginPath();c.moveTo(b.x+b.width/2,py);c.lineTo(n.x-n.width/2,py);c.stroke();
+      }
+      c.restore();
+    }};
     const dlTr={id:'dl_cTrades',afterDatasetsDraw(chart){
       if(!showLbl)return;
-      const{ctx:c,data}=chart;
-      data.datasets[0].data.forEach((val,i)=>{
+      const{ctx:c}=chart;
+      trData.forEach((val,i)=>{
         if(!val)return;
         const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
         const isPos=val>=0,a=Math.abs(val);
@@ -1266,12 +1356,15 @@ function renderCharts(f){
       });
     }};
     charts['cTrades']=new Chart(ctxTr,{
-      type:'bar',plugins:[dlTr],
-      data:{labels:trLabels,datasets:[{data:trData,backgroundColor:trBgs,borderRadius:5,borderSkipped:false,barPercentage:.85,categoryPercentage:.85}]},
+      type:'bar',plugins:[wfLink,dlTr],
+      data:{labels:trLabels,datasets:[{data:trRanges,backgroundColor:_gradArr(trBgs,false),borderRadius:4,borderSkipped:false,minBarLength:2,barPercentage:.85,categoryPercentage:.85}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:showLbl?22:8,bottom:2}},
-        onClick:(e,els)=>{if(!els.length)return;const t=trTrades[els[0].index];if(t)openDetail(t.id);},
+        onClick:(e,els)=>{
+          if(!els.length)return;const g=groups[els[0].index];if(!g)return;
+          if(gran==='trade')openDetail(g[1][0].id);else openTradeListModal(g[1],gTitle(g,els[0].index));
+        },
         plugins:{
           legend:{display:false},
           tooltip:{
@@ -1279,14 +1372,38 @@ function renderCharts(f){
             titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
             borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
             callbacks:{
-              title:items=>{const t=trTrades[items[0].dataIndex];return t?`${fmtD(t.date)}${t.heure?' · '+t.heure:''}`:'' ;},
-              label:v=>{const t=trTrades[v.dataIndex];const val=v.parsed.y;return[` ${t?.instrument||''}  ${t?.direction||''}`,` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`];}
+              title:items=>{const i=items[0].dataIndex;return groups[i]?gTitle(groups[i],i):'';},
+              label:v=>{
+                const i=v.dataIndex,ts=groups[i][1],val=trData[i];
+                if(gran==='trade'){
+                  const t=ts[0],rr=calcRR(t);
+                  return[` ${t.instrument||'—'}${t.direction?' · '+t.direction:''}`,
+                         ` Résultat : ${fmtUSD(val)}${rr!==null?'  ('+(rr>0?'+':'')+fmtN(rr,2)+'R)':''}`,
+                         ` Cumul : ${fmtUSD(trRanges[i][1])}`];
+                }
+                const w=ts.filter(t=>t.resultat==='Win').length,l=ts.filter(t=>t.resultat==='Loss').length;
+                return[` ${ts.length} trade${ts.length>1?'s':''} · ${w}W ${l}L`,
+                       ` Résultat : ${fmtUSD(val)}`,
+                       ` Cumul : ${fmtUSD(trRanges[i][1])}`];
+              },
+              footer:items=>{
+                const ts=groups[items[0].dataIndex][1];
+                if(gran==='trade'){const t=ts[0];return`${t.compte||''}${t.stars?'  '+'★'.repeat(t.stars):''} — cliquer pour ouvrir`;}
+                return'Cliquer pour voir les trades';
+              }
             }
           }
         },
         scales:{
-          x:{grid:{display:false},border:{display:false},ticks:{font:{size:9},padding:3,maxTicksLimit:trTrades.length<=60?trTrades.length:20}},
+          x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},padding:3,autoSkip:true,maxRotation:gran==='trade'?45:0,autoSkipPadding:8}},
           y:{grid:{color:ct_tr.grid,lineWidth:1},border:{display:false},
+            // Échelle calée sur l'amplitude réelle du cumul (avec une petite marge)
+            ...(()=>{
+              const ends=trRanges.flat().concat(0);const lo=Math.min(...ends),hi=Math.max(...ends);
+              const raw=Math.max(hi-lo,1)/4,mag=Math.pow(10,Math.floor(Math.log10(raw)));
+              const step=[1,2,2.5,5,10].map(k=>k*mag).find(s=>s>=raw);
+              return{min:Math.floor(lo/step)*step-(lo<0?0:0),max:Math.ceil(hi/step)*step+(Math.ceil(hi/step)*step===hi?step:0)};
+            })(),
             ticks:{font:{size:10},padding:6,maxTicksLimit:5,callback:v=>{const a=Math.abs(v);return(v<0?'-':'')+'$'+(a>=1000?(a/1000).toFixed(0)+'k':a.toFixed(0));}}}
         }
       }
@@ -1295,7 +1412,8 @@ function renderCharts(f){
     if(sub){
       const wins=trTrades.filter(t=>t.resultat==='Win').length;
       const losses=trTrades.filter(t=>t.resultat==='Loss').length;
-      sub.innerHTML=`<span style="color:var(--green)">${wins}W</span> · <span style="color:var(--red)">${losses}L</span> · ${trTrades.length} trades`;
+      const granTxt={trade:'',day:' · par jour',week:' · par semaine',month:' · par mois'}[gran];
+      sub.innerHTML=`<span style="color:var(--green)">${wins}W</span> · <span style="color:var(--red)">${losses}L</span> · ${trTrades.length} trades${granTxt}`;
     }
   }
 
@@ -1333,7 +1451,7 @@ function renderCharts(f){
     }};
     charts['cRDist']=new Chart(ctxRD,{
       type:'bar',plugins:[dlRD],
-      data:{labels:rBuckets.map(b=>b.l),datasets:[{data:rdCounts,backgroundColor:rdBgs,borderRadius:5,borderSkipped:false,barPercentage:.75,categoryPercentage:.85}]},
+      data:{labels:rBuckets.map(b=>b.l),datasets:[{data:rdCounts,backgroundColor:_gradArr(rdBgs,false),borderRadius:5,borderSkipped:false,barPercentage:.75,categoryPercentage:.85}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:26,bottom:2}},
@@ -1344,7 +1462,8 @@ function renderCharts(f){
             titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
             borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
             callbacks:{
-              label:v=>{const n=v.parsed.y;const pct=rdTrades.length?Math.round(n/rdTrades.length*100):0;return` ${n} trade${n>1?'s':''} (${pct}%)`;}
+              label:v=>{const n=v.parsed.y;const pct=rdTrades.length?Math.round(n/rdTrades.length*100):0;return` ${n} trade${n>1?'s':''} (${pct}%)`;},
+              afterLabel:v=>{const b=rBuckets[v.dataIndex];const ts=rdTrades.filter(t=>{const rr=calcRR(t);return rr>=b.min&&rr<b.max;});return ts.length?` P&L : ${fmtUSD(ts.reduce((a,t)=>a+calcPnl(t),0))}`:'';}
             }
           }
         },
@@ -1364,7 +1483,7 @@ function renderCharts(f){
 
 // ── MODULE-LEVEL CHART HELPERS ────────────────────────────────────────────
 function gainNet(arr){return arr.reduce((s,t)=>s+(parseFloat(t.gainPerte)||0),0);}
-function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
+function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal,groups){
   const ct=getChartTheme();
   const bgs=vals.map((v,i)=>colorFn?colorFn(v,i):v>=0?ct.winBg:ct.lossBg);
   dc(id);const ctx=document.getElementById(id)?.getContext('2d');if(!ctx)return;
@@ -1389,7 +1508,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
   }};
   const pAxis=horizontal?'x':'y';const cAxis=horizontal?'y':'x';
   charts[id]=new Chart(ctx,{type:'bar',plugins:[dlPlugin],
-    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:bgs,borderRadius:5,borderSkipped:false}]},
+    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,
       indexAxis:horizontal?'y':'x',
       layout:{padding:horizontal?{right:64,left:8,top:4,bottom:4}:{top:24,bottom:2}},
@@ -1400,7 +1519,8 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal){
         borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
         callbacks:{
           label:v=>{const val=horizontal?v.parsed.x:v.parsed.y;return` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;},
-          afterLabel:ctx2=>{const n=counts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;}
+          afterLabel:ctx2=>{const n=counts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;},
+          footer:items=>{const g=groups&&groups[items[0].dataIndex];if(!g||!g.length)return'';const st=stats(g.filter(t=>t.resultat!=='En cours'));return`Win rate ${st.winRate}% · RR moyen ${st.avgRR>=0?'+':''}${fmtN(st.avgRR,2)}R`;}
         }
       }},
       scales:{
@@ -1424,7 +1544,7 @@ function renderReportCharts(f){
   // Ajuste la hauteur dynamiquement selon le nombre d'instruments
   const instrWrap=document.getElementById('rInstrWrap');
   if(instrWrap)instrWrap.style.height=Math.max(140,imKeys.length*34+28)+'px';
-  mkGainChart('rInstr',imKeys,imKeys.map(k=>gainNet(im[k])),imKeys.map(k=>im[k].length),(v,i)=>instrPalette[i%instrPalette.length]+'CC',idx=>openTradeListModal(im[imKeys[idx]],`Instrument — ${imKeys[idx]}`),true);
+  mkGainChart('rInstr',imKeys,imKeys.map(k=>gainNet(im[k])),imKeys.map(k=>im[k].length),(v,i)=>instrPalette[i%instrPalette.length]+'CC',idx=>openTradeListModal(im[imKeys[idx]],`Instrument — ${imKeys[idx]}`),true,imKeys.map(k=>im[k]));
 
   // ── WinRate par niveau de confiance (étoiles 1-5)
   dc('rStars');
@@ -1452,7 +1572,7 @@ function renderReportCharts(f){
       });
     }};
     charts['rStars']=new Chart(ctxSt,{type:'bar',plugins:[dlSt],
-      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:stBgs,borderRadius:5,borderSkipped:false}]},
+      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:_gradArr(stBgs,false),borderRadius:5,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:22,bottom:2}},
         plugins:{legend:{display:false},tooltip:{
@@ -1461,7 +1581,8 @@ function renderReportCharts(f){
           borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
           callbacks:{
             label:v=>`  WinRate : ${v.parsed.y}%`,
-            afterLabel:(_,i)=>`  ${stCounts[_?.dataIndex??0]} trade(s)`
+            afterLabel:(_,i)=>`  ${stCounts[_?.dataIndex??0]} trade(s)`,
+            footer:items=>{const lvl=starLevels[items[0].dataIndex];const g=stClosed.filter(t=>{const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);return sv===lvl;});return g.length?`P&L ${fmtUSD(g.reduce((a,t)=>a+calcPnl(t),0))}`:'';}
           }
         }},
         scales:{
@@ -1490,7 +1611,7 @@ function renderReportCharts(f){
       });
     }};
     charts['rDist']=new Chart(ctxDist,{type:'bar',plugins:[distDL],
-      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:[getChartTheme().winBg,getChartTheme().lossBg,getChartTheme().midBg],borderRadius:6,borderSkipped:false}]},
+      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:_gradArr([getChartTheme().winBg,getChartTheme().lossBg,getChartTheme().midBg],false),borderRadius:6,borderSkipped:false}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:24,bottom:2}},
@@ -1499,7 +1620,7 @@ function renderReportCharts(f){
           backgroundColor:'rgba(29,29,31,.92)',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
           borderColor:getChartTheme().ttBorder,borderWidth:1,cornerRadius:10,padding:10,
-          callbacks:{label:v=>`  ${v.parsed.y} trades`}
+          callbacks:{label:v=>{const tot=s.wins+s.losses+s.be;return`  ${v.parsed.y} trades${tot?' ('+Math.round(v.parsed.y/tot*100)+'%)':''}`;},footer:items=>{const r=['Win','Loss','Breakeven'][items[0].dataIndex];const g=f.filter(t=>t.resultat===r);return g.length?`P&L ${fmtUSD(g.reduce((a,t)=>a+calcPnl(t),0))}`:'';}}
         }},
         scales:{
           x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},padding:4}},
@@ -1510,61 +1631,52 @@ function renderReportCharts(f){
     });
   }
 
-  // ── Gain Net par Heure (heures tradées uniquement, triées 00→23)
+  // ── Gain Net par Heure → bande de chaleur : une case par heure (de la 1re à la dernière heure tradée),
+  //    intensité = montant du P&L, sessions de marché au-dessus. Clic = liste des trades de l'heure.
   dc('rHour');
-  const ctxH=document.getElementById('rHour')?.getContext('2d');
-  if(ctxH){
+  const hWrap=document.getElementById('rHourWrap');
+  if(hWrap){
+    hWrap.style.height='auto';
     const hm={};
     f.forEach(t=>{
       if(!t.heure||t.resultat==='En cours'||t.gainPerte===''||t.gainPerte===undefined||isNaN(parseFloat(t.gainPerte)))return;
-      const h=t.heure.slice(0,2);
-      if(!hm[h])hm[h]=[];
-      hm[h].push(t);
+      const h=parseInt(t.heure.slice(0,2),10);if(isNaN(h))return;
+      (hm[h]=hm[h]||[]).push(t);
     });
-    // Trier chronologiquement
-    const hKeys=Object.keys(hm).sort();
-    const hVals=hKeys.map(k=>gainNet(hm[k]));
-    const hCounts=hKeys.map(k=>hm[k].length);
-    const hLabels=hKeys.map(h=>h+'h');
-    const _cth=getChartTheme();
-    const hBgs=hVals.map(v=>v>=0?_cth.winBg:_cth.lossBg);
-    const dlH={id:'dl_rHour',afterDatasetsDraw(chart){
-      const{ctx:c,data}=chart;
-      data.datasets[0].data.forEach((val,i)=>{
-        if(!val)return;
-        const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
-        const isPos=val>=0,a=Math.abs(val);
-        const lbl=a>=1000?`${isPos?'+':'-'}$${(a/1000).toFixed(1)}k`:`${isPos?'+':'-'}$${a.toFixed(0)}`;
-        c.save();c.font='400 10px "Inter",system-ui,sans-serif';
-        c.fillStyle=isPos?_cth.win:_cth.loss;
-        c.textAlign='center';c.textBaseline=isPos?'bottom':'top';
-        c.fillText(lbl,bar.x,isPos?bar.y-4:bar.y+4);c.restore();
+    window._hsTrades=hm;
+    const hrs=Object.keys(hm).map(Number);
+    if(!hrs.length){
+      hWrap.innerHTML='<div class="hs-empty">Aucun trade clôturé sur la période</div>';
+    }else{
+      const range=[];for(let h=Math.min(...hrs);h<=Math.max(...hrs);h++)range.push(h);
+      const hh=h=>String(h).padStart(2,'0');
+      const sessOf=h=>calcSession(hh(h)+':00');
+      const maxAbs=Math.max(...range.map(h=>hm[h]?Math.abs(gainNet(hm[h])):0),1);
+      const ct=getChartTheme();
+      // Bandeau des sessions (cases contiguës d'une même session fusionnées)
+      const spans=[];
+      range.forEach(h=>{const s=sessOf(h),l=spans[spans.length-1];if(l&&l.s===s)l.n++;else spans.push({s,n:1});});
+      let html=`<div class="hs-scroll"><div class="hs-grid" style="grid-template-columns:repeat(${range.length},minmax(54px,1fr))">`;
+      spans.forEach(sp=>{html+=`<div class="hs-sess${sp.s==='Hors session'?' off':''}" style="grid-column:span ${sp.n}">${esc(sp.s)}</div>`;});
+      range.forEach(h=>{
+        const g=hm[h];
+        if(!g){html+=`<div class="hs-cell hs-none" title="Aucun trade"><span class="hs-v">—</span></div>`;return;}
+        const v=gainNet(g),st=stats(g);
+        const a=.14+Math.min(1,Math.abs(v)/maxAbs)*.7;
+        const col=v>0?ct.win:v<0?ct.loss:ct.mid;
+        const tip=[`${hh(h)}h – ${hh(h+1)}h · ${sessOf(h)}`,`P&L ${fmtUSD(v)}`,
+                   `${g.length} trade${g.length>1?'s':''} · win rate ${st.winRate}%`,
+                   `RR moyen ${st.avgRR>=0?'+':''}${fmtN(st.avgRR,2)}R`,'Cliquer pour voir les trades'].join('\n');
+        html+=`<button type="button" class="hs-cell${a>.5?' strong':''}" style="background:${_rgba(col,a)}"
+          data-tip="${esc(tip)}" onmouseenter="showAuditTip(this,this.dataset.tip)" onmouseleave="hideAuditTip()"
+          onclick="hideAuditTip();openTradeListModal(_hsTrades[${h}],'Heure — ${hh(h)}h')">
+          <span class="hs-v">${fmtUSDk(v)}</span><span class="hs-n">${g.length} T · ${st.winRate}%</span></button>`;
       });
-    }};
-    charts['rHour']=new Chart(ctxH,{type:'bar',plugins:[dlH],
-      data:{labels:hLabels,datasets:[{data:hVals,backgroundColor:hBgs,borderRadius:5,borderSkipped:false}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        layout:{padding:{top:22,bottom:2}},
-        onClick:(e,els)=>{if(!els.length)return;const k=hKeys[els[0].index];openTradeListModal(hm[k],`Heure — ${k}h`);},
-        plugins:{legend:{display:false},tooltip:{
-          backgroundColor:'rgba(29,29,31,.92)',
-          titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
-          borderColor:_cth.ttBorder,borderWidth:1,cornerRadius:10,padding:10,
-          callbacks:{
-            label:v=>{const val=v.parsed.y;return` ${val>=0?'+':'-'}$${Math.abs(val).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;},
-            afterLabel:ctx2=>{const n=hCounts[ctx2.dataIndex];return` ${n} trade${n>1?'s':''}`;}
-          }
-        }},
-        scales:{
-          x:{grid:{display:false},border:{display:false},ticks:{font:{size:11},padding:4}},
-          y:{grid:{color:_cth.grid,lineWidth:1},border:{display:false},beginAtZero:true,
-            ticks:{font:{size:10},maxTicksLimit:5,padding:6,
-              callback:v=>{if(v===0)return'0';const a=Math.abs(v);return(v>0?'+':'-')+'$'+(a>=1000?(a/1000).toFixed(0)+'k':a.toFixed(0));}
-            }
-          }
-        }
-      }
-    });
+      range.forEach(h=>{html+=`<div class="hs-h">${hh(h)}h</div>`;});
+      html+=`</div></div>
+        <div class="hs-legend"><span>Perte</span><i style="background:linear-gradient(90deg,${_rgba(ct.loss,.84)},${_rgba(ct.loss,.14)},${_rgba(ct.win,.14)},${_rgba(ct.win,.84)})"></i><span>Gain</span><em>intensité = montant · heures de la plateforme</em></div>`;
+      hWrap.innerHTML=html;
+    }
   }
 
   // ── Performance par Jour — table
@@ -3829,6 +3941,194 @@ async function init(){
   },{passive:false});
 })();
 
+// ── CALCULATEUR DE POSITION ──────────────────────────────────────────────
+// Compte en USD. lots = risque $ ÷ (distance du stop × valeur $ d'une unité par lot), arrondi à 0.01 inférieur.
+// EURUSD/GBPUSD : 10 $/pip/lot (cotation en USD, fixe). XAUUSD : taille de contrat (oz) $ par 1,00 $ de mouvement.
+// GER40 : € par point/lot (taille de contrat) × taux EUR/USD (BCE via frankfurter.app, cache 6 h, saisie manuelle possible).
+const PC_INSTR={
+  EURUSD:{unit:'pips',one:'pip',step:0.0001,dec:5,ccy:'USD',ph:'1.08500',val:()=>10},
+  GBPUSD:{unit:'pips',one:'pip',step:0.0001,dec:5,ccy:'USD',ph:'1.27000',val:()=>10},
+  XAUUSD:{unit:'$',one:'$1',step:1,dec:2,ccy:'USD',ph:'2650.00',val:()=>_pcSpec().XAUUSD},
+  GER40: {unit:'pts',one:'point',step:1,dec:1,ccy:'EUR',ph:'19250.0',val:()=>_pcSpec().GER40},
+};
+function _pcLoad(k,d){try{return Object.assign({},d,JSON.parse(localStorage.getItem(k)||'{}'));}catch(e){return Object.assign({},d);}}
+function _pcSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function _pcSpec(){return _pcLoad('tl_pc_specs',{XAUUSD:100,GER40:1});}
+// Préférences persistées (instrument, compte, risque, mode) ; les prix restent le temps de la session
+let _pc=Object.assign({entry:'',sl:'',tp:'',dist:'',tpDist:''},_pcLoad('tl_pc',{instr:'EURUSD',acc:'',riskMode:'pct',risk:'0.5',mode:'price'}));
+let _pcFx=_pcLoad('tl_eurusd',{rate:null,date:'',ts:0,manual:false});
+function _pcPersist(){_pcSave('tl_pc',{instr:_pc.instr,acc:_pc.acc,riskMode:_pc.riskMode,risk:_pc.risk,mode:_pc.mode});}
+function _pcNum(v){if(v===''||v==null)return NaN;return parseFloat(String(v).replace(/\s/g,'').replace(',','.'));}
+
+// Solde de trading d'un compte = capital de départ + P&L (base du risque en %)
+function getAccBalance(acc){
+  return(parseFloat(acc.startCapital)||0)+DB.trades.filter(t=>t.compte===acc.name).reduce((s,t)=>s+calcPnl(t),0);
+}
+
+async function _pcFetchFx(force){
+  if(!force&&_pcFx.rate&&(_pcFx.manual||Date.now()-_pcFx.ts<6*3600e3))return;
+  try{
+    const r=await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
+    const j=await r.json();
+    if(j&&j.rates&&j.rates.USD){
+      _pcFx={rate:j.rates.USD,date:j.date||'',ts:Date.now(),manual:false};_pcSave('tl_eurusd',_pcFx);
+      const f=document.getElementById('pc_fx');if(f)f.value=_pcFx.rate.toFixed(4);
+      _pcFxNote();_pcCalc();
+    }
+  }catch(e){if(force)toast('Taux EUR/USD indisponible — saisis-le manuellement','warning');}
+}
+function _pcFxNote(){
+  const n=document.getElementById('pc_fx_note');if(!n)return;
+  n.textContent=_pcFx.manual?'saisi manuellement':_pcFx.rate?`BCE ${_pcFx.date?fmtD(_pcFx.date):''}`:'estimation (hors ligne)';
+}
+
+function openPosCalc(){
+  const accs=getActiveAccounts();
+  if(!accs.find(a=>a.name===_pc.acc))_pc.acc=accs[0]?accs[0].name:'';
+  _pcRender();
+  document.getElementById('pcModal').classList.add('open');
+  if(PC_INSTR[_pc.instr].ccy==='EUR')_pcFetchFx(false);
+  if(window.innerWidth>768)setTimeout(()=>{const f=document.getElementById(_pc.mode==='price'?'pc_entry':'pc_dist');if(f)f.focus();},60);
+}
+function _pcSet(k,v){
+  if(k==='riskMode'&&v!==_pc.riskMode){
+    // Conversion % ↔ $ pour garder le même risque
+    const acc=getActiveAccounts().find(a=>a.name===_pc.acc),bal=acc?getAccBalance(acc):0,r=_pcNum(_pc.risk);
+    if(bal>0&&r>0)_pc.risk=v==='usd'?String(Math.round(bal*r/100)):String(+(r/bal*100).toFixed(2));
+  }
+  if(k==='instr'&&v!==_pc.instr){_pc.entry=_pc.sl=_pc.tp=_pc.dist=_pc.tpDist='';}
+  _pc[k]=v;_pcPersist();_pcRender();
+  if(k==='instr'&&PC_INSTR[v].ccy==='EUR')_pcFetchFx(false);
+  const f=document.getElementById(_pc.mode==='price'?'pc_entry':'pc_dist');
+  if(f&&window.innerWidth>768&&(k==='instr'||k==='mode'))f.focus();
+}
+function _pcInput(k,v){_pc[k]=v;if(k==='risk')_pcPersist();_pcCalc();}
+function _pcSetFx(v){const r=_pcNum(v);if(r>0){_pcFx={rate:r,date:'',ts:Date.now(),manual:true};_pcSave('tl_eurusd',_pcFx);_pcFxNote();_pcCalc();}}
+function _pcSetSpec(k,v){const n=_pcNum(v);if(!(n>0))return;const s=_pcSpec();s[k]=n;_pcSave('tl_pc_specs',s);_pcCalc();}
+
+function _pcCompute(){
+  const I=PC_INSTR[_pc.instr];
+  const acc=getActiveAccounts().find(a=>a.name===_pc.acc);
+  const bal=acc?getAccBalance(acc):0;
+  const rIn=_pcNum(_pc.risk);
+  const riskUSD=_pc.riskMode==='pct'?bal*rIn/100:rIn;
+  let dist=NaN,rew=null,dir=null,err='';
+  if(_pc.mode==='price'){
+    const e=_pcNum(_pc.entry),s=_pcNum(_pc.sl),t=_pcNum(_pc.tp);
+    if(isFinite(e)&&isFinite(s)&&e!==s){
+      // arrondi : 1.08500−1.08300 donnerait 19.9999… pips en flottant
+      dist=Math.round(Math.abs(e-s)/I.step*1e6)/1e6;dir=e>s?'Long':'Short';
+      if(isFinite(t)){
+        if((dir==='Long'&&t>e)||(dir==='Short'&&t<e))rew=Math.round(Math.abs(t-e)/I.step*1e6)/1e6;
+        else err='Le take-profit est du mauvais côté de l\'entrée';
+      }
+    }
+  }else{
+    dist=_pcNum(_pc.dist);const td=_pcNum(_pc.tpDist);if(td>0)rew=td;
+  }
+  const fx=I.ccy==='EUR'?(_pcFx.rate||1.08):1;
+  const vpl=I.val()*fx; // $ par unité de mouvement, par lot
+  if(_pc.riskMode==='pct'&&!acc)err=err||'Choisis un compte (ou passe le risque en $)';
+  if(!(dist>0)||!(riskUSD>0)||!(vpl>0))return{ok:false,bal,riskUSD,vpl,err};
+  const raw=riskUSD/(dist*vpl),lots=Math.floor(raw*100+1e-9)/100;
+  return{ok:true,lots,raw,bal,riskUSD,vpl,dist,dir,err,
+    real:lots*dist*vpl,rew,rr:rew?rew/dist:null,gain:rew?lots*rew*vpl:null,
+    minRisk:0.01*dist*vpl};
+}
+function _pcFmtDist(d){
+  const I=PC_INSTR[_pc.instr];
+  if(I.unit==='$')return'$'+d.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return d.toLocaleString('fr-FR',{maximumFractionDigits:1})+' '+I.unit;
+}
+function _pcCalc(){
+  const r=_pcCompute(),I=PC_INSTR[_pc.instr];
+  const $=id=>document.getElementById(id);if(!$('pc_lots'))return;
+  const vplTxt=`${fmtUSD(r.vpl,false)} / ${I.one} / lot`;
+  $('pc_vpl').textContent=vplTxt;
+  $('pc_riskusd').textContent=r.riskUSD>0?(_pc.riskMode==='pct'?`= ${fmtUSD(r.riskUSD,false)}`:(r.bal>0?`= ${(r.riskUSD/r.bal*100).toLocaleString('fr-FR',{maximumFractionDigits:2})} %`:'')):'';
+  $('pc_bal').textContent=r.bal>0?`Solde ${fmtUSD(r.bal,false,0)}`:'';
+  const dirEl=$('pc_dir');
+  dirEl.textContent=r.dir||'';dirEl.className='pc-dir'+(r.dir==='Long'?' long':r.dir==='Short'?' short':'');
+  const res=$('pc_result');
+  if(!r.ok){
+    res.classList.add('empty');
+    $('pc_lots').textContent='—';
+    $('pc_sub').textContent=r.err||(_pc.mode==='price'?'Saisis l\'entrée et le stop':'Saisis la distance du stop');
+    $('pc_tpline').textContent='';$('pc_warn').textContent='';
+    return;
+  }
+  res.classList.remove('empty');
+  $('pc_lots').textContent=r.lots.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  $('pc_sub').textContent=`Risque réel ${fmtUSD(r.real,false)}${r.bal>0?` · ${(r.real/r.bal*100).toLocaleString('fr-FR',{maximumFractionDigits:2})} %`:''} · stop ${_pcFmtDist(r.dist)}`;
+  $('pc_tpline').innerHTML=r.rr?`R:R <b>${r.rr.toLocaleString('fr-FR',{maximumFractionDigits:2})}</b> · gain potentiel <b class="pos">${fmtUSD(r.gain)}</b>`:'';
+  $('pc_warn').textContent=r.err||(r.lots<0.01?`Risque insuffisant : 0,01 lot risque déjà ${fmtUSD(r.minRisk,false)}`:'');
+}
+
+function _pcRender(){
+  const accs=getActiveAccounts(),I=PC_INSTR[_pc.instr],spec=_pcSpec();
+  const seg=(opts,cur,k)=>`<div class="pc-seg">${opts.map(([v,l])=>`<button type="button" class="${v===cur?'on':''}" onclick="_pcSet('${k}','${v}')">${l}</button>`).join('')}</div>`;
+  const fld=(id,k,lbl,ph,extra='')=>`<label class="pc-field"><span>${lbl}</span><input id="${id}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="${ph}" value="${esc(_pc[k]||'')}" oninput="_pcInput('${k}',this.value)"/>${extra}</label>`;
+  const unitLbl=I.unit==='$'?'en $':I.unit;
+  document.getElementById('pcBody').innerHTML=`
+    ${seg(Object.keys(PC_INSTR).map(k=>[k,k]),_pc.instr,'instr')}
+    <div class="pc-row">
+      <label class="pc-field"><span>Compte</span>
+        <select id="pc_acc" onchange="_pcSet('acc',this.value)">${accs.length?accs.map(a=>`<option value="${esc(a.name)}" ${a.name===_pc.acc?'selected':''}>${esc(a.name)}</option>`).join(''):'<option value="">Aucun compte</option>'}</select>
+        <em id="pc_bal"></em>
+      </label>
+      <label class="pc-field"><span>Risque</span>
+        <div class="pc-inline"><input id="pc_risk" type="text" inputmode="decimal" autocomplete="off" value="${esc(_pc.risk)}" oninput="_pcInput('risk',this.value)"/>${seg([['pct','%'],['usd','$']],_pc.riskMode,'riskMode')}</div>
+        <em id="pc_riskusd"></em>
+      </label>
+    </div>
+    <div class="pc-modebar">${seg([['price','Prix'],['dist','Distance']],_pc.mode,'mode')}<span id="pc_dir" class="pc-dir"></span></div>
+    <div class="pc-row pc-row-3">
+      ${_pc.mode==='price'
+        ?fld('pc_entry','entry','Entrée',I.ph)+fld('pc_sl','sl','Stop loss',I.ph)+fld('pc_tp','tp','Take profit <i>option</i>',I.ph)
+        :fld('pc_dist','dist',`Stop (${unitLbl})`,I.unit==='$'?'4.20':I.unit==='pips'?'15':'40')+fld('pc_tpdist','tpDist',`TP (${unitLbl}) <i>option</i>`,I.unit==='$'?'10.00':I.unit==='pips'?'30':'80')}
+    </div>
+    <div class="pc-result empty" id="pc_result">
+      <div class="pc-lots"><span id="pc_lots">—</span><small>lots</small></div>
+      <div class="pc-sub" id="pc_sub"></div>
+      <div class="pc-tp" id="pc_tpline"></div>
+      <div class="pc-warn" id="pc_warn"></div>
+    </div>
+    <div class="pc-meta">
+      <span id="pc_vpl"></span>
+      ${I.ccy==='EUR'?`<span class="pc-fx">EUR/USD <input id="pc_fx" type="text" inputmode="decimal" value="${_pcFx.rate?_pcFx.rate.toFixed(4):''}" placeholder="1.0800" onchange="_pcSetFx(this.value)"/> <em id="pc_fx_note"></em> <button type="button" class="btn-ghost btn-sm" onclick="_pcFetchFx(true)" title="Recharger le taux BCE">↻</button></span>`:''}
+    </div>
+    <details class="pc-specs">
+      <summary>Tailles de contrat</summary>
+      <div class="pc-row">
+        <label class="pc-field"><span>XAUUSD — oz par lot</span><input type="text" inputmode="decimal" value="${spec.XAUUSD}" onchange="_pcSetSpec('XAUUSD',this.value)"/></label>
+        <label class="pc-field"><span>GER40 — € par point par lot</span><input type="text" inputmode="decimal" value="${spec.GER40}" onchange="_pcSetSpec('GER40',this.value)"/></label>
+      </div>
+      <p>EURUSD / GBPUSD : lot standard 100 000 → 10 $ par pip, fixe pour un compte en USD.</p>
+    </details>
+    <div class="pc-actions">
+      <button type="button" class="btn btn-secondary" onclick="pcCopyLots()">Copier les lots</button>
+      <button type="button" class="btn btn-primary" onclick="pcCreateTrade()">Créer le trade</button>
+    </div>`;
+  _pcFxNote();_pcCalc();
+}
+function pcCopyLots(){
+  const r=_pcCompute();if(!r.ok||r.lots<0.01){toast('Rien à copier','warning');return;}
+  const v=r.lots.toFixed(2);
+  (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast(`${v} lots copié`,'success')).catch(()=>toast(v+' lots','info'));
+}
+function pcCreateTrade(){
+  const r=_pcCompute();
+  closeModal('pcModal');openNew();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;};
+  set('f_c',_pc.acc);
+  const fi=document.getElementById('f_i');
+  if(fi){fi.value=_pc.instr;if(typeof handleInstrSelect==='function')handleInstrSelect(fi);}
+  if(r.ok&&r.lots>=0.01)set('f_m',r.real.toFixed(2));
+  if(r.rr)set('f_err',r.rr.toFixed(2));
+  if(r.dir&&typeof togDir==='function'&&tDir!==r.dir)togDir(r.dir);
+  if(typeof updateRRDisplay==='function')updateRRDisplay();
+}
+
 // ── RACCOURCIS CLAVIER (desktop) ─────────────────────────────────────────
 // N = nouveau trade · D/R/J/C/A = Dashboard/Rapport/Journal/Calendrier/Anomalies
 const NAV_KEYS={d:'dashboard',r:'report',j:'journal',c:'calendar',a:'anomalies'};
@@ -3839,6 +4139,7 @@ document.addEventListener('keydown',e=>{
   if(document.querySelector('.overlay.open,.trade-drawer-overlay.open,.tlv.open'))return;
   const k=e.key.toLowerCase();
   if(k==='n'){e.preventDefault();openNew();return;}
+  if(k==='p'){e.preventDefault();openPosCalc();return;}
   if(NAV_KEYS[k]&&curPage!==NAV_KEYS[k]){e.preventDefault();showPage(NAV_KEYS[k]);}
 });
 (function(){

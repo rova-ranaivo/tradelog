@@ -3,3 +3,5 @@
 /Tentative-react
 .env
 .env.local
+
+.claude/settings.local.json

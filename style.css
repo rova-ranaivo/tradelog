@@ -2605,6 +2605,97 @@ body[data-page="settings"] #fab,body[data-page="anomalies"] #fab{display:none}
 .empty h3{font-family:var(--display);font-size:17px;font-weight:600;color:var(--text);margin-bottom:4px}
 .empty p{font-size:13.5px}
 
+/* ─── RAPPORT : bande de chaleur « Gain net par heure » ──────────── */
+.hs-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:2px}
+.hs-grid{display:grid;gap:4px;min-width:min-content}
+.hs-sess{
+  font-size:11px;font-weight:600;color:var(--text3);text-align:center;
+  padding:4px 0;border-radius:7px;background:var(--fill2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.hs-sess.off{background:transparent;color:var(--text4);font-weight:500}
+.hs-cell{
+  height:76px;border:none;border-radius:12px;padding:6px 4px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-family:var(--sans);color:var(--text);transition:transform .15s var(--spring),box-shadow .15s;
+}
+.hs-cell:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.hs-cell:focus-visible{outline:none;box-shadow:var(--shfocus)}
+.hs-cell.strong{color:#FFF}
+.hs-cell.hs-none{background:var(--fill2);cursor:default;color:var(--text4)}
+.hs-cell.hs-none:hover{transform:none;box-shadow:none}
+.hs-v{font-size:13.5px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.hs-n{font-size:10.5px;font-weight:500;opacity:.78;white-space:nowrap}
+.hs-h{font-size:11px;font-weight:500;color:var(--text3);text-align:center;padding-top:2px}
+.hs-legend{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:11.5px;color:var(--text3);flex-wrap:wrap}
+.hs-legend i{display:block;width:120px;height:8px;border-radius:4px}
+.hs-legend em{font-style:normal;color:var(--text4);margin-left:auto}
+.hs-empty{padding:40px 0;text-align:center;color:var(--text4);font-size:13px}
+@media(max-width:600px){
+  .hs-cell{height:68px;border-radius:10px}
+  .hs-legend em{margin-left:0;flex-basis:100%}
+}
+
+/* ─── CALCULATEUR DE POSITION ────────────────────────────────────── */
+.pc-modal{max-width:470px}
+.pc-modal .modal-body{display:flex;flex-direction:column;gap:14px;padding:18px 22px 22px}
+.pc-seg{display:flex;padding:2px;border-radius:9px;background:var(--fill);gap:0}
+.pc-seg button{
+  flex:1 1 0;border:none;background:transparent;border-radius:7px;padding:6px 8px;
+  font:500 13px var(--sans);color:var(--text);cursor:pointer;letter-spacing:-.01em;white-space:nowrap;
+}
+.pc-seg button.on{background:var(--seg-on);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);font-weight:600}
+.pc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc-row-3{grid-template-columns:1fr 1fr 1fr}
+.pc-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pc-field>span{font-size:12px;font-weight:500;color:var(--text3)}
+.pc-field>span i{font-style:normal;color:var(--text4);font-weight:400}
+.pc-field em{font-style:normal;font-size:11.5px;color:var(--text3);min-height:15px}
+.pc-field input,.pc-field select{
+  width:100%;min-width:0;padding:9px 11px;border:1px solid transparent;border-radius:9px;
+  background:var(--fill2);color:var(--text);font:500 15px var(--sans);font-variant-numeric:tabular-nums;outline:none;
+}
+.pc-field input:focus,.pc-field select:focus{background:var(--surface);border-color:var(--accent);box-shadow:var(--shfocus)}
+.pc-inline{display:flex;gap:6px;align-items:stretch}
+.pc-inline input{flex:1}
+.pc-inline .pc-seg{flex:0 0 76px}
+.pc-modebar{display:flex;align-items:center;gap:10px}
+.pc-modebar .pc-seg{flex:0 0 190px}
+.pc-dir{font-size:12px;font-weight:600;padding:3px 10px;border-radius:980px;display:none}
+.pc-dir.long{display:inline-block;background:var(--green-bg);color:var(--green)}
+.pc-dir.short{display:inline-block;background:var(--red-bg);color:var(--red)}
+.pc-result{
+  border-radius:16px;padding:16px 18px;background:var(--accent-bg);
+  display:flex;flex-direction:column;gap:4px;transition:background .2s;
+}
+.pc-result.empty{background:var(--fill2)}
+.pc-lots{display:flex;align-items:baseline;gap:8px}
+.pc-lots span{font-family:var(--display);font-size:44px;font-weight:700;letter-spacing:-.035em;line-height:1.05;color:var(--text);font-variant-numeric:normal}
+.pc-result.empty .pc-lots span{color:var(--text4)}
+.pc-lots small{font-size:16px;font-weight:600;color:var(--text3)}
+.pc-sub{font-size:13px;color:var(--text2)}
+.pc-tp{font-size:13px;color:var(--text2)}
+.pc-tp b{font-weight:600;color:var(--text)}
+.pc-tp b.pos{color:var(--green)}
+.pc-warn{font-size:12.5px;color:var(--amber);font-weight:500}
+.pc-warn:empty,.pc-tp:empty{display:none}
+.pc-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text3)}
+.pc-fx{display:inline-flex;align-items:center;gap:6px}
+.pc-fx input{width:76px;padding:4px 8px;border:none;border-radius:7px;background:var(--fill2);color:var(--text);font:500 12.5px var(--sans);font-variant-numeric:tabular-nums}
+.pc-fx em{font-style:normal;color:var(--text4)}
+.pc-specs{font-size:12.5px;color:var(--text3)}
+.pc-specs summary{cursor:pointer;font-weight:500;color:var(--text2);padding:2px 0;list-style:revert}
+.pc-specs .pc-row{margin-top:10px}
+.pc-specs p{margin:8px 0 0;font-size:12px;color:var(--text4)}
+.pc-actions{display:flex;gap:10px;justify-content:flex-end;padding-top:4px}
+@media(max-width:600px){
+  .pc-modal .modal-body{padding:14px 16px calc(18px + env(safe-area-inset-bottom))}
+  .pc-row-3{grid-template-columns:1fr 1fr}
+  .pc-row-3 .pc-field:last-child{grid-column:1/-1}
+  .pc-lots span{font-size:40px}
+  .pc-actions .btn{flex:1}
+  .pc-modebar .pc-seg{flex:1}
+}
+
 /* ─── Divers ─────────────────────────────────────────────────────── */
 #audit-tip{border-radius:10px;background:rgba(29,29,31,.94);color:#FFF;border:none;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .tlv-tf.active{border-color:var(--accent)}

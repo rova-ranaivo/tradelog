@@ -11,29 +11,16 @@
       "Skill",
       "WebSearch",
       "WebFetch",
-      "Bash(node -e \":*)",
-      "Bash(node:*)",
-      "Bash(node --check \"d:/PERSO/DEV/tradelog/app.js\")",
-      "PowerShell($c = Get-Content \"d:\\\\PERSO\\\\DEV\\\\tradelog\\\\style.css\"; $c.Count; $c | Select-Object -Last 6)",
-      "PowerShell(node --check \"D:\\\\PERSO\\\\DEV\\\\tradelog\\\\app.js\")",
-      "PowerShell(node \"C:\\\\Users\\\\rovan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--PERSO-DEV-tradelog\\\\2bdd60a8-68c9-44fd-adc5-b21f59bfa06e\\\\scratchpad\\\\fmt.js\")",
-      "PowerShell(node \"C:\\\\Users\\\\rovan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--PERSO-DEV-tradelog\\\\2bdd60a8-68c9-44fd-adc5-b21f59bfa06e\\\\scratchpad\\\\tt.js\")",
-      "PowerShell($c = Get-Content \"D:\\\\PERSO\\\\DEV\\\\tradelog\\\\style.css\" -Encoding UTF8; $c.Count; $c | Select-Object -Last 4)",
-      "PowerShell($p=\"D:\\\\PERSO\\\\DEV\\\\tradelog\\\\index.html\"; $t=Get-Content $p -Raw -Encoding UTF8; $n=\\([regex]::Matches\\($t,\"fill='%231C3461'\"\\)\\).Count; $t=$t.Replace\\(\"fill='%231C3461'\",\"fill='%230071E3'\"\\); [IO.File]::WriteAllText\\($p,$t,\\(New-Object Text.UTF8Encoding\\($false\\)\\)\\); \"favicons replaced: $n\")",
-      "PowerShell(node \"C:\\\\Users\\\\rovan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--PERSO-DEV-tradelog\\\\2bdd60a8-68c9-44fd-adc5-b21f59bfa06e\\\\scratchpad\\\\icons.js\")",
-      "PowerShell(node \"C:\\\\Users\\\\rovan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--PERSO-DEV-tradelog\\\\2bdd60a8-68c9-44fd-adc5-b21f59bfa06e\\\\scratchpad\\\\pal.js\")",
-      "Skill(update-config)",
-      "Skill(update-config:*)",
-      "PowerShell(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('D:/PERSO/DEV/tradelog/.claude/settings.local.json','utf8'\\)\\);console.log\\('JSON OK'\\)\"; if\\(-not \\(Select-String -Path \"D:\\\\PERSO\\\\DEV\\\\tradelog\\\\.gitignore\" -Pattern \"settings.local.json\" -Quiet\\)\\){ Add-Content \"D:\\\\PERSO\\\\DEV\\\\tradelog\\\\.gitignore\" \"`n.claude/settings.local.json\"; \"added to .gitignore\" })",
-      "PowerShell(git -C \"D:\\\\PERSO\\\\DEV\\\\tradelog\" status --short)",
-      "PowerShell(git -C \"D:\\\\PERSO\\\\DEV\\\\tradelog\" log --oneline -3)"
+      "PowerShell(node --check \"d:\\\\PERSO\\\\DEV\\\\tradelog\\\\app.js\")",
+      "PowerShell(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('d:/PERSO/DEV/tradelog/.claude/settings.local.json','utf8'\\)\\);console.log\\('settings JSON OK'\\)\")"
     ],
     "ask": [
       "Bash(git push *)",
-      "PowerShell(git push *)",
-      "Bash(rm -rf *)",
-      "PowerShell(Remove-Item * -Recurse *)"
+      "PowerShell(git push *)"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "C:\\Users\\rovan\\AppData\\Local\\Temp\\claude"
+    ]
   }
 }
