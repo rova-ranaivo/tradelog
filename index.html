@@ -21,6 +21,8 @@
 <style></style>
 </head>
 <body>
+<!-- Thème appliqué avant tout rendu (évite le flash clair → sombre du loader) -->
+<script>try{if(localStorage.getItem('tl_theme')==='dark')document.body.dataset.theme='dark';}catch(e){}</script>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
@@ -46,20 +48,27 @@
   </div>
 </div>
 
-<div id="loadingScreen">
-  <div class="ls-bg"></div>
-  <div class="ls-glow"></div>
-  <div class="ls-scan"></div>
+<div id="loadingScreen" role="status" aria-live="polite">
   <div class="ls-center">
-    <div class="ls-icon">
-      <svg width="38" height="24" viewBox="0 0 38 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path class="ls-ecg" d="M0,12 L8,12 L11,3 L14,21 L17,3 L20,21 L23,12 L38,12"
-          stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+    <div class="ls-logo">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><polyline points="30,16 24,16 21,7 16,25 11,7 8,16 2,16" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div class="ls-title">TradeLog</div>
     <div class="ls-tagline">Journal de trading</div>
-    <div class="ls-progress-wrap"><div class="ls-progress-fill"></div></div>
+    <!-- Courbe de capital qui se dessine en boucle = indicateur de chargement -->
+    <svg class="ls-curve" viewBox="0 0 160 46" aria-hidden="true">
+      <defs>
+        <linearGradient id="lsFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="currentColor" stop-opacity=".22"/>
+          <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line class="ls-base" x1="0" y1="34" x2="160" y2="34"/>
+      <path class="ls-area" d="M0,34 L14,30 L26,36 L40,26 L54,29 L68,20 L82,24 L96,15 L110,19 L124,11 L138,14 L156,6 L156,46 L0,46 Z" fill="url(#lsFill)"/>
+      <path class="ls-line" pathLength="1" d="M0,34 L14,30 L26,36 L40,26 L54,29 L68,20 L82,24 L96,15 L110,19 L124,11 L138,14 L156,6"/>
+      <circle class="ls-dot-halo" cx="156" cy="6" r="3.5"/>
+      <circle class="ls-dot" cx="156" cy="6" r="3.5"/>
+    </svg>
     <div class="ls-status" id="lsStatus">Connexion &agrave; Supabase&hellip;</div>
   </div>
   <div class="ls-version">v7.0</div>
@@ -177,7 +186,7 @@
           </div>
           <div class="card dash-chart-half">
             <div class="card-head">
-              <span class="card-head-title">Distribution — R Multiples</span>
+              <span class="card-head-title">Distribution des R multiples</span>
               <span id="cRDistSub" class="card-head-sub"></span>
             </div>
             <div class="ch-sm" style="height:220px"><canvas id="cRDist"></canvas></div>

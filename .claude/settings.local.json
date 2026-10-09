@@ -12,7 +12,11 @@
       "WebSearch",
       "WebFetch",
       "PowerShell(node --check \"d:\\\\PERSO\\\\DEV\\\\tradelog\\\\app.js\")",
-      "PowerShell(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('d:/PERSO/DEV/tradelog/.claude/settings.local.json','utf8'\\)\\);console.log\\('settings JSON OK'\\)\")"
+      "PowerShell(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('d:/PERSO/DEV/tradelog/.claude/settings.local.json','utf8'\\)\\);console.log\\('settings JSON OK'\\)\")",
+      "Read(//c/Users/rovan/AppData/Local/Temp/claude/d--PERSO-DEV-tradelog/**)",
+      "Bash(grep -i -E \"\\\\.html|\\\\.ps1|\\\\.js$\")",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash(cd \"C:/Users/rovan/AppData/Local/Temp/claude/d--PERSO-DEV-tradelog/\"; find . -name \"harness.html\" -o -name \"charts.js\" -o -name \"grad.js\" | head; )"
     ],
     "ask": [
       "Bash(git push *)",

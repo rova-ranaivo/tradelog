@@ -94,7 +94,7 @@ Principes : typographie système (`-apple-system` / SF Pro, Inter en repli) à *
 - Périodes / onglets insights / vue journal = **contrôle segmenté** (`--fill` + segment `--seg-on`).
 - Toast = capsule sombre translucide avec pastille de couleur (succès/erreur/alerte).
 - Tooltips Chart.js = fond fixe `rgba(29,29,31,.92)`, rayon 10 (ne plus utiliser `--sb-bg`).
-- Palette catégorielle des charts (instruments) = couleurs système Apple (`#0A84FF`, `#5E5CE6`, `#30B0C7`, `#AF52DE`, `#FF9500`, `#FF2D55`, `#00C7BE`).
+- Palette catégorielle (`mkBar` uniquement) = couleurs système Apple (`#0A84FF`, `#5E5CE6`, `#30B0C7`, `#AF52DE`, `#FF9500`, `#FF2D55`, `#00C7BE`). Les gains/pertes utilisent `--chart-win`/`--chart-loss`.
 - `color-mix(in srgb, …)` et container queries (`cqi`, taille des KPI) sont utilisés.
 
 ### Couleurs charts — `getChartTheme()` dans `app.js`
@@ -110,12 +110,13 @@ ct.grid                   // gridlines
 ct.ttBorder               // bordure tooltip
 ```
 
-**Toujours mettre à jour `getChartTheme()` si on change les couleurs P&L d'un thème.**
-`getChartTheme()` lit désormais les tokens CSS (`--green`, `--red`, `--amber`, `--accent`) via `_cssVar()` : les charts suivent automatiquement le thème.
+**Style « éditorial » (data-journalisme)** : `getChartTheme()` lit des tokens **dédiés aux charts** dans la couche v2 de `style.css` : `--chart-win` (vert désaturé), `--chart-loss` (rouge désaturé — convention finance vert = gain / rouge = perte, ne pas en sortir), `--chart-mid` (gris, BE / série secondaire), `--chart-muted`. Ils sont distincts de `--green`/`--red` (KPI, texte) → modifier les couleurs des charts ici, pas dans `--green`/`--red`. `ct.muted` est aussi exposé.
 
 ### Finitions des charts
-- Barres en dégradé (pleine couleur à l'extrémité, adoucie vers zéro) : `backgroundColor:_gradArr(couleurs, horizontal)` — gère aussi les barres flottantes `[début, fin]`.
-- Courbe de capital : remplissage en dégradé (`capGradPlugin`). Animation d'entrée 800 ms et style de tooltip communs posés sur `Chart.defaults`.
+- Barres pâles + liseré plein : `backgroundColor:_gradArr(couleurs)` renvoie un remplissage translucide (`_barAlpha()` : .28 clair / .38 sombre) ; le plugin global `edBars` dessine un **liseré 2px** plein à l'extrémité (verticales, y.c. barres flottantes) ou une **pastille** en bout (horizontales `indexAxis:'y'` → lollipop, `barThickness:4`). `borderRadius:1`.
+- Axes discrets via `Chart.defaults.scale` (pas de trait d'axe ni de graduations) ; ligne de zéro légèrement renforcée sur `rInstr`/`cTrades`.
+- Courbe de capital : pas de légende → **étiquettes directes en bout de courbe** (`capEndPlugin` : « Réel » coloré, « Rigueur » en gris, écartées si elles se chevauchent) ; ligne pointillée annotée « Capital de départ, $X » (`capRefPlugin`) ; courbe Rigueur en `ct.mid` pointillée ; remplissage en dégradé léger (`capGradPlugin`). Animation d'entrée 800 ms et style de tooltip communs posés sur `Chart.defaults`.
+- `cTrades` : seuls le meilleur et le pire résultat sont annotés. `rInstr` : couleur selon le signe (plus de palette arc-en-ciel).
 - Tooltips enrichis : capital (trade du point, R, variation), cascade (instrument, résultat, R, cumul, compte), R multiples (P&L de la tranche), instruments (`mkGainChart(..., groups)` → win rate + RR moyen), confiance et W/L/BE (P&L).
 - `cTrades` = **cascade** (waterfall, carte « Progression du P&L ») : chaque barre va du cumul précédent au nouveau cumul, connecteurs `wfLink`, échelle calée sur le cumul. **Regroupement automatique** pour rester lisible (~25 barres max) : trade (≤25) → jour (≤20) → semaine (≤26) → mois ; la granularité s'affiche dans le sous-titre ; clic = trade (detail) ou liste des trades du groupe.
 - `rHour` n'est plus un canvas : **bande de chaleur HTML** dans `#rHourWrap` (une case par heure, sessions au-dessus, intensité = |P&L|, clic → `openTradeListModal`, survol → `showAuditTip`). Styles `.hs-*`.
@@ -153,7 +154,7 @@ ct.ttBorder               // bordure tooltip
   #tradeModal   drawer trade (saisie / édition / détail) + #imgExpandPanel
   #tlViewer     visionneuse plein écran des captures
   [modals .overlay: cfModal, accModal, renameAccModal, editCapModal, detailModal, imgModal, albumModal]
-  #loadingScreen  #loginScreen  #toast  #audit-tip
+  #loadingScreen (icône app + courbe de capital SVG qui se dessine en boucle, styles `.ls-*` ; thème posé par un script inline juste après <body> pour éviter le flash)  #loginScreen  #toast  #audit-tip
 <script src="app.js"></script>
 ```
 
@@ -229,7 +230,7 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 
 | Page | Fonction principale | Notes |
 |---|---|---|
-| Dashboard | `renderDash()` | filtres compte/période → KPIs → `renderCharts` → `renderEnCours` → insights |
+| Dashboard | `renderDash()` | filtres compte/période → bande KPI hiérarchisée (`.kb-hero` : P&L de la période en grand + % du capital + mini-courbe SVG + capital ; `.kb-grid` : 6 indicateurs secondaires, couleur seulement si alerte `.bad`/`.warn`) → `renderCharts` (capital ; cascade P&L + distribution R côte à côte) → `renderEnCours` → insights (toujours visibles, pas de section repliable : données consultées souvent) |
 | Rapport | `renderReport()` | partage `dashFilters`/`dashPeriod` avec le dashboard |
 | Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou `renderJCards` |
 | Calendrier | `renderCal()` | grille 7 jours + **colonne Semaine** (`.cal-8`, `.cal-wk`), heatmap d'intensité P&L |
@@ -344,6 +345,7 @@ Compat ascendante : `screenshotAvant`/`screenshot` → HTF, `screenshotApres` �
 - Tables larges (leaderboard, cashflow, day-table) : toujours entourer d'un `overflow-x:auto`
 - Nouveaux grids inline (`style="grid-template-columns:..."`) : toujours ajouter la règle CSS correspondante avec `!important` dans un `@media`
 - `.jl-wrap` utilise `overflow:clip` (pas `hidden`) pour garder l'en-tête collant
+- Colonnes du journal (`.jl-cols`, bloc en fin de `style.css`) : dernière colonne `auto` (les boutons d'action sont **toujours visibles au tactile** — masqués seulement sous `@media(hover:hover)`), montant/RR/heure avec une largeur minimale. Tester avec les actions visibles (Chrome desktop les masque).
 
 ### Hamburger & iOS PWA
 - `#hamburger` : `display:none` par défaut, `display:flex` à ≤768px

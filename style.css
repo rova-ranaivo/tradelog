@@ -1137,24 +1137,48 @@ tr.tr-data:hover td{background:var(--accent-bg);cursor:pointer}
 .login-error{margin-top:12px;text-align:center;color:var(--red);font-size:12px;font-weight:500;min-height:18px}
 
 /* ─── LOADING SCREEN ─────────────────────────────────────────────── */
+/* Icône de l'app + courbe de capital qui se dessine en boucle (indicateur) */
 #loadingScreen{
   position:fixed;inset:0;z-index:9998;
   display:flex;align-items:center;justify-content:center;
-  background:var(--bg);transition:opacity .5s;
+  background:var(--bg);transition:opacity .45s ease;
 }
 #loadingScreen.hidden{opacity:0;pointer-events:none}
-.ls-bg,.ls-glow,.ls-scan{display:none}
-.ls-center{display:flex;flex-direction:column;align-items:center}
-.ls-icon{margin-bottom:16px}
-.ls-ecg{stroke:var(--accent)}
-.ls-title{font-family:var(--sans);font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px}
-.ls-tagline{font-size:11px;color:var(--text4);margin-top:2px;letter-spacing:.3px}
-.ls-progress-wrap{width:120px;height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:20px}
-.ls-progress-fill{width:30%;height:100%;background:var(--accent);border-radius:2px;animation:lsProgress 1.5s ease-in-out infinite}
-@keyframes lsProgress{0%{width:10%;margin-left:0}50%{width:40%;margin-left:30%}100%{width:10%;margin-left:90%}}
-.ls-status{font-size:11px;color:var(--text4);margin-top:12px;transition:opacity .15s}
+#loadingScreen.hidden .ls-center{transform:scale(1.04);opacity:0}
+.ls-center{
+  display:flex;flex-direction:column;align-items:center;
+  transition:transform .45s ease,opacity .35s ease;
+  animation:lsIn .6s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes lsIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.ls-logo{
+  width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 82%,#fff),var(--accent));
+  box-shadow:0 1px 2px rgba(0,0,0,.08),0 8px 24px color-mix(in srgb,var(--accent) 30%,transparent);
+}
+.ls-title{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--text);margin-top:16px}
+.ls-tagline{font-size:13px;color:var(--text3);margin-top:2px}
+.ls-curve{width:160px;height:46px;margin-top:26px;overflow:visible;color:var(--chart-win,var(--green))}
+.ls-base{stroke:var(--border);stroke-width:1;stroke-dasharray:2 3;vector-effect:non-scaling-stroke}
+.ls-line{
+  fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:1;stroke-dashoffset:1;animation:lsDraw 2.2s cubic-bezier(.45,0,.25,1) infinite;
+}
+.ls-area{opacity:0;animation:lsArea 2.2s ease infinite}
+.ls-dot{fill:currentColor;opacity:0;transform-box:fill-box;transform-origin:center;animation:lsDot 2.2s ease infinite}
+.ls-dot-halo{fill:currentColor;opacity:0;transform-box:fill-box;transform-origin:center;animation:lsHalo 2.2s ease-out infinite}
+@keyframes lsDraw{0%{stroke-dashoffset:1;opacity:1}55%{stroke-dashoffset:0;opacity:1}85%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes lsArea{0%,30%{opacity:0}60%,85%{opacity:1}100%{opacity:0}}
+@keyframes lsDot{0%,50%{opacity:0;transform:scale(.4)}58%{opacity:1;transform:scale(1.15)}64%,85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@keyframes lsHalo{0%,56%{opacity:0;transform:scale(1)}60%{opacity:.35;transform:scale(1)}90%,100%{opacity:0;transform:scale(3.2)}}
+@media(prefers-reduced-motion:reduce){
+  .ls-line,.ls-area,.ls-dot,.ls-dot-halo,.ls-center{animation:none!important}
+  .ls-line{stroke-dashoffset:0}
+  .ls-area,.ls-dot{opacity:1}
+}
+.ls-status{font-size:12.5px;color:var(--text3);margin-top:14px;min-height:1.3em;transition:opacity .15s}
 .ls-status.fading{opacity:0}
-.ls-version{position:fixed;bottom:20px;font-size:10px;color:var(--text4);font-family:var(--mono)}
+.ls-version{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));font-size:11px;color:var(--text4);font-variant-numeric:tabular-nums}
 
 /* ─── TOAST ──────────────────────────────────────────────────────── */
 #toast{
@@ -2063,6 +2087,11 @@ body{
   --fill:rgba(118,118,128,.12);
   --fill2:rgba(118,118,128,.08);
   --seg-on:#FFFFFF;
+  /* Palette charts « éditoriale » : vert / rouge désaturés (convention finance), gris pour le secondaire */
+  --chart-win:#2E9A5E;
+  --chart-loss:#D9534A;
+  --chart-mid:#A1A1A6;
+  --chart-muted:#C7C7CC;
   --r:10px;
   --rl:14px;
   --rxl:18px;
@@ -2115,6 +2144,10 @@ body[data-theme="dark"]{
   --fill:rgba(118,118,128,.24);
   --fill2:rgba(118,118,128,.16);
   --seg-on:#636366;
+  --chart-win:#43BF76;
+  --chart-loss:#EE6A60;
+  --chart-mid:#7C7C82;
+  --chart-muted:#48484A;
   --sh:0 0 0 .5px rgba(255,255,255,.07);
   --shl:0 0 0 .5px rgba(255,255,255,.09),0 16px 40px rgba(0,0,0,.55);
   --shfocus:0 0 0 4px rgba(10,132,255,.3);
@@ -2701,4 +2734,59 @@ body[data-page="settings"] #fab,body[data-page="anomalies"] #fab{display:none}
 .tlv-tf.active{border-color:var(--accent)}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+/* ─── DASHBOARD — hiérarchie KPI & divulgation progressive ───────── */
+/* Un chiffre héros (P&L de la période) + 6 indicateurs secondaires discrets */
+#dashKpiBand{display:grid!important;grid-template-columns:minmax(0,1.1fr) minmax(0,2fr)!important;gap:1px;background:var(--border2)}
+.kb-hero{background:var(--surface);padding:22px 24px 18px;cursor:pointer;min-width:0;display:flex;flex-direction:column}
+.kb-hero:hover{background:var(--surface2)}
+.kb-hero-lbl{font-size:13px;font-weight:500;color:var(--text3)}
+.kb-hero-lbl::first-letter{text-transform:uppercase}
+.kb-hero-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:6px}
+.kb-hero-val{font-family:var(--display);font-size:40px;font-weight:600;letter-spacing:-.035em;line-height:1.05;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kb-hero-val.pos{color:var(--green)}
+.kb-hero-val.neg{color:var(--red)}
+.kb-hero-pct{font-size:13px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--fill);color:var(--text2);font-variant-numeric:tabular-nums}
+.kb-hero-pct.pos{background:var(--green-bg);color:var(--green)}
+.kb-hero-pct.neg{background:var(--red-bg);color:var(--red)}
+.kb-hero-sub{font-size:12.5px;color:var(--text3);margin-top:8px}
+.kb-spark{display:block;width:100%;height:56px;margin-top:auto;padding-top:14px;overflow:visible}
+.kb-hero-cap{font-size:12.5px;color:var(--text3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)}
+.kb-hero-cap b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.kb-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--border2);min-width:0}
+.kb-cell{background:var(--surface);padding:16px 18px;min-width:0}
+.kb-click{cursor:pointer}
+.kb-click:hover{background:var(--surface2)}
+.kb-lbl{font-size:12px;font-weight:500;color:var(--text3)}
+.kb-val{font-family:var(--display);font-size:21px;font-weight:600;letter-spacing:-.025em;color:var(--text);margin-top:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kb-val.bad{color:var(--red)}
+.kb-val.warn{color:var(--amber)}
+.kb-sub{font-size:11.5px;color:var(--text4);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media(max-width:1100px){
+  .kb-hero-val{font-size:34px}
+  .kb-val{font-size:19px}
+}
+@media(max-width:900px){
+  #dashKpiBand{grid-template-columns:1fr!important}
+}
+@media(max-width:600px){
+  .kb-hero{padding:18px 18px 14px}
+  .kb-hero-val{font-size:34px}
+  .kb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kb-cell{padding:12px 14px}
+  .kb-val{font-size:18px}
+}
+
+/* ─── Journal : colonnes — boutons d'action à largeur réelle (toujours visibles au tactile),
+       montant jamais tronqué ─────────────────────────────────────────── */
+.jl-cols{grid-template-columns:44px minmax(0,1.6fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,.6fr) minmax(0,.6fr) minmax(96px,.8fr) auto}
+@media(max-width:900px){
+  .jl-cols{grid-template-columns:40px minmax(0,1.3fr) minmax(52px,.5fr) minmax(62px,.6fr) minmax(96px,.9fr) auto}
+}
+@media(max-width:768px){
+  .jl-cols{grid-template-columns:minmax(0,1.5fr) minmax(52px,.6fr) minmax(96px,.9fr) auto}
+}
+@media(max-width:600px){
+  .jl-cols{grid-template-columns:minmax(0,1fr) minmax(88px,auto) auto}
 }

@@ -564,72 +564,60 @@ function renderDash(){
   const _exp=expectancy(f);
   const disc=getDisciplineAudit(f);
 
-  // Capital card (single account only)
-  let capHtml='';
+  // Capital actuel (compte unique seulement)
+  let capLine='';
   if(_singleAccObj){
     const allAccTrades=DB.trades.filter(t=>t.compte===_singleAccObj.name&&t.resultat!=='En cours');
     const accPnl=allAccTrades.reduce((s2,t)=>s2+(parseFloat(t.gainPerte)||0),0);
     const accCF=(DB.cashflow||[]).filter(c=>c.compte===_singleAccObj.name);
     const cfNet=accCF.filter(c=>c.type==='depot').reduce((s2,c)=>s2+(c.montantUSD||0),0)-accCF.filter(c=>c.type==='payout').reduce((s2,c)=>s2+(c.montantUSD||0),0);
     const curCap=parseFloat(_singleAccObj.startCapital||0)+accPnl+cfNet;
-    const capCls=curCap>=parseFloat(_singleAccObj.startCapital||0)?'green':'red';
-    capHtml=`<div class="kpi-cell kpi-cell-cap">
-      <div class="kpi-label">Capital</div>
-      <div class="kpi-value ${capCls}">$${curCap.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div class="kpi-sub">${esc(_singleAccObj.name)}</div>
-    </div>`;
+    capLine=`<div class="kb-hero-cap">Capital <b>${fmtUSD(curCap,false)}</b> · ${esc(_singleAccObj.name)}</div>`;
   }
 
-  const pnlAbs=Math.abs(s.pnl).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const pnlStr=(s.pnl>=0?'+$':'-$')+pnlAbs;
-  const pnlCls=s.pnl>0?'green':s.pnl<0?'red':'';
+  // ── Hiérarchie : un chiffre héros (P&L de la période) + indicateurs secondaires discrets.
+  //    La couleur ne signale que ce qui demande attention (valeurs en rouge / orange).
+  const pnlCls=s.pnl>0?'pos':s.pnl<0?'neg':'';
+  const perLbl={today:"aujourd'hui",'3months':'sur 3 mois',all:'depuis le début',
+    custom:dashCustomFrom&&dashCustomTo?`du ${fmtD(dashCustomFrom)} au ${fmtD(dashCustomTo)}`:'sur la période'}[dashPeriod]
+    ||(['week','month','year'].includes(dashPeriod)?getDashNavLabel():'sur la période');
+  const pctTxt=_startCap>0?`<span class="kb-hero-pct ${pnlCls}">${s.pnl>=0?'+':''}${fmtN(s.pnl/_startCap*100,1)}%</span>`:'';
+  // Mini-courbe du P&L cumulé de la période
+  const _sp=closed.filter(t=>t.date&&!isNaN(parseFloat(t.gainPerte)))
+    .sort((a,b)=>a.date.localeCompare(b.date)||(a.heure||'').localeCompare(b.heure||''));
+  let _cum=0;const _pts=[0,..._sp.map(t=>_cum+=parseFloat(t.gainPerte)||0)];
+  let spark='';
+  if(_pts.length>2){
+    const W=300,H=56,lo=Math.min(..._pts),hi=Math.max(..._pts),rg=(hi-lo)||1;
+    const xy=_pts.map((v,i)=>[+(i/(_pts.length-1)*W).toFixed(1),+(H-3-(v-lo)/rg*(H-6)).toFixed(1)]);
+    const line=xy.map(p=>p.join(',')).join(' ');
+    const y0=+(H-3-(0-lo)/rg*(H-6)).toFixed(1);
+    const col=_cum>=0?'var(--chart-win)':'var(--chart-loss)';
+    spark=`<svg class="kb-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--border)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+      <polygon points="0,${y0} ${line} ${W},${y0}" fill="${col}" opacity=".1"/>
+      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.75" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+  }
+  const lvl=(bad,warn)=>bad?' bad':warn?' warn':'';
+  const kb=(label,val,sub,cls='',attrs='')=>`<div class="kb-cell${attrs?' kb-click':''}"${attrs}>
+      <div class="kb-lbl">${label}</div><div class="kb-val${cls}">${val}</div><div class="kb-sub">${sub}</div></div>`;
 
   document.getElementById('dashKpiBand').innerHTML=`
-    ${capHtml}
-    <div class="kpi-cell kpi-cell-pnl" onclick="onStatCard(this)" data-dk="all" style="cursor:pointer">
-      <div class="kpi-label">P&L Net</div>
-      <div class="kpi-value kpi-value-lg ${pnlCls}">${pnlStr}</div>
-      <div class="kpi-sub">${s.total} trades · ${s.wins}W ${s.losses}L ${s.be}BE</div>
+    <div class="kb-hero" onclick="onStatCard(this)" data-dk="all" title="Voir les trades">
+      <div class="kb-hero-lbl">P&L net ${esc(perLbl)}</div>
+      <div class="kb-hero-row"><span class="kb-hero-val ${pnlCls}">${fmtUSD(s.pnl)}</span>${pctTxt}</div>
+      <div class="kb-hero-sub">${s.total} trade${s.total>1?'s':''} · ${s.wins} gagnant${s.wins>1?'s':''} · ${s.losses} perdant${s.losses>1?'s':''}${s.be?` · ${s.be} BE`:''}</div>
+      ${spark}
+      ${capLine}
     </div>
-    <div class="kpi-cell" onclick="onStatCard(this)" data-dk="Win" style="cursor:pointer">
-      <div class="kpi-label">Win Rate</div>
-      <div class="kpi-value ${s.winRate>=60?'green':s.winRate>=40?'':'red'}">${s.winRate}%</div>
-      <div class="kpi-sub">${s.wins}W / ${closed.length} fermés</div>
-      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${Math.min(s.winRate,100)}%;background:${s.winRate>=60?'var(--green)':s.winRate>=40?'var(--accent)':'var(--red)'}"></div></div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-label">RR Moyen</div>
-      <div class="kpi-value ${s.avgRR>=1.5?'green':s.avgRR>=0?'':'red'}">${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R</div>
-      <div class="kpi-sub">Expectancy ${fmtUSD(_exp)}</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-label">Profit Factor</div>
-      <div class="kpi-value ${pf>=1.5?'green':pf>=1?'':'red'}">${pf>0?fmtN(pf,2):'—'}</div>
-      <div class="kpi-sub">${fmtUSD(totalWin,true,0)} / ${fmtUSD(-totalLoss,true,0)}</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-label">Max Drawdown</div>
-      <div class="kpi-value ${_dd.pct===0?'':_dd.pct<5?'green':_dd.pct<15?'gold':'red'}">${_dd.pct>0?_dd.pct+'%':'—'}</div>
-      <div class="kpi-sub">${_dd.abs>0?fmtUSD(-_dd.abs):'aucun'}</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-label">Process</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
-            <span style="font-size:9px;color:var(--text4);font-weight:600;text-transform:uppercase;letter-spacing:.3px">Stratégie</span>
-            <span style="font-size:14px;font-weight:700;font-family:var(--mono);color:${disc.pctStrategie>=80?'var(--green)':disc.pctStrategie>=50?'var(--amber)':'var(--red)'}">${disc.pctStrategie}%</span>
-          </div>
-          <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${disc.pctStrategie}%;background:${disc.pctStrategie>=80?'var(--green)':disc.pctStrategie>=50?'var(--amber)':'var(--red)'}"></div></div>
-        </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
-            <span style="font-size:9px;color:var(--text4);font-weight:600;text-transform:uppercase;letter-spacing:.3px">Raison</span>
-            <span style="font-size:14px;font-weight:700;font-family:var(--mono);color:${disc.pctReason>=80?'var(--green)':disc.pctReason>=50?'var(--amber)':'var(--red)'}">${disc.pctReason}%</span>
-          </div>
-          <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${disc.pctReason}%;background:${disc.pctReason>=80?'var(--green)':disc.pctReason>=50?'var(--amber)':'var(--red)'}"></div></div>
-        </div>
-      </div>
+    <div class="kb-grid">
+      ${kb('Win rate',`${s.winRate}%`,`${s.wins} / ${closed.length} fermés`,lvl(closed.length&&s.winRate<35,closed.length&&s.winRate<45),' onclick="onStatCard(this)" data-dk="Win"')}
+      ${kb('RR moyen',`${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,`Espérance ${fmtUSD(_exp)}`,lvl(s.avgRR<0,false))}
+      ${kb('Profit factor',pf>0?fmtN(pf,2):'—',`${fmtUSD(totalWin,true,0)} / ${fmtUSD(-totalLoss,true,0)}`,lvl(pf>0&&pf<1,pf>0&&pf<1.3))}
+      ${kb('Drawdown max',_dd.pct>0?`${fmtN(_dd.pct,1)}%`:'—',_dd.abs>0?fmtUSD(-_dd.abs):'aucun',lvl(_dd.pct>=15,_dd.pct>=8))}
+      ${kb('Stratégie notée',`${disc.pctStrategie}%`,'des trades fermés',lvl(disc.pctStrategie<50,disc.pctStrategie<80))}
+      ${kb('Raison notée',`${disc.pctReason}%`,'des trades fermés',lvl(disc.pctReason<50,disc.pctReason<80))}
     </div>`;
 
   renderCharts(f);
@@ -809,35 +797,45 @@ function _rgba(color,a){
 }
 function getChartTheme(){
   const dk=(document.body.dataset.theme||'')==='dark';
-  const win=_cssVar('--green')||'#1F8A3B',loss=_cssVar('--red')||'#E0281E',
-        mid=_cssVar('--amber')||'#C26A00',accent=_cssVar('--accent')||'#0071E3';
+  // Palette « éditoriale » (tokens --chart-*) : bleu-vert = gain, orange doux = perte, gris = neutre
+  const win=_cssVar('--chart-win')||'#14897F',loss=_cssVar('--chart-loss')||'#E07A2F',
+        mid=_cssVar('--chart-mid')||'#A1A1A6',accent=_cssVar('--accent')||'#0071E3',
+        muted=_cssVar('--chart-muted')||'#C7C7CC';
   return{
-    win,loss,mid,accent,
-    winBg:_rgba(win,.88),lossBg:_rgba(loss,.85),midBg:_rgba(mid,.8),
-    winFill:_rgba(win,dk?.16:.12),lossFill:_rgba(loss,dk?.16:.10),
+    win,loss,mid,accent,muted,
+    winBg:win,lossBg:loss,midBg:mid,
+    winFill:_rgba(win,dk?.14:.10),lossFill:_rgba(loss,dk?.14:.10),
     emptyBg:dk?'rgba(118,118,128,.24)':'rgba(118,118,128,.12)',
-    grid:dk?'rgba(255,255,255,.07)':'rgba(0,0,0,.05)',
+    grid:dk?'rgba(255,255,255,.06)':'rgba(0,0,0,.045)',
     ttBorder:dk?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)'
   };
 }
-// Dégradé doux sur chaque barre : couleur pleine à l'extrémité, adoucie vers la ligne de zéro
-function _barGrad(base,horizontal){
-  return c=>{
-    const ch=c.chart,ca=ch.chartArea;
-    if(!ca||c.type!=='data')return base;
-    const sc=horizontal?ch.scales.x:ch.scales.y;if(!sc)return base;
-    const raw=c.raw;
-    const v0=Array.isArray(raw)?raw[0]:0,v1=Array.isArray(raw)?raw[1]:raw;
-    if(v1==null||isNaN(v1))return base;
-    const p0=sc.getPixelForValue(v0),p1=sc.getPixelForValue(v1);
-    if(Math.abs(p1-p0)<2)return base;
-    const g=horizontal?ch.ctx.createLinearGradient(p0,0,p1,0):ch.ctx.createLinearGradient(0,p0,0,p1);
-    g.addColorStop(0,_rgba(base,.5));g.addColorStop(1,_rgba(base,1));
-    return g;
-  };
-}
-const _gradArr=(arr,horizontal)=>c=>_barGrad(arr[c.dataIndex%arr.length],horizontal)(c);
+// Barres « éditoriales » : remplissage pâle + liseré plein à l'extrémité (verticales)
+// ou pastille pleine en bout (horizontales → lollipop). Les couleurs pleines sont
+// portées par la fonction (_tips) et dessinées par le plugin edBars.
+const _barAlpha=()=>(document.body.dataset.theme==='dark'?.38:.28);
+const _gradArr=arr=>{const fn=c=>_rgba(arr[c.dataIndex%arr.length],_barAlpha());fn._tips=arr;return fn;};
+Chart.register({id:'edBars',afterDatasetsDraw(chart){
+  const c=chart.ctx,hz=chart.options.indexAxis==='y';
+  chart.data.datasets.forEach((ds,di)=>{
+    const tips=ds.backgroundColor&&ds.backgroundColor._tips;if(!tips)return;
+    const meta=chart.getDatasetMeta(di);if(meta.hidden||meta.type!=='bar')return;
+    c.save();
+    meta.data.forEach((b,i)=>{
+      const raw=ds.data[i],v1=Array.isArray(raw)?raw[1]:raw;
+      if(v1==null||isNaN(v1)||Math.abs(b.y-b.base)<.5&&!hz||hz&&Math.abs(b.x-b.base)<.5)return;
+      c.fillStyle=_rgba(tips[i%tips.length],1);
+      if(hz){c.beginPath();c.arc(b.x,b.y,4.5,0,Math.PI*2);c.fill();}
+      else{const up=b.y<=b.base;c.fillRect(b.x-b.width/2,up?b.y:b.y-2,b.width,2);}
+    });
+    c.restore();
+  });
+}});
 // Animation d'entrée douce + style de tooltip commun
+// Axes discrets : ni trait d'axe ni graduations, seules les gridlines pâles restent
+Chart.defaults.scale.border.display=false;
+Chart.defaults.scale.grid.drawTicks=false;
+Chart.defaults.scale.ticks.padding=8;
 Chart.defaults.animation.duration=800;
 Chart.defaults.animation.easing='easeOutQuart';
 Object.assign(Chart.defaults.plugins.tooltip,{
@@ -858,7 +856,7 @@ function mkBar(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:1,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -896,7 +894,7 @@ function mkBarGain(id,labels,data,colors,onClickFn){
   });
   charts[id]=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
+    data:{labels,datasets:[{data,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:1,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       onClick:onClickFn||null,
@@ -1182,15 +1180,40 @@ function renderCharts(f){
     const yPx=scales.y.getPixelForValue(startCap);
     if(yPx<chartArea.top||yPx>chartArea.bottom)return;
     c.save();
-    c.strokeStyle='rgba(180,180,180,.25)';c.lineWidth=1;c.setLineDash([5,5]);
+    c.strokeStyle=_rgba(_cct.mid,.55);c.lineWidth=1;c.setLineDash([3,3]);
     c.beginPath();c.moveTo(chartArea.left,yPx);c.lineTo(chartArea.right,yPx);c.stroke();
     c.setLineDash([]);
-    // Label "Départ $X" à droite
-    if(startCap>0){
-      c.font='500 10px "Inter",system-ui';c.fillStyle='rgba(180,180,180,.45)';
-      c.textAlign='right';c.textBaseline='bottom';
-      c.fillText('$'+startCap.toLocaleString('fr-FR'),chartArea.right-4,yPx-2);
+    // Annotation directe sur la ligne, côté droit (la courbe s'y est en général éloignée du départ)
+    const narrow=chartArea.right-chartArea.left<480;
+    c.font=`400 10.5px ${Chart.defaults.font.family}`;c.fillStyle=_cssVar('--text3');
+    c.textAlign='right';c.textBaseline='bottom';
+    c.fillText(narrow?'Départ':startCap>0?`Capital de départ, ${fmtUSD(startCap,false,0)}`:'Point de départ',chartArea.right-4,yPx-3);
+    c.restore();
+  }};
+
+  // Étiquettes directes en bout de courbe (remplacent la légende)
+  const capEndPlugin={id:'capEnd',afterDatasetsDraw(chart){
+    const c=chart.ctx,ff=Chart.defaults.font.family,lbls=[];
+    chart.data.datasets.forEach((ds,i)=>{
+      const meta=chart.getDatasetMeta(i);if(meta.hidden)return;
+      const p=meta.data[meta.data.length-1];if(!p)return;
+      const v=ds.data[ds.data.length-1],col=i===0?(v>=startCap?_cct.win:_cct.loss):_cct.mid;
+      lbls.push({x:p.x,y:p.y,col,name:i===0?'Réel':'Rigueur',val:fmtUSD(v,false,0),bold:i===0});
+    });
+    // Écarte les deux étiquettes si elles se chevauchent
+    if(lbls.length===2&&Math.abs(lbls[0].y-lbls[1].y)<32){
+      const[hi,lo]=lbls[0].y<=lbls[1].y?[lbls[0],lbls[1]]:[lbls[1],lbls[0]];
+      const mid=(hi.y+lo.y)/2;hi.ty=mid-16;lo.ty=mid+16;
     }
+    c.save();
+    lbls.forEach(l=>{
+      const ty=l.ty??l.y;
+      c.fillStyle=l.col;c.beginPath();c.arc(l.x,l.y,3.5,0,Math.PI*2);c.fill();
+      c.textAlign='left';c.textBaseline='middle';
+      c.font=`600 11px ${ff}`;c.fillText(l.name,l.x+9,ty-6);
+      c.font=`${l.bold?600:400} 11px ${ff}`;c.fillStyle=l.bold?_cssVar('--text'):_cssVar('--text3');
+      c.fillText(l.val,l.x+9,ty+7);
+    });
     c.restore();
   }};
 
@@ -1199,28 +1222,29 @@ function renderCharts(f){
     const{chartArea:ca,scales}=chart;if(!ca||!scales.y)return;
     const c=chart.ctx,y0=Math.min(Math.max(scales.y.getPixelForValue(startCap),ca.top),ca.bottom);
     const up=c.createLinearGradient(0,ca.top,0,y0);
-    up.addColorStop(0,_rgba(_cct.win,.30));up.addColorStop(1,_rgba(_cct.win,0));
+    up.addColorStop(0,_rgba(_cct.win,.16));up.addColorStop(1,_rgba(_cct.win,0));
     const dn=c.createLinearGradient(0,y0,0,ca.bottom);
-    dn.addColorStop(0,_rgba(_cct.loss,0));dn.addColorStop(1,_rgba(_cct.loss,.26));
+    dn.addColorStop(0,_rgba(_cct.loss,0));dn.addColorStop(1,_rgba(_cct.loss,.14));
     const fl=chart.data.datasets[0].fill;if(fl){fl.above=up;fl.below=dn;}
   }};
 
   charts['cCapital']=new Chart(ctx,{
     type:'line',
-    plugins:[capRefPlugin,capGradPlugin],
+    plugins:[capRefPlugin,capGradPlugin,capEndPlugin],
     data:{labels:cl,datasets:[
       {label:'Courbe Réelle',data:cv,
-       borderColor:isUp?_cct.win:_cct.loss,borderWidth:2,tension:0.35,
+       borderColor:isUp?_cct.win:_cct.loss,borderWidth:2,tension:0.3,
        pointRadius:0,pointHoverRadius:4,
        fill:{target:{value:startCap},above:_cct.winFill,below:_cct.lossFill},
        segment:{borderColor:ctx2=>ctx2.p1.parsed.y<startCap?_cct.loss:_cct.win}},
-      {label:'Courbe Rigueur',data:cvR,borderColor:(document.body.dataset.theme==='dark'?'#0A84FF':'#0071E3'),borderWidth:1.5,borderDash:[5,4],tension:0.35,pointRadius:0,pointHoverRadius:4,fill:false}
+      {label:'Courbe Rigueur',data:cvR,borderColor:_cct.mid,borderWidth:1.25,borderDash:[4,3],tension:0.3,pointRadius:0,pointHoverRadius:3,fill:false}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
       interaction:{intersect:false,mode:'index'},
+      layout:{padding:{right:72,top:8}},
       plugins:{
-        legend:{display:true,position:'top',align:'end',labels:{boxWidth:16,boxHeight:2,font:{size:10},padding:10,usePointStyle:true,pointStyle:'line'}},
+        legend:{display:false},
         tooltip:{
           backgroundColor:'rgba(29,29,31,.92)',
           titleColor:'#FFFFFF',bodyColor:'rgba(255,255,255,.7)',
@@ -1243,7 +1267,7 @@ function renderCharts(f){
         y:{
           grid:{color:_cct.grid,lineWidth:1},border:{display:false},
           ticks:{font:{size:10},padding:6,maxTicksLimit:5,
-            callback:v=>{const a=Math.abs(v);return(v<0?'-':'')+'$'+(a>=1000?(a/1000).toFixed(0)+'k':a.toFixed(0));}}
+            callback:v=>{const a=Math.abs(v);return(v<0?'-':'')+'$'+(a>=1000?(a/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+'k':a.toFixed(0));}}
         }
       }
     }
@@ -1260,14 +1284,14 @@ function renderCharts(f){
       type:'line',
       data:{labels:cl,datasets:[{
         data:ddData,
-        borderColor:hasDd?_cct.loss:'rgba(100,200,150,.5)',
-        borderWidth:1.5,tension:0.3,pointRadius:0,
-        fill:{target:{value:0},below:'rgba(239,83,80,.18)'}
+        borderColor:hasDd?_cct.loss:_cct.mid,
+        borderWidth:1.25,tension:0.3,pointRadius:0,
+        fill:{target:{value:0},below:_rgba(_cct.loss,.12)}
       }]},
       options:{
         responsive:true,maintainAspectRatio:false,
         interaction:{intersect:false,mode:'index'},
-        layout:{padding:{top:4,bottom:0}},
+        layout:{padding:{top:4,bottom:0,right:72}},
         plugins:{
           legend:{display:false},
           tooltip:{
@@ -1330,6 +1354,8 @@ function renderCharts(f){
     });
     const trLabels=groups.map(gLabel);
     const showLbl=groups.length<=25;
+    // Seuls le meilleur et le pire résultat sont annotés (lecture éditoriale)
+    const _trMax=trData.indexOf(Math.max(...trData)),_trMin=trData.indexOf(Math.min(...trData));
     // Connecteurs fins entre la fin d'une barre et le départ de la suivante
     const wfLink={id:'wf_link',beforeDatasetsDraw(chart){
       const meta=chart.getDatasetMeta(0),c=chart.ctx,ys=chart.scales.y;
@@ -1345,7 +1371,7 @@ function renderCharts(f){
       if(!showLbl)return;
       const{ctx:c}=chart;
       trData.forEach((val,i)=>{
-        if(!val)return;
+        if(!val||(i!==_trMax&&i!==_trMin))return;
         const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
         const isPos=val>=0,a=Math.abs(val);
         const lbl=a>=1000?`${isPos?'+':'-'}$${(a/1000).toFixed(1)}k`:`${isPos?'+':'-'}$${a.toFixed(0)}`;
@@ -1357,7 +1383,7 @@ function renderCharts(f){
     }};
     charts['cTrades']=new Chart(ctxTr,{
       type:'bar',plugins:[wfLink,dlTr],
-      data:{labels:trLabels,datasets:[{data:trRanges,backgroundColor:_gradArr(trBgs,false),borderRadius:4,borderSkipped:false,minBarLength:2,barPercentage:.85,categoryPercentage:.85}]},
+      data:{labels:trLabels,datasets:[{data:trRanges,backgroundColor:_gradArr(trBgs,false),borderRadius:1,borderSkipped:false,minBarLength:2,barPercentage:.85,categoryPercentage:.85}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:showLbl?22:8,bottom:2}},
@@ -1396,7 +1422,7 @@ function renderCharts(f){
         },
         scales:{
           x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},padding:3,autoSkip:true,maxRotation:gran==='trade'?45:0,autoSkipPadding:8}},
-          y:{grid:{color:ct_tr.grid,lineWidth:1},border:{display:false},
+          y:{grid:{color:g=>g.tick&&g.tick.value===0?_rgba(ct_tr.mid,.7):ct_tr.grid,lineWidth:1},border:{display:false},
             // Échelle calée sur l'amplitude réelle du cumul (avec une petite marge)
             ...(()=>{
               const ends=trRanges.flat().concat(0);const lo=Math.min(...ends),hi=Math.max(...ends);
@@ -1451,7 +1477,7 @@ function renderCharts(f){
     }};
     charts['cRDist']=new Chart(ctxRD,{
       type:'bar',plugins:[dlRD],
-      data:{labels:rBuckets.map(b=>b.l),datasets:[{data:rdCounts,backgroundColor:_gradArr(rdBgs,false),borderRadius:5,borderSkipped:false,barPercentage:.75,categoryPercentage:.85}]},
+      data:{labels:rBuckets.map(b=>b.l),datasets:[{data:rdCounts,backgroundColor:_gradArr(rdBgs,false),borderRadius:1,borderSkipped:false,barPercentage:.75,categoryPercentage:.85}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:26,bottom:2}},
@@ -1498,7 +1524,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal,group
       c.fillStyle=isPos?ct.win:ct.loss;
       if(horizontal){
         c.textAlign=isPos?'left':'right';c.textBaseline='middle';
-        c.fillText(lbl,isPos?bar.x+5:bar.x-5,bar.y);
+        c.fillText(lbl,isPos?bar.x+11:bar.x-11,bar.y);
       } else {
         c.textAlign='center';c.textBaseline=isPos?'bottom':'top';
         c.fillText(lbl,bar.x,isPos?bar.y-4:bar.y+4);
@@ -1508,7 +1534,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal,group
   }};
   const pAxis=horizontal?'x':'y';const cAxis=horizontal?'y':'x';
   charts[id]=new Chart(ctx,{type:'bar',plugins:[dlPlugin],
-    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:_gradArr(bgs,typeof horizontal!=='undefined'&&!!horizontal),borderRadius:5,borderSkipped:false}]},
+    data:{labels:dispLabels,datasets:[{data:vals,backgroundColor:_gradArr(bgs),borderRadius:1,borderSkipped:false,...(horizontal?{barThickness:4}:{maxBarThickness:48})}]},
     options:{responsive:true,maintainAspectRatio:false,
       indexAxis:horizontal?'y':'x',
       layout:{padding:horizontal?{right:64,left:8,top:4,bottom:4}:{top:24,bottom:2}},
@@ -1525,8 +1551,7 @@ function mkGainChart(id,dispLabels,vals,counts,colorFn,filterFn,horizontal,group
       }},
       scales:{
         [cAxis]:{grid:{display:false},border:{display:false},ticks:{font:{size:10,weight:'500'},maxRotation:0,padding:4}},
-        [pAxis]:{grid:{color:ct.grid,lineWidth:1},border:{display:false},beginAtZero:true,
-          ticks:{font:{size:10},maxTicksLimit:5,padding:6,
+        [pAxis]:{grid:{color:g=>g.tick&&g.tick.value===0?_rgba(ct.mid,.7):ct.grid,lineWidth:1},border:{display:false},beginAtZero:true,          ticks:{font:{size:10},maxTicksLimit:5,padding:6,
             callback:v=>{if(v===0)return'0';const a=Math.abs(v);return(v>0?'+':'-')+'$'+(a>=1000?(a/1000).toFixed(0)+'k':a.toFixed(0));}
           }
         }
@@ -1540,11 +1565,10 @@ function renderReportCharts(f){
   // ── Par instrument — barres horizontales
   const im={};f.forEach(t=>{if(!t.instrument)return;if(!im[t.instrument])im[t.instrument]=[];im[t.instrument].push(t);});
   const imKeys=Object.keys(im).sort((a,b)=>gainNet(im[b])-gainNet(im[a]));
-  const instrPalette=['#0A84FF','#5E5CE6','#30B0C7','#AF52DE','#FF9500','#FF2D55','#00C7BE'];
   // Ajuste la hauteur dynamiquement selon le nombre d'instruments
   const instrWrap=document.getElementById('rInstrWrap');
   if(instrWrap)instrWrap.style.height=Math.max(140,imKeys.length*34+28)+'px';
-  mkGainChart('rInstr',imKeys,imKeys.map(k=>gainNet(im[k])),imKeys.map(k=>im[k].length),(v,i)=>instrPalette[i%instrPalette.length]+'CC',idx=>openTradeListModal(im[imKeys[idx]],`Instrument — ${imKeys[idx]}`),true,imKeys.map(k=>im[k]));
+  mkGainChart('rInstr',imKeys,imKeys.map(k=>gainNet(im[k])),imKeys.map(k=>im[k].length),null,idx=>openTradeListModal(im[imKeys[idx]],`Instrument — ${imKeys[idx]}`),true,imKeys.map(k=>im[k]));
 
   // ── WinRate par niveau de confiance (étoiles 1-5)
   dc('rStars');
@@ -1572,7 +1596,7 @@ function renderReportCharts(f){
       });
     }};
     charts['rStars']=new Chart(ctxSt,{type:'bar',plugins:[dlSt],
-      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:_gradArr(stBgs,false),borderRadius:5,borderSkipped:false}]},
+      data:{labels:starLevels.map(n=>'★'.repeat(n)),datasets:[{data:stWR.map(v=>v??0),backgroundColor:_gradArr(stBgs,false),borderRadius:1,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:22,bottom:2}},
         plugins:{legend:{display:false},tooltip:{
@@ -1605,13 +1629,13 @@ function renderReportCharts(f){
         if(!val)return;
         const bar=chart.getDatasetMeta(0).data[i];if(!bar)return;
         c.save();c.font='400 11px "Inter",system-ui,sans-serif';
-        c.fillStyle=[getChartTheme().win,getChartTheme().loss,'#FF9500'][i];
+        c.fillStyle=[getChartTheme().win,getChartTheme().loss,getChartTheme().mid][i];
         c.textAlign='center';c.textBaseline='bottom';
         c.fillText(val,bar.x,bar.y-4);c.restore();
       });
     }};
     charts['rDist']=new Chart(ctxDist,{type:'bar',plugins:[distDL],
-      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:_gradArr([getChartTheme().winBg,getChartTheme().lossBg,getChartTheme().midBg],false),borderRadius:6,borderSkipped:false}]},
+      data:{labels:['Win','Loss','BE'],datasets:[{data:[s.wins,s.losses,s.be],backgroundColor:_gradArr([getChartTheme().winBg,getChartTheme().lossBg,getChartTheme().midBg],false),borderRadius:1,maxBarThickness:56,borderSkipped:false}]},
       options:{
         responsive:true,maintainAspectRatio:false,
         layout:{padding:{top:24,bottom:2}},
