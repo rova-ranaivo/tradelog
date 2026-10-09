@@ -116,9 +116,9 @@ ct.ttBorder               // bordure tooltip
 - Barres pâles + liseré plein : `backgroundColor:_gradArr(couleurs)` renvoie un remplissage translucide (`_barAlpha()` : .28 clair / .38 sombre) ; le plugin global `edBars` dessine un **liseré 2px** plein à l'extrémité (verticales, y.c. barres flottantes) ou une **pastille** en bout (horizontales `indexAxis:'y'` → lollipop, `barThickness:4`). `borderRadius:1`.
 - Axes discrets via `Chart.defaults.scale` (pas de trait d'axe ni de graduations) ; ligne de zéro légèrement renforcée sur `rInstr`/`cTrades`.
 - Courbe de capital : pas de légende → **étiquettes directes en bout de courbe** (`capEndPlugin` : « Réel » coloré, « Rigueur » en gris, écartées si elles se chevauchent) ; ligne pointillée annotée « Capital de départ, $X » (`capRefPlugin`) ; courbe Rigueur en `ct.mid` pointillée ; remplissage en dégradé léger (`capGradPlugin`). Animation d'entrée 800 ms et style de tooltip communs posés sur `Chart.defaults`.
-- `cTrades` : seuls le meilleur et le pire résultat sont annotés. `rInstr` : couleur selon le signe (plus de palette arc-en-ciel).
-- Tooltips enrichis : capital (trade du point, R, variation), cascade (instrument, résultat, R, cumul, compte), R multiples (P&L de la tranche), instruments (`mkGainChart(..., groups)` → win rate + RR moyen), confiance et W/L/BE (P&L).
-- `cTrades` = **cascade** (waterfall, carte « Progression du P&L ») : chaque barre va du cumul précédent au nouveau cumul, connecteurs `wfLink`, échelle calée sur le cumul. **Regroupement automatique** pour rester lisible (~25 barres max) : trade (≤25) → jour (≤20) → semaine (≤26) → mois ; la granularité s'affiche dans le sous-titre ; clic = trade (detail) ou liste des trades du groupe.
+- `cTrades` : seuls le meilleur et le pire net sont annotés (étiquette maintenue dans le cadre). `rInstr` : couleur selon le signe (plus de palette arc-en-ciel).
+- Tooltips enrichis : capital (trade du point, R, variation), P&L par période (gains, pertes, net ; trade : instrument, R, compte), R multiples (P&L de la tranche), instruments (`mkGainChart(..., groups)` → win rate + RR moyen), confiance et W/L/BE (P&L).
+- `cTrades` = **barres divergentes** (carte « P&L par période ») : par période, gains empilés au-dessus de zéro et pertes en dessous (2 datasets `stack:'pl'`), **trait du net** (`pl_net`) quand la période mélange gains et pertes, repère gris pour une période nulle. Remplace l'ancienne cascade (le cumul est déjà porté par la courbe de capital). Granularité : **jour** par défaut ; trade si une seule journée ; semaine (>31 jours) ; mois (>26 semaines). Clic = trade (detail) ou liste des trades de la période.
 - `rHour` n'est plus un canvas : **bande de chaleur HTML** dans `#rHourWrap` (une case par heure, sessions au-dessus, intensité = |P&L|, clic → `openTradeListModal`, survol → `showAuditTip`). Styles `.hs-*`.
 - Helpers : `_cssVar(name)`, `_rgba(couleur, alpha)` (hex ou rgb).
 
@@ -230,7 +230,7 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 
 | Page | Fonction principale | Notes |
 |---|---|---|
-| Dashboard | `renderDash()` | filtres compte/période → bande KPI hiérarchisée (`.kb-hero` : P&L de la période en grand + % du capital + mini-courbe SVG + capital ; `.kb-grid` : 6 indicateurs secondaires, couleur seulement si alerte `.bad`/`.warn`) → `renderCharts` (capital ; cascade P&L + distribution R côte à côte) → `renderEnCours` → insights (toujours visibles, pas de section repliable : données consultées souvent) |
+| Dashboard | `renderDash()` | filtres compte/période → bande KPI hiérarchisée (`.kb-hero` : P&L de la période en grand + % du capital + mini-courbe SVG + capital ; `.kb-grid` : 6 indicateurs secondaires, couleur seulement si alerte `.bad`/`.warn`) → `renderCharts` (capital ; P&L par période + distribution R côte à côte) → `renderEnCours` → insights (toujours visibles, pas de section repliable : données consultées souvent) |
 | Rapport | `renderReport()` | partage `dashFilters`/`dashPeriod` avec le dashboard |
 | Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou `renderJCards` |
 | Calendrier | `renderCal()` | grille 7 jours + **colonne Semaine** (`.cal-8`, `.cal-wk`), heatmap d'intensité P&L |
@@ -365,7 +365,7 @@ Compat ascendante : `screenshotAvant`/`screenshot` → HTF, `screenshotApres` �
 |---|---|---|
 | `cCapital` | Dashboard | Courbe capital réelle + rigueur |
 | `cDrawdown` | Dashboard | Drawdown sous la courbe capital |
-| `cTrades` | Dashboard | Progression du P&L en cascade (trade / jour / semaine / mois selon le volume) |
+| `cTrades` | Dashboard | P&L par période en barres divergentes gains / pertes + trait du net (jour / semaine / mois ; trade si une seule journée) |
 | `cRDist` | Dashboard | Distribution des R multiples |
 | `rInstr` | Rapport | Gain net par instrument (barres horizontales) |
 | `rDist` | Rapport | Distribution W/L/BE |

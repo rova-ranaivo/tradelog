@@ -1171,11 +1171,23 @@ tr.tr-data:hover td{background:var(--accent-bg);cursor:pointer}
 @keyframes lsArea{0%,30%{opacity:0}60%,85%{opacity:1}100%{opacity:0}}
 @keyframes lsDot{0%,50%{opacity:0;transform:scale(.4)}58%{opacity:1;transform:scale(1.15)}64%,85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 @keyframes lsHalo{0%,56%{opacity:0;transform:scale(1)}60%{opacity:.35;transform:scale(1)}90%,100%{opacity:0;transform:scale(3.2)}}
+/* Icône : le tracé de pouls se dessine comme un battement, l'icône respire légèrement */
+.ls-logo{animation:lsBreath 2.2s ease-in-out infinite}
+.ls-ecg{stroke-dasharray:1;stroke-dashoffset:1;animation:lsEcg 2.2s cubic-bezier(.5,0,.3,1) infinite}
+@keyframes lsBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes lsEcg{0%{stroke-dashoffset:1;opacity:1}45%{stroke-dashoffset:0;opacity:1}80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:.35}}
+/* « Réduire les animations » (ex. effets d'animation désactivés dans Windows) :
+   aucun mouvement, mais un fondu lent pour signaler que ça charge.
+   Sélecteurs #id + !important pour primer sur la règle globale qui coupe les animations. */
 @media(prefers-reduced-motion:reduce){
-  .ls-line,.ls-area,.ls-dot,.ls-dot-halo,.ls-center{animation:none!important}
-  .ls-line{stroke-dashoffset:0}
-  .ls-area,.ls-dot{opacity:1}
+  #loadingScreen .ls-center,#loadingScreen .ls-logo,#loadingScreen .ls-ecg,
+  #loadingScreen .ls-line,#loadingScreen .ls-dot,#loadingScreen .ls-dot-halo{animation:none!important}
+  #loadingScreen .ls-ecg,#loadingScreen .ls-line{stroke-dashoffset:0}
+  #loadingScreen .ls-curve{animation:lsSoft 1.8s ease-in-out infinite!important;animation-duration:1.8s!important}
+  #loadingScreen .ls-area{animation:none!important;opacity:1}
+  #loadingScreen .ls-dot{opacity:1;transform:none}
 }
+@keyframes lsSoft{0%,100%{opacity:1}50%{opacity:.35}}
 .ls-status{font-size:12.5px;color:var(--text3);margin-top:14px;min-height:1.3em;transition:opacity .15s}
 .ls-status.fading{opacity:0}
 .ls-version{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));font-size:11px;color:var(--text4);font-variant-numeric:tabular-nums}

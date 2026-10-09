@@ -51,7 +51,7 @@
 <div id="loadingScreen" role="status" aria-live="polite">
   <div class="ls-center">
     <div class="ls-logo">
-      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><polyline points="30,16 24,16 21,7 16,25 11,7 8,16 2,16" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><polyline class="ls-ecg" pathLength="1" points="2,16 8,16 11,7 16,25 21,7 24,16 30,16" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div class="ls-title">TradeLog</div>
     <div class="ls-tagline">Journal de trading</div>
@@ -179,7 +179,7 @@
         <div class="dash-chart-row">
           <div class="card dash-chart-half">
             <div class="card-head">
-              <span class="card-head-title">Progression du P&amp;L</span>
+              <span class="card-head-title">P&amp;L par période</span>
               <span id="cTradesSub" class="card-head-sub"></span>
             </div>
             <div class="ch"><canvas id="cTrades"></canvas></div>
