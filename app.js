@@ -2430,7 +2430,11 @@ function buildForm(t){
   tScrHTF=t.screenshotHTF||t.screenshotAvant||t.screenshot||'';tScrMTF=t.screenshotMTF||t.screenshotApres||'';tScrLTF=t.screenshotLTF||'';
   tConf=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):3);
   tDir=t.direction||'';
-  const ao=DB.accounts.map(a=>`<option value="${esc(a.name)}" ${t.compte===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
+  // Comptes actifs uniquement (+ le compte actuel du trade s'il est désactivé, pour ne pas le perdre en édition)
+  const accs=getActiveAccounts();
+  if(t.compte&&!accs.some(a=>a.name===t.compte)){const cur=DB.accounts.find(a=>a.name===t.compte);if(cur)accs.push(cur);}
+  const selAcc=t.compte||(accs.length===1?accs[0].name:'');
+  const ao=accs.map(a=>`<option value="${esc(a.name)}" ${selAcc===a.name?'selected':''}>${esc(a.name)}</option>`).join('');
   const currentRR=calcRR(t);
   const rrDisplay=currentRR!==null?(currentRR>0?'+':'')+fmtN(currentRR,2)+'R':'— R';
   const rrColor=currentRR===null?'var(--text3)':currentRR>0?'var(--green)':currentRR<0?'var(--red)':'var(--text3)';
