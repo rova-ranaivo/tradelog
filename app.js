@@ -4158,7 +4158,7 @@ function pcCreateTrade(){
 }
 
 // ── RACCOURCIS CLAVIER (desktop) ─────────────────────────────────────────
-// N = nouveau trade · D/R/J/C/A = Dashboard/Rapport/Journal/Calendrier/Anomalies
+// N ou + = nouveau trade · D/R/J/C/A = Dashboard/Rapport/Journal/Calendrier/Anomalies
 const NAV_KEYS={d:'dashboard',r:'report',j:'journal',c:'calendar',a:'anomalies'};
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
@@ -4166,14 +4166,14 @@ document.addEventListener('keydown',e=>{
   if(tg&&(tg.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)))return;
   if(document.querySelector('.overlay.open,.trade-drawer-overlay.open,.tlv.open'))return;
   const k=e.key.toLowerCase();
-  if(k==='n'){e.preventDefault();openNew();return;}
+  if(k==='n'||k==='+'){e.preventDefault();openNew();return;}
   if(k==='p'){e.preventDefault();openPosCalc();return;}
   if(NAV_KEYS[k]&&curPage!==NAV_KEYS[k]){e.preventDefault();showPage(NAV_KEYS[k]);}
 });
 (function(){
   const lbl={dashboard:'D',report:'R',journal:'J',calendar:'C',anomalies:'A'};
   document.querySelectorAll('.sb-item[data-page]').forEach(b=>{const k=lbl[b.dataset.page];if(k)b.title=`Raccourci : ${k}`;});
-  const fab=document.getElementById('fab');if(fab)fab.title='Nouveau trade (N)';
+  const fab=document.getElementById('fab');if(fab)fab.title='Nouveau trade (N ou +)';
 })();
 
 // ── SCREENSHOT VIEWER (plein écran : HTF/MTF/LTF + navigation entre trades) ─

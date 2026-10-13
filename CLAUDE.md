@@ -264,7 +264,7 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 
 ## Raccourcis clavier (desktop)
 
-`N` nouveau trade · `P` calculateur de position · `D` Dashboard · `R` Rapport · `J` Journal · `C` Calendrier · `A` Anomalies.
+`N` ou `+` nouveau trade · `P` calculateur de position · `D` Dashboard · `R` Rapport · `J` Journal · `C` Calendrier · `A` Anomalies.
 Inactifs pendant la saisie (input/select/textarea) et quand un modal/drawer/visionneuse est ouvert.
 
 ---
