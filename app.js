@@ -127,8 +127,8 @@ function toggleAccDisabled(accId){const d=getDisabledAccounts();const id=String(
 function getActiveAccounts(){return DB.accounts.filter(a=>!isAccDisabled(a.id));}
 let dashPeriod='all',dashCustomFrom='',dashCustomTo='';
 let dashWeekOffset=0,dashMonthOffset=0,dashYearOffset=0;
-let jFilters={session:'',instrument:'',resultat:'',dateFrom:'',dateTo:'',period:'week'};
-let jViewMode='table'; // 'table' | 'cards'
+let jFilters={session:'',instrument:'',resultat:'',phase:'',model:'',dateFrom:'',dateTo:'',period:'week'}; // phase/model : valeur, ou '__none' = non assigné
+let jViewMode=(()=>{try{return localStorage.getItem('tl_jview')==='grid'?'grid':'table';}catch(e){return 'table';}})(); // 'table' (liste) | 'grid' (tableur)
 let cfFilters={type:''};
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter='all';
 let activeTab='rules',checkedItems={},selColor=ACC_COLORS[0]||'#2558CE';
@@ -616,7 +616,7 @@ function renderDash(){
       ${kb('RR moyen',`${s.avgRR>=0?'+':''}${fmtN(s.avgRR,2)}R`,`Espérance ${fmtUSD(_exp)}`,lvl(s.avgRR<0,false))}
       ${kb('Profit factor',pf>0?fmtN(pf,2):'—',`${fmtUSD(totalWin,true,0)} / ${fmtUSD(-totalLoss,true,0)}`,lvl(pf>0&&pf<1,pf>0&&pf<1.3))}
       ${kb('Drawdown max',_dd.pct>0?`${fmtN(_dd.pct,1)}%`:'—',_dd.abs>0?fmtUSD(-_dd.abs):'aucun',lvl(_dd.pct>=15,_dd.pct>=8))}
-      ${kb('Stratégie notée',`${disc.pctStrategie}%`,'des trades fermés',lvl(disc.pctStrategie<50,disc.pctStrategie<80))}
+      ${kb('Phase notée',`${disc.pctStrategie}%`,'des trades fermés',lvl(disc.pctStrategie<50,disc.pctStrategie<80))}
       ${kb('Raison notée',`${disc.pctReason}%`,'des trades fermés',lvl(disc.pctReason<50,disc.pctReason<80))}
     </div>`;
 
@@ -2065,6 +2065,133 @@ function renderReport(){
   renderReportFilter();
   renderReportCharts(f);
   renderDashBottom(f,s);
+  renderPhaseStats(f);
+  renderEntryModelStats(f);
+  renderCrossStats(f);
+}
+
+// Groupes de la carte « par phase » / lignes du croisement (A/B/C/D/Range + sans phase)
+function getPhaseGroups(f){
+  const groups=PHASE_OPTIONS.map(s=>({key:s.value,label:s.value==='RANGE'?'Range':s.step,name:s.value==='RANGE'?'Pas d\'intention claire':s.title,tone:s.tone,
+    trades:f.filter(t=>normStrat(t.strategie)===s.value)}));
+  const none=f.filter(t=>!PHASE_OPTIONS.some(s=>s.value===normStrat(t.strategie)));
+  if(none.length)groups.push({key:'',label:'—',name:'Sans phase',tone:'mid',trades:none});
+  return groups;
+}
+// Groupes par modèle d'entrée (+ valeurs hors liste éventuelles, + sans modèle)
+function getEntryModelGroups(f){
+  const extra=[...new Set(f.map(t=>t.entryModel).filter(m=>m&&!ENTRY_MODELS.includes(m)))];
+  const groups=[...ENTRY_MODELS,...extra].map(m=>({key:m,label:m,name:m==='NA'?'Non applicable':'',tone:m==='NA'?'mid':'em',trades:f.filter(t=>t.entryModel===m)}));
+  const none=f.filter(t=>!t.entryModel);
+  if(none.length)groups.push({key:'',label:'—',name:'Sans modèle',tone:'mid',trades:none});
+  return groups;
+}
+// Performance par phase MTF
+function renderPhaseStats(f){
+  renderGroupStats('reportPhaseCard',f,getPhaseGroups(f),{title:'Performance par phase',col:'Phase',what:'une phase',
+    listTitle:r=>r.key?`Phase ${r.label} — ${r.name}`:'Trades sans phase'});
+}
+// Performance par modèle d'entrée
+function renderEntryModelStats(f){
+  renderGroupStats('reportEntryModelCard',f,getEntryModelGroups(f),{title:'Performance par modèle d\'entrée',col:'Modèle',what:'un modèle',
+    listTitle:r=>r.key?`Modèle d'entrée — ${r.key}`:'Trades sans modèle d\'entrée'});
+}
+// Tableau de performance générique : une ligne par groupe {key,label,name,tone,trades}
+function renderGroupStats(elId,f,groups,o){
+  const el=document.getElementById(elId);if(!el)return;
+  const rows=groups.map(g=>({...g,s:stats(g.trades)}));
+  const pnlMax=Math.max(1,...rows.map(r=>Math.abs(r.s.pnl)));
+  const none=rows.find(r=>!r.key);
+  const cov=f.length?Math.round((f.length-(none?none.trades.length:0))/f.length*100):0;
+  el.innerHTML=`
+    <div class="card-head">
+      <span class="card-head-title">${o.title}</span>
+      <span class="card-head-hint">${f.length?`${cov}% des trades avec ${o.what} · ligne cliquable`:''}</span>
+    </div>
+    ${!f.length?`<div style="text-align:center;padding:24px;color:var(--text4);font-size:12px">Aucun trade sur cette période</div>`:`
+    <div class="ph-wrap"><table class="ph-table">
+      <thead><tr><th>${o.col}</th><th class="r">Trades</th><th>Win rate</th><th class="r">RR moyen</th><th class="r">P&L net</th></tr></thead>
+      <tbody>${rows.map((r,i)=>{
+        const empty=!r.trades.length;
+        const pc=r.s.pnl>0?'var(--green)':r.s.pnl<0?'var(--red)':'var(--text3)';
+        const wrc=r.s.winRate>=50?'var(--green)':r.s.winRate>=35?'var(--text2)':'var(--red)';
+        const enc=r.trades.length-r.s.total;
+        return `<tr class="ph-row${empty?' ph-empty':''}" data-i="${i}">
+          <td><div class="ph-name"><span class="ph-letter ph-${r.tone}">${esc(r.label)}</span>${r.name?`<span>${esc(r.name)}</span>`:''}</div></td>
+          <td class="r">${r.trades.length||'—'}${enc?`<span class="ph-enc" title="En cours">+${enc}</span>`:''}</td>
+          <td>${r.s.total?`<div class="ph-wr"><div class="ph-wr-bar"><span style="width:${r.s.winRate}%;background:${wrc}"></span></div><span style="color:${wrc}">${r.s.winRate}%</span></div>`:'—'}</td>
+          <td class="r" style="color:${!r.s.total?'var(--text4)':r.s.avgRR>0?'var(--green)':r.s.avgRR<0?'var(--red)':'var(--text3)'}">${r.s.total?(r.s.avgRR>0?'+':'')+fmtN(r.s.avgRR,2)+'R':'—'}</td>
+          <td class="r"><div class="ph-pnl"><div class="ph-pnl-bar"><span style="width:${Math.round(Math.abs(r.s.pnl)/pnlMax*100)}%;background:${pc}"></span></div><span style="color:${pc}">${r.s.total?fmtUSD(r.s.pnl):'—'}</span></div></td>
+        </tr>`;}).join('')}</tbody>
+    </table></div>`}`;
+  el.querySelectorAll('tr.ph-row:not(.ph-empty)').forEach(tr=>{
+    const r=rows[+tr.dataset.i];
+    tr.onclick=()=>openTradeListModal(r.trades,o.listTitle(r));
+  });
+}
+
+// Croisement phase × modèle d'entrée — matrice colorée selon la mesure choisie
+let crossMetric='pnl';   // 'pnl' | 'wr' | 'rr' | 'n'
+let _crossF=[];
+function setCrossMetric(m){crossMetric=m;renderCrossStats(_crossF);}
+function renderCrossStats(f){
+  _crossF=f;
+  const el=document.getElementById('reportCrossCard');if(!el)return;
+  const metrics=[{v:'pnl',l:'P&L'},{v:'wr',l:'Win rate'},{v:'rr',l:'RR moyen'},{v:'n',l:'Trades'}];
+  const seg=`<div class="dash-period-pills cx-seg">${metrics.map(m=>`<button class="dash-period-pill${crossMetric===m.v?' active':''}" onclick="setCrossMetric('${m.v}')">${m.l}</button>`).join('')}</div>`;
+  const head=`<div class="card-head cx-head">
+      <span class="card-head-title">Phase × modèle d'entrée</span>${seg}
+    </div>`;
+  if(!f.length){el.innerHTML=head+`<div style="text-align:center;padding:24px;color:var(--text4);font-size:12px">Aucun trade sur cette période</div>`;return;}
+  const rowsG=getPhaseGroups(f),colsG=getEntryModelGroups(f);
+  const inCol=(t,c)=>c.key?t.entryModel===c.key:!t.entryModel;
+  // Une cellule = stats d'un sous-ensemble de trades
+  const cell=tr=>{const s=stats(tr);return{trades:tr,s,n:tr.length};};
+  const grid=rowsG.map(r=>colsG.map(c=>cell(r.trades.filter(t=>inCol(t,c)))));
+  const rowTot=rowsG.map(r=>cell(r.trades));
+  const colTot=colsG.map(c=>cell(c.trades));
+  const all=cell(f);
+  const val=c=>{
+    if(crossMetric==='n')return c.n;
+    if(!c.s.total)return null;
+    return crossMetric==='pnl'?c.s.pnl:crossMetric==='wr'?c.s.winRate:c.s.avgRR;
+  };
+  const fmt=v=>v===null?'—':crossMetric==='pnl'?fmtUSDk(v):crossMetric==='wr'?v+'%':crossMetric==='rr'?(v>0?'+':'')+fmtN(v,2)+'R':String(v);
+  // Intensité : P&L / RR divergent autour de 0, win rate autour de 50 %, nombre de trades en accent
+  const inner=grid.flat();
+  const maxAbs=Math.max(1e-9,...inner.map(c=>{const v=val(c);return v===null?0:crossMetric==='wr'?Math.abs(v-50):Math.abs(v);}));
+  const bg=c=>{
+    const v=val(c);if(v===null||!c.n)return '';
+    if(crossMetric==='n')return `background:color-mix(in srgb,var(--accent) ${Math.round(8+v/maxAbs*30)}%,transparent)`;
+    const d=crossMetric==='wr'?v-50:v;if(!d)return '';
+    // Échantillon faible (< 5 trades clôturés) → couleur atténuée, pour ne pas sur-lire 1 trade à 100 %
+    const conf=Math.min(1,c.s.total/5);
+    return `background:color-mix(in srgb,var(${d>0?'--green':'--red'}) ${Math.round(4+Math.abs(d)/maxAbs*30*conf)}%,transparent)`;
+  };
+  const tone=c=>{
+    const v=val(c);if(v===null||crossMetric==='n')return '';
+    const d=crossMetric==='wr'?v-50:v;
+    return d>0?'color:var(--green)':d<0?'color:var(--red)':'';
+  };
+  const td=(c,ri,ci,cls='')=>c.n
+    ?`<td class="cx-cell${cls}" data-r="${ri}" data-c="${ci}" style="${cls?'':bg(c)}"><div class="cx-v" style="${tone(c)}">${fmt(val(c))}</div>${crossMetric!=='n'?`<div class="cx-n">${c.n} trade${c.n>1?'s':''}</div>`:''}</td>`
+    :`<td class="cx-cell cx-0${cls}"><div class="cx-v">·</div></td>`;
+  el.innerHTML=head+`
+    <div class="cx-wrap"><table class="cx-table">
+      <thead><tr><th class="cx-corner">Phase \\ Modèle</th>${colsG.map(c=>`<th>${esc(c.key?c.label:'Sans modèle')}</th>`).join('')}<th class="cx-tot">Total</th></tr></thead>
+      <tbody>
+        ${rowsG.map((r,ri)=>`<tr><th class="cx-rh"><span class="ph-letter ph-${r.tone}">${esc(r.label)}</span>${r.key?'':'<span class="cx-rh-n">Sans phase</span>'}</th>${grid[ri].map((c,ci)=>td(c,ri,ci)).join('')}${td(rowTot[ri],ri,'t',' cx-tot')}</tr>`).join('')}
+        <tr class="cx-tot-row"><th class="cx-rh">Total</th>${colTot.map((c,ci)=>td(c,'t',ci,' cx-tot')).join('')}${td(all,'t','t',' cx-tot')}</tr>
+      </tbody>
+    </table></div>
+    <div class="cx-foot">${crossMetric==='wr'?'Vert au-dessus de 50 %, rouge en dessous':crossMetric==='n'?'Intensité = nombre de trades':'Vert = positif, rouge = négatif · intensité = ampleur'}${crossMetric!=='n'?' (atténuée sous 5 trades)':''} · cellule cliquable · les trades en cours ne comptent que dans « Trades »</div>`;
+  el.querySelectorAll('td.cx-cell[data-r]').forEach(tdEl=>{
+    const{r,c}=tdEl.dataset;
+    const rg=r==='t'?null:rowsG[+r],cg=c==='t'?null:colsG[+c];
+    const cellData=r==='t'&&c==='t'?all:r==='t'?colTot[+c]:c==='t'?rowTot[+r]:grid[+r][+c];
+    const rl=rg?(rg.key?`Phase ${rg.label}`:'Sans phase'):'',cl=cg?(cg.key?cg.label:'Sans modèle'):'';
+    tdEl.onclick=()=>openTradeListModal(cellData.trades,[rl,cl].filter(Boolean).join(' × ')||'Tous les trades');
+  });
 }
 
 function openTradeListModal(trades,title){
@@ -2162,6 +2289,8 @@ function renderJFilters(){
     <select onchange="setJF('session',this.value)"><option value="">Toutes sessions</option>${so}</select>
     <select onchange="setJF('instrument',this.value)"><option value="">Tous instruments</option>${io}</select>
     <select onchange="setJF('resultat',this.value)"><option value="">Tous résultats</option>${ro}</select>
+    <select onchange="setJF('phase',this.value)"${jFilters.phase?' class="jf-on"':''}><option value="">Toutes phases</option><option value="__none" ${jFilters.phase==='__none'?'selected':''}>Phase non assignée</option>${PHASE_OPTIONS.map(s=>`<option value="${s.value}" ${jFilters.phase===s.value?'selected':''}>Phase ${esc(stratLabel(s.value))}</option>`).join('')}</select>
+    <select onchange="setJF('model',this.value)"${jFilters.model?' class="jf-on"':''}><option value="">Tous modèles</option><option value="__none" ${jFilters.model==='__none'?'selected':''}>Modèle non assigné</option>${ENTRY_MODELS.map(m=>`<option value="${m}" ${jFilters.model===m?'selected':''}>Modèle ${m}</option>`).join('')}</select>
     ${isCustom?`<input type="date" value="${jFilters.dateFrom}" onchange="setJF('dateFrom',this.value)" title="Date début"/>
     <input type="date" value="${jFilters.dateTo}" onchange="setJF('dateTo',this.value)" title="Date fin"/>`:''}
     <button class="btn btn-ghost btn-sm" onclick="resetJF()">✕ Reset</button>
@@ -2170,8 +2299,8 @@ function renderJFilters(){
         <button class="j-view-btn ${jViewMode==='table'?'active':''}" onclick="toggleJView('table')" title="Vue liste">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><rect y="1" width="16" height="2.5" rx="1.2"/><rect y="6.5" width="16" height="2.5" rx="1.2"/><rect y="12" width="16" height="2.5" rx="1.2"/></svg>
         </button>
-        <button class="j-view-btn ${jViewMode==='cards'?'active':''}" onclick="toggleJView('cards')" title="Vue cartes">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>
+        <button class="j-view-btn ${jViewMode==='grid'?'active':''}" onclick="toggleJView('grid')" title="Vue tableur — édition en ligne et en masse">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1.5" width="14" height="13" rx="1.5"/><path d="M1 5.5h14M1 10h14M5.5 1.5v13M10.5 1.5v13"/></svg>
         </button>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
@@ -2180,10 +2309,10 @@ function renderJFilters(){
 function setJF(k,v){if(k==='dateFrom'||k==='dateTo')jFilters.period='custom';jFilters[k]=v;renderJournal();}
 function resetJF(){
   const r=getPeriodRange('week');
-  jFilters={session:'',instrument:'',resultat:'',dateFrom:r.from,dateTo:r.to,period:'week'};
+  jFilters={session:'',instrument:'',resultat:'',phase:'',model:'',dateFrom:r.from,dateTo:r.to,period:'week'};
   renderJournal();
 }
-function getFT(){const _an=new Set(getActiveAccounts().map(a=>a.name));return DB.trades.filter(t=>{if(!_an.has(t.compte))return false;if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
+function getFT(){const _an=new Set(getActiveAccounts().map(a=>a.name));return DB.trades.filter(t=>{if(!_an.has(t.compte))return false;if(!jAccFilters.has('all')&&!jAccFilters.has(t.compte))return false;const f=jFilters;if(f.session&&t.session!==f.session)return false;if(f.instrument&&t.instrument!==f.instrument)return false;if(f.resultat&&t.resultat!==f.resultat)return false;if(f.phase&&(f.phase==='__none'?!!normStrat(t.strategie):normStrat(t.strategie)!==f.phase))return false;if(f.model&&(f.model==='__none'?!!t.entryModel:t.entryModel!==f.model))return false;if(f.dateFrom&&t.date<f.dateFrom)return false;if(f.dateTo&&t.date>f.dateTo)return false;return true;}).sort((a,b)=>b.date.localeCompare(a.date)||(b.heure||'').localeCompare(a.heure||''));}
 
 function renderJSummary(){
   const trades=getFT();
@@ -2233,9 +2362,11 @@ function renderJSummary(){
     </div>
   </div>`;
 }
-function toggleJView(mode){jViewMode=mode;renderJFilters();renderJTable();}
+function toggleJView(mode){jViewMode=mode;try{localStorage.setItem('tl_jview',mode);}catch(e){}renderJFilters();renderJTable();}
 function renderJTable(){
-  if(jViewMode==='cards'){renderJCards();return;}
+  // Vue tableur : la page Journal prend toute la largeur (cf. body.jg-wide dans style.css)
+  document.body.classList.toggle('jg-wide',jViewMode==='grid');
+  if(jViewMode==='grid'){renderJGrid();return;}
   const trades=getFT();
   _detailNavIds=trades.map(t=>t.id);
   if(!trades.length){document.getElementById('jTable').innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
@@ -2317,64 +2448,321 @@ function renderJTable(){
   document.getElementById('jTable').innerHTML=h;
 }
 
-function renderJCards(){
+// ── JOURNAL — VUE TABLEUR ─────────────────────────────────────────────────
+// Toutes les colonnes, édition en ligne (clic sur une cellule), sélection multiple
+// (Maj+clic = plage) et mise à jour / suppression en masse. Chaque écriture est
+// confirmée par Supabase ; en cas d'échec la modification locale est annulée.
+// t: type d'éditeur (date|time|select|num|text) · ro: lecture seule · r: aligné à droite · req: valeur obligatoire
+const JG_COLS=[
+  {k:'date',l:'Date',t:'date',w:88,req:1},
+  {k:'heure',l:'Heure',t:'time',w:58},
+  {k:'compte',l:'Compte',t:'select',w:120,opts:()=>getActiveAccounts().map(a=>a.name)},
+  {k:'instrument',l:'Instrument',t:'select',w:92,opts:()=>[...new Set([...FORM_INSTRUMENTS,...DB.instruments])]},
+  {k:'direction',l:'Sens',t:'select',w:70,opts:()=>['Long','Short']},
+  {k:'session',l:'Session',ro:1,w:78},
+  {k:'strategie',l:'Phase',t:'select',w:132,opts:()=>PHASE_OPTIONS.map(s=>[s.value,stratLabel(s.value)])},
+  {k:'entryModel',l:'Modèle',t:'select',w:84,opts:()=>ENTRY_MODELS},
+  // Captures juste après Phase / Modèle : vérifier le setup sur la capture puis corriger la phase sans défiler
+  {k:'scr',l:'Captures HTF · MTF · LTF',ro:1,w:160},
+  {k:'stars',l:'Confiance',t:'select',w:84,req:1,opts:()=>[1,2,3,4,5].map(n=>[String(n),'★'.repeat(n)])},
+  {k:'montantRisque',l:'Risque',t:'num',w:84,r:1},
+  {k:'gainPerte',l:'Gain / Perte',t:'num',w:104,r:1},
+  {k:'rr',l:'RR',ro:1,w:66,r:1},
+  {k:'expectedRR',l:'RR attendu',t:'num',w:80,r:1},
+  {k:'resultat',l:'Résultat',t:'select',w:96,opts:()=>RESULTATS},
+  {k:'disc',l:'Discipline',ro:1,w:82},
+  {k:'pourquoiEntrer',l:'Pourquoi entrer',t:'text',w:220},
+  {k:'douteHesitation',l:'Doute / hésitation',t:'text',w:180},
+];
+// Champs proposés dans la barre de mise à jour en masse
+const JG_BULK=['strategie','entryModel','compte','instrument','direction','resultat','stars','montantRisque','expectedRR','date'];
+let jgSel=new Set(),jgLast=-1,jgSort={k:'date',dir:-1},jgBulkK='strategie',_jgRows=[];
+
+const _jgCol=k=>JG_COLS.find(c=>c.k===k);
+const _jgOpts=c=>(c.opts?c.opts():[]).map(o=>Array.isArray(o)?o:[String(o),String(o)]);
+function jgVal(t,k){
+  if(k==='strategie')return normStrat(t.strategie);
+  if(k==='stars'){const s=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):'');return String(s);}
+  const v=t[k];return v===undefined||v===null?'':String(v);
+}
+// URL de capture par TF (avec compat ascendante), '' si absente ou invalide
+function jgScrUrl(t,tf){
+  const u=String((tf==='htf'?t.screenshotHTF||t.screenshotAvant||t.screenshot:tf==='mtf'?t.screenshotMTF||t.screenshotApres:t.screenshotLTF)||'').trim();
+  return u.startsWith('http')||u.startsWith('//')||u.startsWith('data:')?u:'';
+}
+function jgScr(t){return TLV_TFS.map(tf=>jgScrUrl(t,tf)).filter(Boolean);}
+function jgAudit(t){
+  const sv=+jgVal(t,'stars')||null;
+  const und=t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
+  return und&&t.resultat!=='En cours'?getAuditReasons(t):[];
+}
+function jgSortVal(t,k){
+  switch(k){
+    case 'date':return(t.date||'')+' '+(t.heure||'');
+    case 'rr':{const r=calcRR(t);return r===null?-Infinity:r;}
+    case 'montantRisque':case 'gainPerte':case 'expectedRR':{const n=parseFloat(t[k]);return isNaN(n)?-Infinity:n;}
+    case 'stars':return +jgVal(t,'stars')||0;
+    case 'disc':return jgAudit(t).length;
+    case 'scr':return jgScr(t).length;
+    default:return jgVal(t,k).toLowerCase();
+  }
+}
+function jgCell(t,k){
+  const na='<span class="jg-na">—</span>';
+  switch(k){
+    case 'date':return t.date?fmtD(t.date):na;
+    case 'heure':return t.heure?esc(t.heure):na;
+    case 'compte':{if(!t.compte)return na;const a=DB.accounts.find(a=>a.name===t.compte);return `<span class="jg-dot" style="background:${a?a.color:'var(--text4)'}"></span>${esc(t.compte)}`;}
+    case 'instrument':return t.instrument?`<strong>${esc(t.instrument)}</strong>`:na;
+    case 'direction':return t.direction==='Long'?'<span class="jg-long">↑ Long</span>':t.direction==='Short'?'<span class="jg-short">↓ Short</span>':na;
+    case 'session':return t.session?esc(t.session):na;
+    case 'strategie':{
+      const s=PHASE_OPTIONS.find(s=>s.value===normStrat(t.strategie));
+      if(!s)return t.strategie?esc(t.strategie):na;
+      return `<span class="ph-letter ph-${s.tone}">${s.value==='RANGE'?'Range':s.step}</span>${s.value==='RANGE'?'':`<span class="jg-sub">${esc(s.title)}</span>`}`;
+    }
+    case 'entryModel':return t.entryModel?`<span class="ph-letter ph-${t.entryModel==='NA'?'mid':'em'}">${esc(t.entryModel)}</span>`:na;
+    case 'stars':{const n=+jgVal(t,'stars');return n?`<span class="jg-stars">${'★'.repeat(n)}<span>${'★'.repeat(5-n)}</span></span>`:na;}
+    case 'montantRisque':{const n=parseFloat(t.montantRisque);return !isNaN(n)&&n?fmtUSD(Math.abs(n),false):na;}
+    case 'gainPerte':{
+      if(t.gainPerte===undefined||t.gainPerte===null||t.gainPerte==='')return na;
+      const n=parseFloat(t.gainPerte)||0;
+      return `<span style="color:${n>0?'var(--green)':n<0?'var(--red)':'var(--text3)'}">${fmtUSD(n)}</span>`;
+    }
+    case 'rr':{const r=calcRR(t);return r===null?na:`<span style="color:${r>0?'var(--green)':r<0?'var(--red)':'var(--text3)'}">${r>0?'+':''}${fmtN(r,2)}R</span>`;}
+    case 'expectedRR':{const n=parseFloat(t.expectedRR);return isNaN(n)?na:fmtN(n,2)+'R';}
+    case 'resultat':return t.resultat?`<span class="badge badge-${t.resultat==='Win'?'win':t.resultat==='Loss'?'loss':t.resultat==='En cours'?'encours':'be'}">${t.resultat}</span>`:na;
+    case 'disc':{
+      const r=jgAudit(t);
+      return r.length?`<span class="jg-warn" data-audit="${esc(r.map(x=>'• '+x).join('\n'))}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">⚠ ${r.length}</span>`:'<span class="jg-ok">✓</span>';
+    }
+    case 'pourquoiEntrer':case 'douteHesitation':return t[k]?`<span class="jg-txt" title="${esc(t[k])}">${esc(t[k])}</span>`:na;
+    case 'scr':return `<div class="jg-thumbs">${TLV_TFS.map(tf=>{
+      const u=jgScrUrl(t,tf),L=tf.toUpperCase();
+      return u
+        ?`<button class="jg-th" onclick="openViewer('${t.id}','${tf}')" title="Voir la capture ${L} en grand (Échap pour fermer)"><img src="${esc(u)}" alt="" loading="lazy" onerror="this.remove()"/><span>${L[0]}</span></button>`
+        :`<span class="jg-th jg-th-none" title="Pas de capture ${L}"><span>${L[0]}</span></span>`;
+    }).join('')}</div>`;
+  }
+  return '';
+}
+
+function renderJGrid(){
+  const el=document.getElementById('jTable');if(!el)return;
+  const prev=el.querySelector('.jg-scroll');
+  const sx=prev?prev.scrollLeft:0,sy=prev?prev.scrollTop:0;
   const trades=getFT();
-  _detailNavIds=trades.map(t=>t.id);
-  const el=document.getElementById('jTable');
-  if(!trades.length){el.innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
-  let h='<div class="j-cards-grid">';
-  trades.forEach(t=>{
-    const ac=DB.accounts.find(a=>a.name===t.compte);
-    const rr=calcRR(t);
-    const gp=parseFloat(t.gainPerte)||0;
-    const sv=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
-    const isUndisciplined=t.horsZone===true||t.structure==='fragile'||(sv!==null&&sv<3);
-    const scrLTF=(t.screenshotLTF||'').trim();
-    const scrMTF=(t.screenshotMTF||t.screenshotApres||'').trim();
-    const scrHTF=(t.screenshotHTF||t.screenshotAvant||t.screenshot||'').trim();
-    const scrUrl=scrLTF||scrMTF||scrHTF;
-    const hasImg=scrUrl&&(scrUrl.startsWith('http')||scrUrl.startsWith('//')||scrUrl.startsWith('data:'));
-    const resClass=t.resultat==='Win'?'jc-win':t.resultat==='Loss'?'jc-loss':t.resultat==='Breakeven'?'jc-be':t.resultat==='En cours'?'jc-encours':'';
-    const resColor=t.resultat==='Win'?'var(--green)':t.resultat==='Loss'?'var(--red)':t.resultat==='Breakeven'?'var(--amber)':'var(--blue)';
-    const gpColor=gp>0?'var(--green)':gp<0?'var(--red)':'var(--text3)';
-    const gpStr=t.gainPerte!==undefined&&t.gainPerte!==''?(gp>=0?`${fmtUSD(gp)}`:`${fmtUSD(gp)}`):'—';
-    const dirIcon=t.direction==='Long'?'↑':t.direction==='Short'?'↓':'';
-    const dirColor=t.direction==='Long'?'var(--green)':t.direction==='Short'?'var(--red)':'';
-    const rrStr=rr!==null?`<span class="jc-rr" style="color:${rr>0?'var(--green)':rr<0?'var(--red)':'var(--text3)'}">${(rr>0?'+':'')+fmtN(rr,2)}R</span>`:'';
-    const auditReasons=isUndisciplined&&t.resultat!=='En cours'?getAuditReasons(t):[];
-    const disciplineBdg=auditReasons.length?`<span class="_audit-badge jc-badge-warn" data-audit="${esc(auditReasons.map(r=>'• '+r).join('\n'))}" onmouseenter="showAuditTip(this,this.dataset.audit)" onmouseleave="hideAuditTip()">Indisc.</span>`:'';
-    const resBdg=t.resultat?`<span class="jc-result" style="background:${resColor}12;color:${resColor}">${t.resultat}</span>`:'';
-    const thumbHtml=hasImg
-      ?`<div class="jc-thumb"><img src="${scrUrl}" alt="" loading="lazy" onerror="this.parentElement.classList.add('jc-thumb-err');this.remove()"/></div>`
-      :`<div class="jc-thumb jc-thumb-empty"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-    h+=`<div class="j-card ${resClass}" onclick="openDetail('${t.id}')">
-      ${thumbHtml}
-      <div class="jc-content">
-        <div class="jc-row1">
-          <div class="jc-instr-row">
-            ${ac?`<span class="jc-acc-dot" style="background:${ac.color}"></span>`:''}
-            <span class="jc-instr">${esc(t.instrument||'—')}</span>
-            ${dirIcon?`<span class="jc-dir" style="color:${dirColor}">${dirIcon}</span>`:''}
-          </div>
-          <span class="jc-pnl" style="color:${gpColor}">${gpStr}</span>
-        </div>
-        <div class="jc-row2">
-          <span class="jc-meta">${fmtD(t.date)}${t.heure?' · '+t.heure:''}${t.session?' · '+esc(t.session):''}</span>
-          ${rrStr}
-        </div>
-        <div class="jc-row3">
-          <div class="jc-badges">${resBdg}${disciplineBdg}</div>
-          <div class="jc-actions" onclick="event.stopPropagation()">
-            <button class="btn-ghost btn-sm" onclick="dupTrade('${t.id}')" title="Dupliquer">${ICO.dup}</button>
-            <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier">${ICO.edit}</button>
-            <button class="btn-ghost btn-sm" style="color:var(--red)" onclick="delTrade('${t.id}')" title="Supprimer">${ICO.del}</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
+  // La sélection ne porte que sur les trades visibles (évite d'agir sur des trades filtrés)
+  const vis=new Set(trades.map(t=>t.id));
+  jgSel=new Set([...jgSel].filter(id=>vis.has(id)));
+  const{k,dir}=jgSort;
+  const rows=[...trades].sort((a,b)=>{const x=jgSortVal(a,k),y=jgSortVal(b,k);return(x<y?-1:x>y?1:0)*dir;});
+  _jgRows=rows;_detailNavIds=rows.map(t=>t.id);
+  if(!rows.length){el.innerHTML='<div class="empty"><h3>Aucun trade trouvé</h3><p>Ajustez les filtres ou ajoutez un trade</p></div>';return;}
+  const allSel=rows.every(t=>jgSel.has(t.id));
+  const icoOpen='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+  el.innerHTML=`<div id="jgBulk" class="jg-bulk"></div>
+  <div class="jg-scroll"><table class="jg">
+    <thead><tr>
+      <th class="jg-c-sel"><input type="checkbox" ${allSel?'checked':''} onchange="jgSelAll(this.checked)" title="Tout sélectionner"/></th>
+      ${JG_COLS.map(c=>`<th class="${c.r?'r ':''}${c.k==='date'?'jg-c-date':''}" style="min-width:${c.w}px" onclick="jgSortBy('${c.k}')">${c.l}${jgSort.k===c.k?`<span class="jg-arrow">${dir>0?'▲':'▼'}</span>`:''}</th>`).join('')}
+      <th class="jg-c-act"></th>
+    </tr></thead>
+    <tbody>${rows.map((t,i)=>`<tr data-id="${t.id}"${jgSel.has(t.id)?' class="sel"':''}>
+      <td class="jg-c-sel"><input type="checkbox" ${jgSel.has(t.id)?'checked':''} onclick="jgToggle(${i},event)"/></td>
+      ${JG_COLS.map(c=>`<td class="${c.ro?'ro':'ed'}${c.r?' r':''}${c.k==='date'?' jg-c-date':''}" data-k="${c.k}">${jgCell(t,c.k)}</td>`).join('')}
+      <td class="jg-c-act">
+        <button class="btn-ghost btn-sm" onclick="openDetail('${t.id}')" title="Ouvrir le détail">${icoOpen}</button>
+        <button class="btn-ghost btn-sm" onclick="openEdit('${t.id}')" title="Modifier (formulaire)">${ICO.edit}</button>
+        <button class="btn-ghost btn-sm" onclick="dupTrade('${t.id}')" title="Dupliquer">${ICO.dup}</button>
+        <button class="btn-ghost btn-sm jg-del-ico" onclick="delTrade('${t.id}')" title="Supprimer">${ICO.del}</button>
+      </td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr>${jgFootRow(rows)}</tr></tfoot>
+  </table></div>`;
+  const sc=el.querySelector('.jg-scroll');sc.scrollLeft=sx;sc.scrollTop=sy;
+  el.querySelector('tbody').addEventListener('click',e=>{
+    const td=e.target.closest('td.ed');
+    if(td&&!td.classList.contains('editing'))jgEdit(td);
   });
-  h+='</div>';
-  el.innerHTML=h;
+  renderJGBulk();
+}
+// Cellules de la ligne de totaux
+function jgFootRow(rows){
+  const s=stats(rows);
+  const risk=rows.reduce((a,t)=>a+(Math.abs(parseFloat(t.montantRisque))||0),0);
+  const foot=c=>{
+    switch(c.k){
+      case 'date':return `${rows.length} trade${rows.length>1?'s':''}`;
+      case 'montantRisque':return risk?fmtUSD(risk,false):'';
+      case 'gainPerte':return `<span style="color:${s.pnl>0?'var(--green)':s.pnl<0?'var(--red)':'var(--text3)'}">${fmtUSD(s.pnl)}</span>`;
+      case 'rr':return s.total?`<span title="RR moyen">${s.avgRR>0?'+':''}${fmtN(s.avgRR,2)}R</span>`:'';
+      case 'resultat':return s.total?`${s.winRate}% WR`:'';
+    }
+    return '';
+  };
+  return `<td class="jg-c-sel"></td>${JG_COLS.map(c=>`<td class="${c.r?'r ':''}${c.k==='date'?'jg-c-date':''}">${foot(c)}</td>`).join('')}<td class="jg-c-act"></td>`;
+}
+// Mise à jour ciblée après une modification : seules les lignes touchées et les totaux sont réécrits
+// (pas de re-rendu complet → instantané même avec des milliers de lignes). Les lignes restent
+// à leur place même si elles ne correspondent plus au filtre/tri : appliqué au prochain rendu.
+function jgUpdateRows(ids){
+  ids.forEach(id=>{
+    const tr=document.querySelector(`.jg tbody tr[data-id="${id}"]`);
+    const t=DB.trades.find(x=>x.id===id);if(!tr||!t)return;
+    tr.querySelectorAll('td[data-k]').forEach(td=>{if(!td.classList.contains('editing'))td.innerHTML=jgCell(t,td.dataset.k);});
+  });
+  const ft=document.querySelector('.jg tfoot tr');if(ft)ft.innerHTML=jgFootRow(_jgRows);
+}
+function jgSortBy(k){
+  if(jgSort.k===k)jgSort.dir*=-1;
+  else jgSort={k,dir:['date','gainPerte','rr','montantRisque','expectedRR','stars','disc','scr'].includes(k)?-1:1};
+  renderJGrid();
+}
+function jgToggle(i,e){
+  const id=_jgRows[i].id,on=!jgSel.has(id);
+  if(e.shiftKey&&jgLast>=0){
+    const a=Math.min(jgLast,i),b=Math.max(jgLast,i);
+    for(let j=a;j<=b;j++){const x=_jgRows[j].id;on?jgSel.add(x):jgSel.delete(x);}
+  }else on?jgSel.add(id):jgSel.delete(id);
+  jgLast=i;jgSyncSel();
+}
+function jgSelAll(on){jgSel=on?new Set(_jgRows.map(t=>t.id)):new Set();jgLast=-1;jgSyncSel();}
+// Met à jour cases et surlignage sans re-rendre le tableau
+function jgSyncSel(){
+  document.querySelectorAll('.jg tbody tr').forEach(tr=>{
+    const on=jgSel.has(tr.dataset.id);tr.classList.toggle('sel',on);
+    const cb=tr.querySelector('.jg-c-sel input');if(cb)cb.checked=on;
+  });
+  const all=document.querySelector('.jg thead .jg-c-sel input');
+  if(all){all.checked=_jgRows.length>0&&_jgRows.every(t=>jgSel.has(t.id));all.indeterminate=!all.checked&&jgSel.size>0;}
+  renderJGBulk();
+}
+function renderJGBulk(){
+  const el=document.getElementById('jgBulk');if(!el)return;
+  const n=jgSel.size;
+  el.classList.toggle('on',n>0);
+  if(!n){el.innerHTML=`<span class="jg-hint">Clic sur une cellule pour la modifier · Entrée valide, Échap annule, Tab passe à la suivante · coche des lignes pour une mise à jour en masse (Maj+clic = plage)</span>`;return;}
+  const c=_jgCol(jgBulkK);
+  const ctrl=c.t==='select'
+    ?`<select id="jgBulkVal"><option value="__" selected disabled>Choisir…</option>${_jgOpts(c).map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}${c.req?'':'<option value="">— vider le champ —</option>'}</select>`
+    :`<input id="jgBulkVal" type="${c.t==='num'?'number':c.t}" ${c.t==='num'?'step="any"':''} placeholder="${c.req?'Valeur':'Vide = effacer'}"/>`;
+  el.innerHTML=`<span class="jg-count">${n} sélectionné${n>1?'s':''}</span>
+    <div class="jg-bulk-set">
+      <span class="jg-bulk-lbl">Définir</span>
+      <select id="jgBulkField" onchange="jgBulkK=this.value;renderJGBulk()">${JG_BULK.map(k=>`<option value="${k}"${k===jgBulkK?' selected':''}>${_jgCol(k).l}</option>`).join('')}</select>
+      <span class="jg-bulk-lbl">sur</span>${ctrl}
+      <button class="btn btn-primary btn-sm" onclick="jgBulkApply()">Appliquer</button>
+    </div>
+    <div class="jg-bulk-end">
+      <button class="btn btn-secondary btn-sm jg-bulk-del" onclick="jgBulkDelete()">Supprimer</button>
+      <button class="btn btn-ghost btn-sm" onclick="jgSelAll(false)">Désélectionner</button>
+    </div>`;
+}
+
+// Édition en ligne d'une cellule
+function jgEdit(td){
+  const id=td.parentElement.dataset.id,k=td.dataset.k,c=_jgCol(k);
+  const t=DB.trades.find(x=>x.id===id);if(!t||!c||c.ro)return;
+  const cur=jgVal(t,k);
+  let h;
+  if(c.t==='select'){
+    const o=_jgOpts(c);if(cur&&!o.some(x=>x[0]===cur))o.push([cur,cur]);
+    h=`<select class="jg-ed">${c.req?'':'<option value="">—</option>'}${o.map(([v,l])=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  }else if(c.t==='text')h=`<textarea class="jg-ed jg-ed-txt" rows="4">${esc(cur)}</textarea>`;
+  else h=`<input class="jg-ed" type="${c.t==='num'?'number':c.t}" ${c.t==='num'?'step="any"':''} value="${esc(cur)}"/>`;
+  td.classList.add('editing');td.innerHTML=h;
+  const ed=td.querySelector('.jg-ed');
+  ed.focus();if(c.t==='num'||c.t==='text')ed.select();
+  let done=false,next=null;
+  const finish=save=>{
+    if(done)return;done=true;
+    if(save&&ed.value!==cur){td.classList.remove('editing');jgCommit(id,k,ed.value);}
+    else{td.classList.remove('editing');td.innerHTML=jgCell(t,k);}
+    // Tab : ouvrir la cellule éditable suivante (le tableau a pu être re-rendu)
+    if(next){const n=document.querySelector(`.jg tr[data-id="${id}"] td[data-k="${next}"]`);if(n)jgEdit(n);}
+  };
+  ed.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(false);}
+    else if(e.key==='Enter'&&!(c.t==='text'&&e.shiftKey)){e.preventDefault();finish(true);}
+    else if(e.key==='Tab'){
+      e.preventDefault();
+      const eds=JG_COLS.filter(x=>!x.ro).map(x=>x.k);
+      next=eds[eds.indexOf(k)+(e.shiftKey?-1:1)]||null;
+      finish(true);
+    }
+  });
+  if(c.t==='select')ed.addEventListener('change',()=>finish(true));
+  ed.addEventListener('blur',()=>finish(true));
+}
+// Applique une valeur à un trade (mêmes règles que saveTrade) ; renvoie un message d'erreur ou ''
+function jgApply(t,k,v){
+  const c=_jgCol(k);
+  v=(v??'').toString().trim();
+  if(c.req&&!v)return `« ${c.l} » ne peut pas être vide`;
+  if(c.t==='num'&&v!==''&&isNaN(parseFloat(v)))return `« ${c.l} » : nombre invalide`;
+  if(k==='stars'){t.stars=parseInt(v,10);return '';}
+  if(k==='instrument')v=v.toUpperCase();
+  t[k]=v;
+  if(k==='heure'){t.session=calcSession(v);t.horsZone=calcHorsZone(v);}
+  if(k==='montantRisque'||k==='gainPerte'){
+    const g=parseFloat(t.gainPerte),m=parseFloat(t.montantRisque);
+    t.rr=(!isNaN(g)&&!isNaN(m)&&m!==0)?String((g/Math.abs(m)).toFixed(4)):'';
+  }
+  return '';
+}
+function jgRestore(t,snap){Object.keys(t).forEach(x=>{if(!(x in snap))delete t[x];});Object.assign(t,snap);}
+// Upsert groupé ; renvoie les trades dont l'enregistrement a échoué
+async function sbSaveTrades(list){
+  const failed=[],now=new Date().toISOString();
+  for(let i=0;i<list.length;i+=200){
+    const chunk=list.slice(i,i+200);
+    const{error}=await sb.from('trades').upsert(chunk.map(t=>({id:t.id,data:t,updated_at:now})));
+    if(error){failed.push(...chunk);console.error('sbSaveTrades:',error.message);}
+  }
+  return failed;
+}
+// Après modification : sauvegarde locale + synthèse + mise à jour ciblée des lignes (pas de re-rendu complet)
+function jgRefresh(ids){saveDB();renderJSummary();jgUpdateRows(ids);}
+async function jgCommit(id,k,v){
+  const t=DB.trades.find(x=>x.id===id);if(!t)return;
+  const snap={...t};
+  const err=jgApply(t,k,v);
+  if(err){jgRestore(t,snap);toast(err,'warning');jgUpdateRows([id]);return;}
+  jgRefresh([id]);
+  const failed=await sbSaveTrades([t]);
+  if(failed.length){jgRestore(t,snap);jgRefresh([id]);toast('Échec de l\'enregistrement sur Supabase — modification annulée','error');}
+}
+async function jgBulkApply(){
+  const c=_jgCol(jgBulkK),inp=document.getElementById('jgBulkVal');if(!c||!inp)return;
+  const v=inp.value;
+  if(v==='__'||v===null){toast('Choisis une valeur','warning');return;}
+  const list=DB.trades.filter(t=>jgSel.has(t.id));if(!list.length)return;
+  const lbl=c.t==='select'?((_jgOpts(c).find(o=>o[0]===v)||[])[1]||'vide'):(v.trim()||'vide');
+  if(!confirm(`Définir « ${c.l} » sur « ${lbl} » pour ${list.length} trade${list.length>1?'s':''} ?`))return;
+  const snaps=new Map(list.map(t=>[t.id,{...t}]));
+  for(const t of list){
+    const err=jgApply(t,c.k,v);
+    if(err){list.forEach(x=>jgRestore(x,snaps.get(x.id)));toast(err,'warning');return;}
+  }
+  jgRefresh(list.map(t=>t.id));
+  toast(`Enregistrement de ${list.length} trade${list.length>1?'s':''}…`,'info');
+  const failed=await sbSaveTrades(list);
+  if(failed.length){
+    failed.forEach(t=>jgRestore(t,snaps.get(t.id)));jgRefresh(failed.map(t=>t.id));
+    toast(`${failed.length}/${list.length} non enregistrés sur Supabase — annulés`,'error');
+  }else toast(`${list.length} trade${list.length>1?'s':''} mis à jour ✓`,'success');
+}
+async function jgBulkDelete(){
+  const ids=[...jgSel];if(!ids.length)return;
+  if(!confirm(`Supprimer définitivement ${ids.length} trade${ids.length>1?'s':''} ?`))return;
+  // Serveur d'abord : en cas d'échec rien n'est supprimé localement
+  const{error}=await sb.from('trades').delete().in('id',ids);
+  if(error){console.error('jgBulkDelete:',error.message);toast('Échec de la suppression sur Supabase — aucun trade supprimé','error');return;}
+  const del=new Set(ids);
+  DB.trades=DB.trades.filter(t=>!del.has(t.id));
+  jgSel.clear();saveDB();renderJournal();
+  toast(`${ids.length} trade${ids.length>1?'s':''} supprimé${ids.length>1?'s':''}`,'info');
 }
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
@@ -2457,24 +2845,30 @@ function buildForm(t){
         <div id="f_i_warn" style="display:${WARN_INSTRUMENTS.includes(t.instrument)?'flex':'none'};align-items:center;gap:6px;margin-top:6px;padding:7px 10px;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.25);border-radius:5px;font-size:11.5px;color:var(--red)">⚠️ Edge non prouvé sur cette paire</div>
         <div id="f_i_err" style="display:none;margin-top:5px;font-size:11.5px;color:var(--red);font-weight:500">Instrument requis</div>
       </div>
-      <div class="field"><label>Stratégie</label>
-        <select id="f_strat">
-          <option value="">Sélectionner</option>
-          <option value="1-trend" ${t.strategie==='1-trend'?'selected':''}>1 · TREND — Pro-HTF · Pro-MTF</option>
-          <option value="2-pullback" ${t.strategie==='2-pullback'?'selected':''}>2 · PULLBACK — Counter-HTF · Pro-MTF</option>
-          <option value="2a-transition" ${t.strategie==='2a-transition'?'selected':''}>2A · TRANSITION — Pro-HTF · Counter-MTF</option>
-          <option value="3-realignement" ${t.strategie==='3-realignement'?'selected':''}>3 · RÉALIGNEMENT — Swing ↔ Internal</option>
-        </select>
-      </div>
-    </div>
-    <div class="sdiv" style="margin-top:24px"><span>Analyse & Setup</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="field"><label>Direction</label>
         <div class="toggle-group" style="margin-top:5px">
           <button type="button" class="toggle-btn ${tDir==='Long'?'along':''}" id="dirL" onclick="togDir('Long')">↑ Long</button>
           <button type="button" class="toggle-btn ${tDir==='Short'?'ashort':''}" id="dirS" onclick="togDir('Short')">↓ Short</button>
         </div>
       </div>
+    </div>
+    <div class="sdiv" style="margin-top:24px"><span>Analyse & Setup</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="field"><label>Phase</label>
+        <select id="f_strat">
+          <option value="">Sélectionner</option>
+          ${PHASE_OPTIONS.map(s=>`<option value="${s.value}" ${normStrat(t.strategie)===s.value?'selected':''}>${stratOptionLabel(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Modèle d'entrée</label>
+        <select id="f_em">
+          <option value="">Sélectionner</option>
+          ${ENTRY_MODELS.map(m=>`<option value="${m}" ${t.entryModel===m?'selected':''}>${m}</option>`).join('')}
+          ${t.entryModel&&!ENTRY_MODELS.includes(t.entryModel)?`<option value="${esc(t.entryModel)}" selected>${esc(t.entryModel)}</option>`:''}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
       <div class="field"><label>Confiance — <span id="cVal">${tConf}</span>/5</label>
         <div class="star-rating" id="confStars">${[1,2,3,4,5].map(n=>`<span data-v="${n}" class="${tConf>=n?'lit':''}" onclick="setConfStars(${n})" onmouseover="previewConfStars(${n})" onmouseout="resetConfStars()">★</span>`).join('')}</div>
       </div>
@@ -2607,6 +3001,7 @@ async function saveTrade(){
     instrument:getInstrValue(),
     direction:tDir,
     strategie:document.getElementById('f_strat').value,
+    entryModel:document.getElementById('f_em').value,
     horsZone:calcHorsZone(document.getElementById('f_h').value),
     stars:tConf,
     montantRisque,gainPerte,
@@ -2673,13 +3068,13 @@ function openDetail(id){
   const rr=calcRR(t);
   const rrStr=rr!==null?(rr>0?'+':'')+fmtN(rr,2)+'R':'—';
   const starsVal=t.stars||(t.confiance?Math.max(1,Math.min(5,Math.round(t.confiance/2))):null);
-  const stratLabel={'1-trend':'1 · TREND','2-pullback':'2 · PULLBACK','2a-transition':'2A · TRANSITION','3-realignement':'3 · RÉALIGNEMENT'};
   const cells=[
     ['Compte',t.compte,null],
     ['Session',t.session,null],
     ['Heure',t.heure,null],
     ['Direction',t.direction||'—',null],
-    ['Stratégie',t.strategie?stratLabel[t.strategie]||t.strategie:'—',null],
+    ['Phase',t.strategie?esc(stratLabel(t.strategie)):'—',null],
+    ['Modèle d\'entrée',t.entryModel?esc(t.entryModel):'—',null],
     ['Confiance',starsVal?`<span style="color:var(--amber);letter-spacing:1px">${'★'.repeat(starsVal)}</span><span style="color:var(--border);letter-spacing:1px">${'★'.repeat(5-starsVal)}</span>`:null,null],
     ['Montant risqué',t.montantRisque?`$${t.montantRisque}`:'—',null],
     ['Gain / Perte',gpStr,gpColor],
@@ -3060,100 +3455,163 @@ async function saveRenameAcc(){
 }
 
 // ── RULES ─────────────────────────────────────────────────────────────────
+// Phases MTF (docs/mtf-phases.md) : swing M15 × internal M15, pro/counter.
+// tone : couleur de la phase (go = vert, warn = ambre, bad = rouge, mid = gris)
+const STRATEGIES=[
+  {value:'A',step:'A',title:'Aligné',swing:'pro',internal:'pro',tone:'go',risk:'Faible',
+    lead:'Tout est aligné.',
+    situation:'Le pullback swing est terminé, la structure interne est repartie dans le sens du swing.',
+    best:[],
+    rules:[
+      ['Objectif','viser le <strong>weak swing high/low</strong>, dans le sens du swing'],
+      ['Entrée','suivre la structure interne, passer <strong>directement en M5</strong> sur le POI M15'],
+      ['Pas besoin','d\'attendre un CHoCH M15 sur le POI'],
+    ],
+    note:'La phase la plus propre. <strong>Commencer ici.</strong>',
+    short:'Viser le weak H/L'},
+  {value:'B',step:'B',title:'Fin de pullback',swing:'pro',internal:'counter',tone:'warn',risk:'Moyen',
+    lead:'Anticiper la fin du pullback swing.',
+    situation:'Le pullback swing se termine probablement, mais la structure interne pointe encore dans l\'autre sens.',
+    best:['prix au-delà de l\'<strong>EQ swing</strong> (discount pour un long, premium pour un short)','un <strong>POI extrême M15/H4</strong> a été mitigé'],
+    rules:[
+      ['Objectif','capter le retour du swing, viser les S&D internes ou le strong high/low'],
+      ['Option','attendre un CHoCH M15, surtout si un POI non mitigé est juste derrière'],
+      ['Si le H4 suggère un retournement M15','attendre un <strong>i-BOS M15</strong> (retour en phase A)'],
+    ],
+    short:'Acheter/vendre la fin du pullback'},
+  {value:'C',step:'C',title:'Pullback',swing:'counter',internal:'pro',tone:'warn',risk:'Moyen',
+    lead:'Trader le pullback swing.',
+    situation:'Le pullback swing a commencé, la structure interne s\'est retournée contre le swing.',
+    best:['un POI H4 a été mitigé','un BOS swing vient de se former','le pullback commence, <strong>avant l\'EQ swing</strong>'],
+    rules:[
+      ['Objectif','accompagner le pullback vers l\'EQ ou le POI discount/premium — ou anticiper un retournement swing si le H4 le suggère'],
+      ['Option','attendre un CHoCH M15'],
+    ],
+    short:'Suivre le pullback vers EQ / POI'},
+  {value:'D',step:'D',title:'Contre tout',swing:'counter',internal:'counter',tone:'bad',risk:'Élevé',
+    lead:'Très agressif. À éviter tant que tu n\'es pas rentable de façon régulière.',
+    situation:'On trade le petit pullback interne <strong>contre tout</strong>.',
+    best:['juste après un BOS swing, quand un pullback est attendu','après mitigation d\'un POI M15 raffiné','après une forte prise de liquidité','la tendance H4 va dans ce sens'],
+    rules:[
+      ['À éviter','juste après la fin d\'un pullback swing'],
+    ],
+    note:'Soit <strong>ne pas le trader</strong>, soit au minimum <strong>attendre un CHoCH M5</strong>.',
+    short:'Scalper le pullback interne'},
+  {value:'RANGE',step:'R',title:'Range',swing:null,internal:null,tone:'mid',risk:'—',
+    lead:'Pas d\'intention claire M15/H4.',
+    situation:'',
+    best:[],
+    rules:[
+      ['Rester hors du milieu','long uniquement dans le <strong>tiers bas</strong>, short uniquement dans le <strong>tiers haut</strong>'],
+      ['Sinon','attendre la cassure'],
+    ],
+    short:'Extrêmes seulement, ou attendre'},
+];
+// Schéma de référence affiché sur la page Stratégie
+const STRAT_IMG='https://s3.tradingview.com/snapshots/8/81mjo0xs.png';
+// Modèles d'entrée LTF (champ trade `entryModel`)
+// 'NA' = non applicable (choisi volontairement), distinct d'un champ vide (non renseigné)
+const ENTRY_MODELS=['LC-2A','LC-1','LC-2A+4','LC-1+4','LC-2B','CE','DCE','NA'];
+// Phase « NA » : option de saisie, hors de STRATEGIES (qui alimente la page Stratégie)
+const PHASE_NA={value:'NA',step:'NA',title:'Non applicable',tone:'mid'};
+const PHASE_OPTIONS=[...STRATEGIES,PHASE_NA];
+// Anciennes valeurs (Pullback Model 1/2/2A/3) → phases actuelles
+const STRAT_LEGACY={'1-trend':'A','3-realignement':'A','2-pullback':'C','2a-transition':'B'};
+function normStrat(v){return STRAT_LEGACY[v]||v||'';}
+function stratLabel(v){
+  const s=PHASE_OPTIONS.find(x=>x.value===normStrat(v));
+  return s?(s.value==='RANGE'?'Range':`${s.step} · ${s.title}`):(v||'');
+}
+function stratOptionLabel(s){
+  if(s.value==='NA')return 'NA — non applicable';
+  if(!s.swing)return `Range — pas d'intention claire`;
+  const lbl=x=>x==='pro'?'Pro':'Counter';
+  return `${s.step} · ${s.title} — ${lbl(s.swing)} swing · ${lbl(s.internal)} internal`;
+}
+const GOLDEN_RULES=[
+  'Trader depuis la <strong>structure forte</strong>, viser la <strong>structure faible</strong>.',
+  'Ne pas acheter les <strong>weak lows</strong>. Prudence avec les shorts en discount swing.',
+  'Attendre une <strong>mitigation de POI</strong> avant de chercher une entrée. Sinon, attendre un CHoCH ou un i-BOS pour former un POI frais.',
+  '<strong>Aligné avec le H4</strong> → plus agressif. <strong>Contre le H4</strong> → réduire la taille ou attendre.',
+];
+
 function renderRules(){renderStrategy();}
 function renderStrategy(){
   const el=document.getElementById('strategyContent');if(!el)return;
+  const badge=(kind,v)=>v?`<span class="strat-badge ${v==='pro'?'strat-b-go':'strat-b-warn'}">${v==='pro'?'Pro':'Counter'} ${kind}</span>`:'';
+  const node=s=>`
+    <div class="strat-node" data-tone="${s.tone}">
+      <div class="strat-node-head">
+        <span class="strat-step">${s.step}</span>
+        <span class="strat-step-title">${s.title}</span>
+        ${badge('swing',s.swing)}${badge('internal',s.internal)}
+        ${s.swing?`<span class="strat-risk strat-risk-${s.tone}">Risque ${s.risk.toLowerCase()}</span>`:''}
+      </div>
+      <div class="strat-node-body">
+        <div class="strat-lead">${s.lead}</div>
+        ${s.situation?`<div class="strat-rule"><span class="strat-cond">Situation</span>${s.situation}</div>`:''}
+        ${s.best.length?`<div class="strat-rule"><span class="strat-cond">Idéal quand</span></div><ul class="strat-list">${s.best.map(b=>`<li>${b}</li>`).join('')}</ul>`:''}
+        ${s.rules.map(([c,t])=>`<div class="strat-rule"><span class="strat-cond">${c}</span>${t}</div>`).join('')}
+        ${s.note?`<div class="strat-note">${s.note}</div>`:''}
+      </div>
+    </div>`;
+  const yn=v=>v==='pro'?'<span class="strat-yes">✓ avec</span>':v==='counter'?'<span class="strat-no">✕ contre</span>':'—';
   el.innerHTML=`
   <div class="strat-header">
     <div class="strat-header-left">
-      <div class="strat-title">Pullback Model</div>
-      <div class="strat-subtitle">Processus d'identification et d'exécution</div>
+      <div class="strat-title">Phases MTF</div>
+      <div class="strat-subtitle">Objectif HTF › POI MTF › exécution LTF — <strong>H4</strong> (narratif) › <strong>M15</strong> (biais + POI) › <strong>M5</strong> (entrée)</div>
     </div>
     <button class="btn btn-secondary btn-sm" onclick="copyStrategy()" id="copyStratBtn" style="font-size:10px;padding:4px 10px">Copier pour TradingView</button>
   </div>
 
-  <div class="strat-timeline">
-
-    <div class="strat-node" data-color="var(--accent)">
-      <div class="strat-node-head">
-        <span class="strat-step">1</span>
-        <span class="strat-step-title">TREND</span>
-        <span class="strat-badge strat-b-accent">Pro-HTF</span>
-        <span class="strat-badge strat-b-accent">Pro-MTF</span>
-      </div>
-      <div class="strat-node-body">
-        Trend pro-HTF et pro-MTF, mais en attente d'un potentiel pullback.
-      </div>
-    </div>
-
-    <div class="strat-node" data-color="var(--amber)">
-      <div class="strat-node-head">
-        <span class="strat-step">2</span>
-        <span class="strat-step-title">PULLBACK</span>
-        <span class="strat-badge strat-b-warn">Counter-HTF</span>
-        <span class="strat-badge strat-b-accent">Pro-MTF</span>
-      </div>
-      <div class="strat-node-body">
-        On recherche des <strong>sells</strong>. On peut chercher une entrée (agressive ou non) mais manage l'expectation du TP sachant que le pullback peut s'arrêter à tout moment.
-      </div>
-    </div>
-
-    <div class="strat-node strat-node-sub" data-color="var(--amber)">
-      <div class="strat-node-head">
-        <span class="strat-step strat-step-sm">2A</span>
-        <span class="strat-step-title">TRANSITION</span>
-        <span class="strat-badge strat-b-accent">Pro-HTF</span>
-        <span class="strat-badge strat-b-warn">Counter-MTF</span>
-      </div>
-      <div class="strat-node-body">
-        <div class="strat-rule"><span class="strat-cond">Si aligné HTF</span> on peut être plus agressif</div>
-        <div class="strat-rule"><span class="strat-cond">Si fin de pullback HTF</span> attendre <strong>ChoCH MTF</strong> avant de chercher une entrée</div>
-      </div>
-    </div>
-
-    <div class="strat-node" data-color="var(--green)">
-      <div class="strat-node-head">
-        <span class="strat-step">3</span>
-        <span class="strat-step-title">RÉALIGNEMENT</span>
-        <span class="strat-badge strat-b-go">Swing ↔ Internal</span>
-      </div>
-      <div class="strat-node-body">
-        Après ChoCH MTF, au retour sur MTF zone, on passe en <strong>LTF directement</strong>.
-      </div>
-    </div>
-
+  <div class="strat-intro">
+    <div class="strat-ask"><span>Toujours se demander</span><strong>Quel est l'objectif actuel ?</strong><strong>Qu'est-ce qui a été mitigé ?</strong></div>
+    <div class="strat-ask-sub">Le HTF décide du niveau d'agressivité. Chaque phase combine la tendance <strong>swing M15</strong> et la tendance <strong>internal M15</strong>, chacune avec (pro) ou contre (counter) la tendance.</div>
   </div>
 
-  <div class="strat-foot">
-    <div class="strat-foot-item"><kbd>Agressif</kbd> Passer en LTF directement sans attendre un ChoCH MTF</div>
-    <div class="strat-foot-item"><kbd>Non agressif</kbd> Attendre un ChoCH MTF</div>
-  </div>`;
+  <a class="strat-img" href="${STRAT_IMG}" target="_blank" rel="noopener" title="Ouvrir en plein écran">
+    <img src="${STRAT_IMG}" alt="Schéma des phases MTF" loading="lazy" onerror="this.closest('.strat-img').classList.add('err')"/>
+    <span class="strat-img-cap">Schéma de référence · TradingView ↗</span>
+  </a>
+
+  <div class="strat-timeline">${STRATEGIES.map(node).join('')}</div>
+
+  <div class="strat-sec-title">Aide-mémoire</div>
+  <div class="strat-table-wrap">
+    <table class="strat-table">
+      <thead><tr><th>Phase</th><th>Swing</th><th>Internal</th><th>Ce qu'on fait</th><th>Risque</th></tr></thead>
+      <tbody>${STRATEGIES.map(s=>`<tr><td><strong>${s.value==='RANGE'?'Range':s.step}</strong></td><td>${yn(s.swing)}</td><td>${yn(s.internal)}</td><td>${s.short}</td><td>${s.swing?`<span class="strat-risk strat-risk-${s.tone}">${s.risk}</span>`:'—'}</td></tr>`).join('')}</tbody>
+    </table>
+  </div>
+
+  <div class="strat-sec-title">Règles d'or</div>
+  <ol class="strat-golden">${GOLDEN_RULES.map(r=>`<li>${r}</li>`).join('')}</ol>`;
 }
 function copyStrategy(){
-  const t=`── PULLBACK MODEL ──────────────────────────────
+  const plain=h=>h.replace(/<[^>]+>/g,'');
+  const yn=v=>v==='pro'?'avec':v==='counter'?'contre':'—';
+  const body=STRATEGIES.map(s=>{
+    const head=s.swing?`${s.step}. ${s.title.toUpperCase()}  [${s.swing==='pro'?'Pro':'Counter'} swing · ${s.internal==='pro'?'Pro':'Counter'} internal] — risque ${s.risk.toLowerCase()}`:'RANGE';
+    const lines=[plain(s.lead)];
+    if(s.situation)lines.push('Situation : '+plain(s.situation));
+    if(s.best.length)lines.push('Idéal quand :',...s.best.map(b=>'  - '+plain(b)));
+    s.rules.forEach(([c,t])=>lines.push(`${c} → ${plain(t)}`));
+    if(s.note)lines.push('👉 '+plain(s.note));
+    return head+'\n'+lines.map(l=>'   '+l).join('\n');
+  }).join('\n\n');
+  const t=`── PHASES MTF ──────────────────────────────────
+H4 (narratif) › M15 (biais + POI) › M5 (entrée)
+Toujours : objectif actuel ? qu'est-ce qui a été mitigé ?
+Schéma : ${STRAT_IMG}
 
-1. TREND  [Pro-HTF · Pro-MTF]
-   Trend pro-HTF et pro-MTF
-   mais en attente d'un potentiel pullback.
-
-2. PULLBACK  [Counter-HTF · Pro-MTF]
-   On recherche des sells.
-   On peut chercher une entrée (agressive ou non)
-   mais manage l'expectation du TP sachant que
-   le pullback peut s'arrêter à tout moment.
-
-  2A. TRANSITION  [Pro-HTF · Counter-MTF]
-      Si aligné HTF → plus agressif.
-      Si fin de pullback HTF → attendre ChoCH MTF
-      avant de chercher une entrée.
-
-3. RÉALIGNEMENT  [Swing ↔ Internal]
-   Après ChoCH MTF, au retour sur MTF zone,
-   on passe en LTF directement.
+${body}
 
 ────────────────────────────────────────────────
-* Agressif     = LTF directement (sans ChoCH MTF)
-* Non agressif = Attendre un ChoCH MTF`;
+${STRATEGIES.map(s=>`${(s.value==='RANGE'?'Range':s.step).padEnd(6)} swing ${yn(s.swing).padEnd(6)} internal ${yn(s.internal).padEnd(6)} ${s.short}`).join('\n')}
+
+Règles d'or :
+${GOLDEN_RULES.map((r,i)=>`${i+1}. ${plain(r)}`).join('\n')}`;
   navigator.clipboard.writeText(t).then(()=>{
     const btn=document.getElementById('copyStratBtn');
     btn.textContent='Copié ✓';btn.style.color='var(--green)';

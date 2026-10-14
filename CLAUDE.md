@@ -29,7 +29,7 @@
 | Modifier les couleurs de charts | `app.js` | `getChartTheme()` ~L.789 |
 | Modifier le rapport | `app.js` | `renderReport()` ~L.1911 |
 | Modifier la discipline | `app.js` | `getDisciplineAudit()` ~L.667 |
-| Modifier le journal | `app.js` | `renderJournal()` ~L.1978 / `renderJTable()` ~L.2090 / `renderJCards()` ~L.2173 |
+| Modifier le journal | `app.js` | `renderJournal()` ~L.1978 / `renderJTable()` ~L.2090 / vue tableur `renderJGrid()` (section `JOURNAL — VUE TABLEUR`) |
 | Modifier la saisie trade | `app.js` | `openNew()` / `dupTrade()` / `openEdit()` ~L.2234 / `buildForm()` ~L.2282 / `saveTrade()` ~L.2438 |
 | Modifier le détail d'un trade | `app.js` | `openDetail()` ~L.2507 |
 | Modifier la visionneuse plein écran | `app.js` | section `SCREENSHOT VIEWER` ~L.3840 |
@@ -181,12 +181,12 @@ dashPeriod     = 'today'|'week'|'month'|'3months'|'year'|'all'|'custom'
 dashCustomFrom/To = ''  // YYYY-MM-DD
 dashWeekOffset / dashMonthOffset / dashYearOffset = 0  // <0 = passé
 
-jFilters = { session, instrument, resultat, dateFrom, dateTo, period }
+jFilters = { session, instrument, resultat, phase, model, dateFrom, dateTo, period }   // phase/model : valeur ou '__none' (= non assigné)
 cfFilters = { type }
 calY, calM
 
 editId, tConf, tDir, tTags[], tScrHTF, tScrMTF, tScrLTF   // formulaire trade
-_detailNavIds[], _detailNavIdx   // liste de nav ‹ › du drawer détail (posée par renderJTable/renderJCards/renderAnomalies)
+_detailNavIds[], _detailNavIdx   // liste de nav ‹ › du drawer détail (posée par renderJTable/renderJGrid/renderAnomalies)
 _tlv = { ids, idx, tf, s, x, y, … }   // état visionneuse
 albumTrades[], albumIdx, albumImgMode
 charts = {}   // instances Chart.js, clé = canvas id
@@ -231,8 +231,8 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 | Page | Fonction principale | Notes |
 |---|---|---|
 | Dashboard | `renderDash()` | filtres compte/période → bande KPI hiérarchisée (`.kb-hero` : P&L de la période en grand + % du capital + mini-courbe SVG + capital ; `.kb-grid` : 6 indicateurs secondaires, couleur seulement si alerte `.bad`/`.warn`) → `renderCharts` (capital ; P&L par période + distribution R côte à côte) → `renderEnCours` → insights (toujours visibles, pas de section repliable : données consultées souvent) |
-| Rapport | `renderReport()` | partage `dashFilters`/`dashPeriod` avec le dashboard |
-| Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou `renderJCards` |
+| Rapport | `renderReport()` | partage `dashFilters`/`dashPeriod` avec le dashboard ; cartes « Performance par phase » / « par modèle d'entrée » (`renderGroupStats` via `renderPhaseStats`/`renderEntryModelStats`, styles `.ph-*`) et matrice « Phase × modèle d'entrée » (`renderCrossStats`, mesure `crossMetric` = pnl/wr/rr/n, styles `.cx-*`) — le champ `strategie` est libellé **Phase** dans l'UI |
+| Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou, si `jViewMode==='grid'` (persisté `localStorage.tl_jview`), **vue tableur** `renderJGrid` : toutes les colonnes (`JG_COLS`), tri par en-tête, colonnes Sélection + Date figées, totaux en pied, **édition en ligne** au clic (`jgEdit` → `jgApply` = mêmes règles que `saveTrade` : session/horsZone recalculés depuis l'heure, rr depuis risque/gain), **sélection multiple** (Maj+clic = plage, limitée aux trades visibles) et **mise à jour / suppression en masse** (`jgBulkApply` / `jgBulkDelete`, champs `JG_BULK`). Après une modification, **pas de re-rendu complet** : `jgRefresh(ids)` → `jgUpdateRows(ids)` réécrit seulement les lignes touchées + la ligne de totaux (`jgFootRow`) ; les lignes restent en place même si elles ne correspondent plus au filtre/tri (appliqué au prochain `renderJGrid`). Écritures via `sbSaveTrades(list)` (upsert groupé qui **renvoie les échecs** ; la modif locale est annulée en cas d'échec) ; suppression en masse = serveur d'abord (`.delete().in('id',ids)`). Styles `.jg-*`. La vue « cartes » n'existe plus. |
 | Calendrier | `renderCal()` | grille 7 jours + **colonne Semaine** (`.cal-8`, `.cal-wk`), heatmap d'intensité P&L |
 | Cashflow | `renderCashflow()` | cartes `.cf-sum-card` ; bouton « Nouveau mouvement » uniquement dans le header |
 | Comptes | `renderAccounts()` | cartes `.acc2` : capital actuel, %, sparkline SVG, stats, boutons Dashboard/Journal |
@@ -299,13 +299,13 @@ Credentials : constantes `SUPABASE_URL` + `SUPABASE_KEY` au début de `app.js` (
 
 ```
 id, compte, date (YYYY-MM-DD), heure (HH:MM), session, instrument, direction ('Long'|'Short')
-strategie ('1-trend'|'2-pullback'|'2a-transition'|'3-realignement'), structure ('solide'|'fragile'|null)
+strategie ('A'|'B'|'C'|'D'|'RANGE'|'NA' — phases MTF ; 'NA' = non applicable, option de saisie `PHASE_NA` hors de `STRATEGIES` → utiliser `PHASE_OPTIONS` pour les listes, cf. `STRATEGIES` dans app.js et docs/mtf-phases.md), entryModel (`ENTRY_MODELS` : 'LC-2A'|'LC-1'|'LC-2A+4'|'LC-1+4'|'LC-2B'|'CE'|'DCE'|'NA', libellé « Modèle d'entrée »), structure ('solide'|'fragile'|null)
 horsZone (bool), stars (1–5), montantRisque, gainPerte, rr, expectedRR
 resultat ('Win'|'Loss'|'Breakeven'|'En cours'), pourquoiEntrer, douteHesitation
 screenshotHTF, screenshotMTF, screenshotLTF (URL), tags[]
 ```
 
-Compat ascendante : `screenshotAvant`/`screenshot` → HTF, `screenshotApres` → MTF ; `structureSolide` (bool) → `structure` ; `confiance` (1–10) → `stars` via `Math.round(confiance/2)`.
+Compat ascendante : `strategie` ancienne (Pullback Model) → `normStrat()` : `1-trend`/`3-realignement` → A, `2a-transition` → B, `2-pullback` → C ; `screenshotAvant`/`screenshot` → HTF, `screenshotApres` → MTF ; `structureSolide` (bool) → `structure` ; `confiance` (1–10) → `stars` via `Math.round(confiance/2)`.
 
 ---
 
@@ -328,7 +328,7 @@ Compat ascendante : `screenshotAvant`/`screenshot` → HTF, `screenshotApres` �
 | ≤768px | Sidebar cachée, hamburger + `#mobileNav` visibles, margin-left:0 |
 | ≤600px | Journal en cartes, calendrier compact (méta masquées, « Sem. »), pills période défilantes, inputs 16px (anti-zoom iOS) |
 | ≤480px | `.disc-banner` 2 cols, stats comptes 2 cols, paddings réduits |
-| ≤420px | J-cards forcé 1 col |
+| ≤420px | (rien de spécifique au journal) |
 
 ### Comportement « app iOS » (section `MOBILE — comportement d'app iOS` en fin de `style.css`)
 - Safe areas : header/FAB/contenu paddés avec `env(safe-area-inset-*)` (PWA `black-translucent`).
