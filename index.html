@@ -131,7 +131,7 @@
     </button>
   </nav>
   <div class="sb-footer">
-    <div class="sb-sync" id="syncDot" title="Supabase connect&eacute;"></div>
+    <div class="sb-sync" id="syncDot" title="Synchronis&eacute; avec Supabase" onclick="refreshApp()"></div>
     <button class="sb-btn" id="refreshBtn" onclick="refreshApp()" title="Rafra&icirc;chir">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.13"/></svg>
     </button>
@@ -500,7 +500,15 @@
     <div class="modal-body">
       <div style="display:flex;flex-direction:column;gap:12px">
         <div class="field"><label>Nom du compte</label><input id="accName" placeholder="Ex: Compte Prop Firm A"/></div>
-        <div class="field"><label>Capital de départ ($)</label><input type="number" id="accCapital" placeholder="Ex: 10000"/></div>
+        <div class="field"><label>Capital de départ ($)</label><input type="number" id="accCapital" placeholder="Ex: 10000" oninput="updGoalHints('acc')"/></div>
+        <div class="field"><label>Objectif <span class="goal-opt">facultatif</span></label>
+          <div class="pc-inline"><input type="number" id="accTgtVal" min="0" step="any" placeholder="Ex: 10" oninput="updGoalHints('acc')"/>
+            <div class="pc-seg" id="accTgtUnit"><button type="button" data-u="pct" class="on" onclick="setGoalUnit(this,'acc')">%</button><button type="button" data-u="usd" onclick="setGoalUnit(this,'acc')">$</button></div></div>
+          <em class="goal-hint" id="accTgtHint"></em></div>
+        <div class="field"><label>Perte maximale <span class="goal-opt">facultatif</span></label>
+          <div class="pc-inline"><input type="number" id="accMlVal" min="0" step="any" placeholder="Ex: 10" oninput="updGoalHints('acc')"/>
+            <div class="pc-seg" id="accMlUnit"><button type="button" data-u="pct" class="on" onclick="setGoalUnit(this,'acc')">%</button><button type="button" data-u="usd" onclick="setGoalUnit(this,'acc')">$</button></div></div>
+          <em class="goal-hint" id="accMlHint"></em></div>
         <div class="field"><label>Couleur</label><div class="swatches" id="accSwatches"></div></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border2)">
@@ -530,13 +538,23 @@
 
 <!-- ─── EDIT CAPITAL MODAL ─── -->
 <div class="overlay" id="editCapModal">
-  <div class="modal" style="max-width:360px">
+  <div class="modal" style="max-width:420px">
     <div class="modal-header">
-      <span class="modal-title">Modifier le capital</span>
+      <span class="modal-title">Configuration du compte</span>
       <button class="modal-close" onclick="closeModal('editCapModal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field"><label>Capital de départ ($)</label><input type="number" id="editCapVal" placeholder="Ex: 10000"/></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label>Capital de départ ($)</label><input type="number" id="editCapVal" placeholder="Ex: 10000" oninput="updGoalHints('editCap')"/></div>
+        <div class="field"><label>Objectif <span class="goal-opt">facultatif</span></label>
+          <div class="pc-inline"><input type="number" id="editCapTgtVal" min="0" step="any" placeholder="Ex: 10" oninput="updGoalHints('editCap')"/>
+            <div class="pc-seg" id="editCapTgtUnit"><button type="button" data-u="pct" class="on" onclick="setGoalUnit(this,'editCap')">%</button><button type="button" data-u="usd" onclick="setGoalUnit(this,'editCap')">$</button></div></div>
+          <em class="goal-hint" id="editCapTgtHint"></em></div>
+        <div class="field"><label>Perte maximale <span class="goal-opt">facultatif</span></label>
+          <div class="pc-inline"><input type="number" id="editCapMlVal" min="0" step="any" placeholder="Ex: 10" oninput="updGoalHints('editCap')"/>
+            <div class="pc-seg" id="editCapMlUnit"><button type="button" data-u="pct" class="on" onclick="setGoalUnit(this,'editCap')">%</button><button type="button" data-u="usd" onclick="setGoalUnit(this,'editCap')">$</button></div></div>
+          <em class="goal-hint" id="editCapMlHint"></em></div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border2)">
         <button class="btn btn-secondary" onclick="closeModal('editCapModal')">Annuler</button>
         <button class="btn btn-primary" onclick="saveEditCap()">Enregistrer</button>

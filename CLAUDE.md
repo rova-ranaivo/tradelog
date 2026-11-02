@@ -232,10 +232,10 @@ Filtres **supprimés** (ne pas réintroduire) : `rNonProfitable`, `horsSession`,
 |---|---|---|
 | Dashboard | `renderDash()` | filtres compte/période → bande KPI hiérarchisée (`.kb-hero` : P&L de la période en grand + % du capital + mini-courbe SVG + capital ; `.kb-grid` : 6 indicateurs secondaires, couleur seulement si alerte `.bad`/`.warn`) → `renderCharts` (capital ; P&L par période + distribution R côte à côte) → `renderEnCours` → insights (toujours visibles, pas de section repliable : données consultées souvent) |
 | Rapport | `renderReport()` | partage `dashFilters`/`dashPeriod` avec le dashboard ; cartes « Performance par phase » / « par modèle d'entrée » (`renderGroupStats` via `renderPhaseStats`/`renderEntryModelStats`, styles `.ph-*`) et matrice « Phase × modèle d'entrée » (`renderCrossStats`, mesure `crossMetric` = pnl/wr/rr/n, styles `.cx-*`) — le champ `strategie` est libellé **Phase** dans l'UI |
-| Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou, si `jViewMode==='grid'` (persisté `localStorage.tl_jview`), **vue tableur** `renderJGrid` : toutes les colonnes (`JG_COLS`), tri par en-tête, colonnes Sélection + Date figées, totaux en pied, **édition en ligne** au clic (`jgEdit` → `jgApply` = mêmes règles que `saveTrade` : session/horsZone recalculés depuis l'heure, rr depuis risque/gain), **sélection multiple** (Maj+clic = plage, limitée aux trades visibles) et **mise à jour / suppression en masse** (`jgBulkApply` / `jgBulkDelete`, champs `JG_BULK`). Après une modification, **pas de re-rendu complet** : `jgRefresh(ids)` → `jgUpdateRows(ids)` réécrit seulement les lignes touchées + la ligne de totaux (`jgFootRow`) ; les lignes restent en place même si elles ne correspondent plus au filtre/tri (appliqué au prochain `renderJGrid`). Écritures via `sbSaveTrades(list)` (upsert groupé qui **renvoie les échecs** ; la modif locale est annulée en cas d'échec) ; suppression en masse = serveur d'abord (`.delete().in('id',ids)`). Styles `.jg-*`. La vue « cartes » n'existe plus. |
+| Journal | `renderJournal()` | `renderJAccPills` → `renderJFilters` → `renderJSummary` → `renderJTable` (groupé **par jour** avec en-tête `.jl-day`, colonne **Risque**, en-tête `.jl-head` collant) ou, si `jViewMode==='grid'` (persisté `localStorage.tl_jview`), **vue tableur** `renderJGrid` : toutes les colonnes (`JG_COLS`), tri par en-tête, colonnes Sélection + Date figées, totaux en pied, **édition en ligne** au clic (`jgEdit` → `jgApply` = mêmes règles que `saveTrade` : session/horsZone recalculés depuis l'heure, rr depuis risque/gain), **sélection multiple** (Maj+clic = plage, limitée aux trades visibles) et **mise à jour / suppression en masse** (`jgBulkApply` / `jgBulkDelete`, champs `JG_BULK`). Après une modification, **pas de re-rendu complet** : `jgRefresh(ids)` → `jgUpdateRows(ids)` réécrit seulement les lignes touchées + la ligne de totaux (`jgFootRow`) ; les lignes restent en place même si elles ne correspondent plus au filtre/tri (appliqué au prochain `renderJGrid`). Écritures via `sbUpsertTrade` / `sbSaveTrades(list)` / `sbWrite('trades',ids,'delete')` (file de synchro : en cas d'échec la modif reste locale et sera renvoyée, cf. section Synchronisation). Styles `.jg-*`. La vue « cartes » n'existe plus. |
 | Calendrier | `renderCal()` | grille 7 jours + **colonne Semaine** (`.cal-8`, `.cal-wk`), heatmap d'intensité P&L |
 | Cashflow | `renderCashflow()` | cartes `.cf-sum-card` ; bouton « Nouveau mouvement » uniquement dans le header |
-| Comptes | `renderAccounts()` | cartes `.acc2` : capital actuel, %, sparkline SVG, stats, boutons Dashboard/Journal |
+| Comptes | `renderAccounts()` | cartes `.acc2` : capital actuel, %, sparkline SVG, jauge objectif / perte max, stats, boutons Dashboard/Journal. « configurer » → `#editCapModal` (capital + objectif + perte max, en % ou $). **Objectifs** : `getAccGoals(acc)` (solde = `getAccBalance`, hors cashflow) → `goalTrackHTML(g)` (jauge `.goal-track`/`.gt-*`, aussi dans le héros du dashboard pour un compte unique) ; sur `cCapital`, plugin `capGoalPlugin` (lignes Objectif / Perte max, échelle élargie) et la courbe part alors du **solde d'ouverture** de la période |
 | Stratégie | `renderRules()` → `renderStrategy()` | |
 | Anomalies | `renderAnomalies()` | trades sans compte / compte inexistant ; badge rouge `.anom-badge` sidebar + mobile |
 | Paramètres | `renderSettings()` | |
@@ -278,7 +278,9 @@ Tables : `trades`, `accounts`, `cashflow`, `tags`
 { id, data: <TradeObject>, updated_at }   // colonne data = JSON complet
 
 // accounts
-{ id, name, start_capital, color, updated_at }
+{ id, name, start_capital, color, goals, updated_at }
+// goals (jsonb, facultatif) = { target:{v,u}, maxLoss:{v,u} }, u = 'pct' (du capital de départ) | 'usd'
+// Si la colonne manque côté serveur : SB_ACC_GOALS passe à false (sbWrite renvoie sans), objectifs gardés en local
 
 // cashflow
 { id, type, date, compte, montant_usd, montant_mur, taux, note, updated_at }
@@ -289,9 +291,15 @@ Tables : `trades`, `accounts`, `cashflow`, `tags`
 
 Credentials : constantes `SUPABASE_URL` + `SUPABASE_KEY` au début de `app.js` (clé `anon` → RLS doit être activé côté Supabase).
 
-**Points faibles connus (non corrigés)** :
-- `sbUpsertTrade` & co. ne font que `console.error` en cas d'échec → le toast « sauvegardé ✓ » s'affiche quand même.
-- `refreshApp()` / `loadApp()` remplacent `DB.trades` par la liste serveur → un trade jamais synchronisé peut être perdu.
+### Synchronisation (section `SYNC` en tête de `app.js`)
+
+- **Toutes les écritures passent par `sbWrite(table, items|ids, 'upsert'|'delete')`** (groupé par 200, renvoie les ids en échec). Raccourcis `sbUpsertTrade/sbDeleteTrade/sbUpsertAccount/sbUpsertCF/sbDeleteCF` → `true` si confirmé ; `sbSaveTrades(list)` → trades en échec. Ne jamais appeler `sb.from(...).upsert/delete` directement.
+- Mapping objet ↔ ligne : `SB_MAP[table].from/to` (seul endroit où sont les noms de colonnes).
+- **Local d'abord + file d'attente** : chaque écriture est marquée en attente (`localStorage.tl_pending`, `{table:{id:'upsert'|'delete'}}`) *avant* l'appel réseau, retirée à la confirmation. En cas d'échec la modif **reste en local** (plus d'annulation) et sera renvoyée par `flushPending()` (au chargement, au rafraîchissement, événement `online`, retour sur l'onglet).
+- Après une écriture : `syncToast(ok, msgSucces)` (succès, ou « gardé en local, sera renvoyé »).
+- `loadApp()` / `refreshApp()` → `syncFromServer()` : flush, puis chargement (`sbLoad` renvoie `null` en erreur ≠ `[]`) et **fusion** `mergeTable` : le serveur fait foi, sauf les ids en attente (version locale / suppression locale). Garde-fou : serveur vide + local non vide → cache local conservé. Premier lancement avec la file (`tl_pending` absent) : les enregistrements locaux absents du serveur sont gardés et renvoyés.
+- Pastille `#syncDot` : vert = synchro, ambre `.pending`, rouge `.error` ; clic = `refreshApp()`.
+- Non couverts par la sync : `tags` (lecture seule), `instruments`, `rules`, `checklists` (localStorage uniquement).
 
 ---
 

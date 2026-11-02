@@ -42,68 +42,177 @@ const SUPABASE_URL='https://nakykfuduehcwsjuicpb.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ha3lrZnVkdWVoY3dzanVpY3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTM0MjAsImV4cCI6MjA4ODk4OTQyMH0.dGd4UnYdzOZRrExSW22AJE4RJEtU8y4U4SuXvOY-MMQ';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-// ── SUPABASE: TRADES ──────────────────────────────────────────────────────
-async function sbLoadTrades(){
-  const{data,error}=await sb.from('trades').select('data');
-  if(error){console.error('sbLoadTrades:',error.message);return[];}
-  return(data||[]).map(r=>r.data);
+// ── SUPABASE : MAPPERS (objet local ↔ ligne serveur) ─────────────────────
+// accounts.goals (jsonb, facultatif) : objectif / perte max. Si la colonne n'existe pas
+// encore côté serveur, SB_ACC_GOALS passe à false (cf. sbWrite) et les objectifs restent locaux.
+let SB_ACC_GOALS=true;
+const SB_MAP={
+  trades:{
+    from:r=>r.data,
+    to:(t,now)=>({id:String(t.id),data:t,updated_at:now})
+  },
+  accounts:{
+    from:a=>({id:String(a.id),name:a.name,startCapital:a.start_capital,color:a.color,
+      goals:'goals' in a?a.goals:(DB.accounts||[]).find(x=>String(x.id)===String(a.id))?.goals||null}),
+    to:(a,now)=>({id:String(a.id),name:a.name,start_capital:a.startCapital||0,color:a.color,
+      ...(SB_ACC_GOALS?{goals:a.goals||null}:{}),updated_at:now})
+  },
+  cashflow:{
+    from:c=>({id:String(c.id),type:c.type,date:c.date,compte:c.compte,montantUSD:c.montant_usd,montantMUR:c.montant_mur,taux:c.taux,note:c.note}),
+    to:(c,now)=>({id:String(c.id),type:c.type,date:c.date,compte:c.compte,montant_usd:c.montantUSD,montant_mur:c.montantMUR,taux:c.taux,note:c.note,updated_at:now})
+  }
+};
+const SB_TABLES=Object.keys(SB_MAP);
+
+// ── SYNC : file d'attente des écritures non confirmées ────────────────────
+// Chaque écriture est marquée « en attente » AVANT l'appel réseau (persisté dans
+// localStorage) et n'est retirée qu'après confirmation du serveur. Les écritures
+// restées en attente (échec, hors ligne, onglet fermé) sont renvoyées par
+// flushPending() — au chargement, au rafraîchissement, au retour en ligne.
+// Format : { trades:{ id:'upsert'|'delete' }, accounts:{…}, cashflow:{…} }
+const PENDING_KEY='tl_pending';
+const _pendingFresh=localStorage.getItem(PENDING_KEY)===null;  // 1er lancement avec la file
+let _pending=(()=>{
+  let p={};try{p=JSON.parse(localStorage.getItem(PENDING_KEY))||{};}catch(e){}
+  SB_TABLES.forEach(tb=>{if(!p[tb]||typeof p[tb]!=='object')p[tb]={};});
+  return p;
+})();
+const _pendingGen=new Map();   // génération par enregistrement : une écriture plus récente n'est pas effacée par une confirmation plus ancienne
+let _syncError=false;
+function savePending(){try{localStorage.setItem(PENDING_KEY,JSON.stringify(_pending));}catch(e){}updateSyncDot();}
+function pendingCount(){return SB_TABLES.reduce((n,tb)=>n+Object.keys(_pending[tb]).length,0);}
+function markPending(tb,ids,op){
+  const gens=new Map();
+  ids.forEach(id=>{id=String(id);_pending[tb][id]=op;const k=tb+':'+id,g=(_pendingGen.get(k)||0)+1;_pendingGen.set(k,g);gens.set(id,g);});
+  savePending();return gens;
 }
-async function sbUpsertTrade(t){
-  const{error}=await sb.from('trades').upsert({id:t.id,data:t,updated_at:new Date().toISOString()});
-  if(error)console.error('sbUpsertTrade:',error.message);
+function clearPending(tb,gens){
+  gens.forEach((g,id)=>{if(_pendingGen.get(tb+':'+id)===g)delete _pending[tb][id];});
+  savePending();
 }
-async function sbDeleteTrade(id){
-  const{error}=await sb.from('trades').delete().eq('id',id);
-  if(error)console.error('sbDeleteTrade:',error.message);
+function updateSyncDot(){
+  const el=document.getElementById('syncDot');if(!el)return;
+  const n=pendingCount();
+  el.classList.toggle('pending',n>0&&!_syncError);
+  el.classList.toggle('error',_syncError);
+  el.title=_syncError?(n?`${n} modification${n>1?'s':''} non synchronisée${n>1?'s':''} — clic pour réessayer`:'Supabase injoignable — clic pour réessayer')
+    :n?`${n} modification${n>1?'s':''} en cours de synchronisation`:'Synchronisé avec Supabase';
 }
 
-// ── SUPABASE: ACCOUNTS ────────────────────────────────────────────────────
-async function sbLoadAccounts(){
-  const{data,error}=await sb.from('accounts').select('*');
-  if(error){console.error('sbLoadAccounts:',error.message);return null;}
-  return data||[];
+// Écritures groupées. Renvoient la liste des ids en échec ([] = tout est confirmé).
+async function sbWrite(tb,items,op){
+  if(!items.length)return[];
+  const ids=op==='delete'?items.map(String):items.map(x=>String(x.id));
+  const gens=markPending(tb,ids,op);
+  const failed=[],now=new Date().toISOString();
+  for(let i=0;i<items.length;i+=200){
+    const chunk=items.slice(i,i+200),cids=ids.slice(i,i+200);
+    let error;
+    try{
+      ({error}=op==='delete'
+        ?await sb.from(tb).delete().in('id',cids)
+        :await sb.from(tb).upsert(chunk.map(x=>SB_MAP[tb].to(x,now))));
+    }catch(e){error=e;}
+    // Colonne accounts.goals absente du serveur → on renvoie sans (objectifs gardés en local)
+    if(error&&tb==='accounts'&&op==='upsert'&&SB_ACC_GOALS&&/goals/i.test(error.message||'')){
+      SB_ACC_GOALS=false;console.warn('Colonne accounts.goals absente : objectifs gardés en local');i-=200;continue;
+    }
+    if(error){failed.push(...cids);console.error(`sb ${op} ${tb}:`,error.message||error);}
+  }
+  const ok=new Map([...gens].filter(([id])=>!failed.includes(id)));
+  clearPending(tb,ok);
+  if(failed.length)_syncError=true;else if(!pendingCount())_syncError=false;
+  updateSyncDot();
+  return failed;
 }
-async function sbUpsertAccount(acc){
-  const{error}=await sb.from('accounts').upsert({
-    id:String(acc.id),name:acc.name,
-    start_capital:acc.startCapital||0,
-    color:acc.color,updated_at:new Date().toISOString()
-  });
-  if(error)console.error('sbUpsertAccount:',error.message);
+// Raccourcis : true = confirmé par le serveur
+async function sbUpsertTrade(t){return!(await sbWrite('trades',[t],'upsert')).length;}
+async function sbDeleteTrade(id){return!(await sbWrite('trades',[id],'delete')).length;}
+async function sbUpsertAccount(acc){return!(await sbWrite('accounts',[acc],'upsert')).length;}
+async function sbDeleteAccount(id){return!(await sbWrite('accounts',[id],'delete')).length;}
+async function sbUpsertCF(cf){return!(await sbWrite('cashflow',[cf],'upsert')).length;}
+async function sbDeleteCF(id){return!(await sbWrite('cashflow',[id],'delete')).length;}
+// Upsert groupé de trades ; renvoie les trades en échec
+async function sbSaveTrades(list){
+  const failed=new Set(await sbWrite('trades',list,'upsert'));
+  return list.filter(t=>failed.has(String(t.id)));
 }
-async function sbDeleteAccount(id){
-  const{error}=await sb.from('accounts').delete().eq('id',String(id));
-  if(error)console.error('sbDeleteAccount:',error.message);
+// Toast de fin d'écriture : succès, ou avertissement « gardé en local »
+function syncToast(ok,msg){
+  if(ok)toast(msg,'success');
+  else toast('Hors ligne / erreur Supabase — gardé en local, sera renvoyé','error');
 }
 
-// ── SUPABASE: CASHFLOW ────────────────────────────────────────────────────
-async function sbLoadCashflow(){
-  const{data,error}=await sb.from('cashflow').select('*').order('date',{ascending:false});
-  if(error){console.error('sbLoadCashflow:',error.message);return null;}
-  return data||[];
+// Renvoie toutes les écritures en attente. Renvoie true si la file est vide à la fin.
+async function flushPending(){
+  for(const tb of SB_TABLES){
+    const ent=Object.entries(_pending[tb]);if(!ent.length)continue;
+    const del=ent.filter(([,op])=>op==='delete').map(([id])=>id);
+    const upIds=new Set(ent.filter(([,op])=>op==='upsert').map(([id])=>id));
+    const ups=(DB[tb]||[]).filter(x=>upIds.has(String(x.id)));
+    // upsert d'un enregistrement qui n'existe plus localement : rien à renvoyer
+    const gone=[...upIds].filter(id=>!ups.some(x=>String(x.id)===id));
+    if(gone.length){gone.forEach(id=>delete _pending[tb][id]);savePending();}
+    if(del.length)await sbWrite(tb,del,'delete');
+    if(ups.length)await sbWrite(tb,ups,'upsert');
+  }
+  return pendingCount()===0;
 }
-async function sbUpsertCF(cf){
-  const{error}=await sb.from('cashflow').upsert({
-    id:String(cf.id),type:cf.type,date:cf.date,
-    compte:cf.compte,montant_usd:cf.montantUSD,
-    montant_mur:cf.montantMUR,taux:cf.taux,
-    note:cf.note,updated_at:new Date().toISOString()
-  });
-  if(error)console.error('sbUpsertCF:',error.message);
-}
-async function sbDeleteCF(id){
-  const{error}=await sb.from('cashflow').delete().eq('id',String(id));
-  if(error)console.error('sbDeleteCF:',error.message);
+
+// ── SUPABASE : CHARGEMENT ─────────────────────────────────────────────────
+// null = erreur (≠ [] = table vide) : en cas d'erreur on garde les données locales
+async function sbLoad(tb){
+  const q=tb==='trades'?sb.from('trades').select('data'):sb.from(tb).select('*');
+  const{data,error}=await q;
+  if(error){console.error('sbLoad '+tb+':',error.message);return null;}
+  return(data||[]).map(SB_MAP[tb].from);
 }
 async function sbLoadTags(){
   const{data,error}=await sb.from('tags').select('name').order('name');
-  if(error){console.error('sbLoadTags:',error.message);return[];}
+  if(error){console.error('sbLoadTags:',error.message);return null;}
   return(data||[]).map(r=>r.name);
 }
-async function sbUpsertTag(name){
-  const{error}=await sb.from('tags').upsert({name},{onConflict:'name'});
-  if(error)console.error('sbUpsertTag:',error.message);
+// Fusion serveur + local : le serveur fait foi, sauf pour les enregistrements
+// dont une écriture locale est encore en attente.
+function mergeTable(tb,server){
+  const local=DB[tb]||[],pend=_pending[tb];
+  // Garde-fou : serveur vide alors qu'il y a des données locales (session expirée,
+  // RLS…) → on ne vide pas le cache local.
+  if(!server.length&&local.length)return local;
+  // 1er lancement avec la file : les enregistrements locaux absents du serveur
+  // n'ont peut-être jamais été synchronisés → on les garde et on les renvoie.
+  if(_pendingFresh){
+    const sIds=new Set(server.map(x=>String(x.id)));
+    local.forEach(x=>{if(!sIds.has(String(x.id))&&!pend[String(x.id)])pend[String(x.id)]='upsert';});
+  }
+  const localById=new Map(local.map(x=>[String(x.id),x]));
+  const out=[],seen=new Set();
+  server.forEach(x=>{
+    const id=String(x.id);seen.add(id);
+    if(pend[id]==='delete')return;
+    out.push(pend[id]==='upsert'&&localById.has(id)?localById.get(id):x);
+  });
+  // Créations locales pas encore arrivées sur le serveur (ordre local conservé, en tête)
+  const extra=local.filter(x=>{const id=String(x.id);return!seen.has(id)&&pend[id]==='upsert';});
+  return extra.concat(out);
 }
+// Synchronisation complète : renvoie les écritures en attente, puis recharge et fusionne.
+// Renvoie true si tout s'est bien passé.
+async function syncFromServer(){
+  await flushPending();
+  const[trades,accounts,cashflow,tags]=await Promise.all([sbLoad('trades'),sbLoad('accounts'),sbLoad('cashflow'),sbLoadTags()]);
+  if(trades)DB.trades=mergeTable('trades',trades);
+  if(accounts)DB.accounts=mergeTable('accounts',accounts);
+  if(cashflow){DB.cashflow=mergeTable('cashflow',cashflow);DB.cashflow.sort((a,b)=>(b.date||'').localeCompare(a.date||''));}
+  if(tags&&tags.length)DB.tags=tags;
+  savePending();saveDB();
+  // Enregistrements locaux gardés au 1er lancement → on les renvoie tout de suite
+  if(pendingCount())await flushPending();
+  _syncError=!(trades&&accounts&&cashflow)||pendingCount()>0;updateSyncDot();
+  return!_syncError;
+}
+window.addEventListener('online',()=>{if(pendingCount())flushPending();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&pendingCount())flushPending();});
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 const KEY='tradelog_v3';
@@ -298,12 +407,10 @@ async function refreshApp(){
   const btn=document.getElementById('refreshBtn');
   btn.classList.add('spinning');btn.disabled=true;
   try{
-    const[trades,accounts,cashflow,tags]=await Promise.all([sbLoadTrades(),sbLoadAccounts(),sbLoadCashflow(),sbLoadTags()]);
-    if(trades&&trades.length>0)DB.trades=trades;
-    if(accounts&&accounts.length>0){DB.accounts=accounts.map(a=>({id:String(a.id),name:a.name,startCapital:a.start_capital,color:a.color}));}
-    if(cashflow&&cashflow.length>0){DB.cashflow=cashflow.map(c=>({id:c.id,type:c.type,date:c.date,compte:c.compte,montantUSD:c.montant_usd,montantMUR:c.montant_mur,taux:c.taux,note:c.note}));}
-    if(tags&&tags.length>0)DB.tags=tags;
-    saveDB();showPage(curPage);toast('Données rafraîchies ✓','success');
+    const ok=await syncFromServer();
+    showPage(curPage);
+    if(ok)toast('Données rafraîchies ✓','success');
+    else toast(pendingCount()?`${pendingCount()} modification(s) non synchronisée(s) — gardées en local`:'Supabase injoignable — données locales affichées','error');
   }catch(e){console.error('Refresh error:',e);toast('Erreur lors du rafraîchissement','error');}
   finally{btn.classList.remove('spinning');btn.disabled=false;}
 }
@@ -439,8 +546,7 @@ async function assignTradeAccount(id,name){
   const t=DB.trades.find(x=>x.id===id);if(!t||!name)return;
   t.compte=name;saveDB();renderAnomalies();updateAnomalyBadge();
   toast('Enregistrement…','info');
-  await sbUpsertTrade(t);
-  toast(`Trade rattaché à ${name} ✓`,'success');
+  syncToast(await sbUpsertTrade(t),`Trade rattaché à ${name} ✓`);
 }
 async function assignAllAnomalies(){
   const name=(document.getElementById('anomBulkAcc')||{}).value;
@@ -450,8 +556,8 @@ async function assignAllAnomalies(){
   list.forEach(t=>{t.compte=name;});
   saveDB();renderAnomalies();updateAnomalyBadge();
   toast('Enregistrement…','info');
-  await Promise.all(list.map(t=>sbUpsertTrade(t)));
-  toast(`${list.length} trade${list.length>1?'s':''} rattaché${list.length>1?'s':''} à ${name} ✓`,'success');
+  const failed=await sbSaveTrades(list);
+  syncToast(!failed.length,`${list.length} trade${list.length>1?'s':''} rattaché${list.length>1?'s':''} à ${name} ✓`);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
@@ -572,7 +678,8 @@ function renderDash(){
     const accCF=(DB.cashflow||[]).filter(c=>c.compte===_singleAccObj.name);
     const cfNet=accCF.filter(c=>c.type==='depot').reduce((s2,c)=>s2+(c.montantUSD||0),0)-accCF.filter(c=>c.type==='payout').reduce((s2,c)=>s2+(c.montantUSD||0),0);
     const curCap=parseFloat(_singleAccObj.startCapital||0)+accPnl+cfNet;
-    capLine=`<div class="kb-hero-cap">Capital <b>${fmtUSD(curCap,false)}</b> · ${esc(_singleAccObj.name)}</div>`;
+    capLine=`<div class="kb-hero-cap">Capital <b>${fmtUSD(curCap,false)}</b> · ${esc(_singleAccObj.name)}</div>`
+      +goalTrackHTML(getAccGoals(_singleAccObj));
   }
 
   // ── Hiérarchie : un chiffre héros (P&L de la période) + indicateurs secondaires discrets.
@@ -1152,9 +1259,13 @@ function renderCharts(f){
   const closedF=[...f].filter(t=>t.resultat!=='En cours'&&t.gainPerte!==''&&t.gainPerte!==undefined&&!isNaN(parseFloat(t.gainPerte))&&t.date)
     .sort((a,b)=>a.date.localeCompare(b.date)||((a.heure||'').localeCompare(b.heure||'')));
   const cl=[],cv=[],cvR=[];
-  const startCap=acc&&acc.startCapital?parseFloat(acc.startCapital):0;
+  // Objectif / perte max (compte unique) : la courbe part alors du solde réel au début de la
+  // période (capital de départ + P&L antérieur) pour être comparable aux deux seuils.
+  const goals=getAccGoals(acc),_gFrom=goals?getDashRange().from:'';
+  const _openPnl=_gFrom?DB.trades.filter(t=>t.compte===acc.name&&t.date&&t.date<_gFrom).reduce((s,t)=>s+calcPnl(t),0):0;
+  const startCap=(acc&&acc.startCapital?parseFloat(acc.startCapital):0)+_openPnl;
   let running=startCap,runningR=startCap;
-  cl.push('Départ');cv.push(running);cvR.push(runningR);
+  cl.push(_openPnl?'Ouverture':'Départ');cv.push(running);cvR.push(runningR);
   closedF.forEach(t=>{
     running+=parseFloat(t.gainPerte);
     cl.push(fmtD(t.date));cv.push(parseFloat(running.toFixed(2)));
@@ -1187,9 +1298,30 @@ function renderCharts(f){
     const narrow=chartArea.right-chartArea.left<480;
     c.font=`400 10.5px ${Chart.defaults.font.family}`;c.fillStyle=_cssVar('--text3');
     c.textAlign='right';c.textBaseline='bottom';
-    c.fillText(narrow?'Départ':startCap>0?`Capital de départ, ${fmtUSD(startCap,false,0)}`:'Point de départ',chartArea.right-4,yPx-3);
+    c.fillText(narrow?(_openPnl?'Ouverture':'Départ'):_openPnl?`Solde d'ouverture, ${fmtUSD(startCap,false,0)}`:startCap>0?`Capital de départ, ${fmtUSD(startCap,false,0)}`:'Point de départ',chartArea.right-4,yPx-3);
     c.restore();
   }};
+
+  // Plugin : seuils objectif (vert) / perte max (rouge) du compte, annotés à gauche
+  const capGoalPlugin={id:'capGoal',afterDraw(chart){
+    if(!goals)return;
+    const{ctx:c,chartArea:ca,scales}=chart,ff=Chart.defaults.font.family;
+    [[goals.tgtLvl,_cct.win,'Objectif'],[goals.mlLvl,_cct.loss,'Perte max']].forEach(([lvl,col,name])=>{
+      if(lvl===null)return;
+      const y=scales.y.getPixelForValue(lvl);if(y<ca.top-1||y>ca.bottom+1)return;
+      c.save();
+      if(name==='Perte max'){c.fillStyle=_rgba(col,.06);c.fillRect(ca.left,y,ca.right-ca.left,ca.bottom-y);}
+      c.strokeStyle=_rgba(col,.8);c.lineWidth=1.25;c.setLineDash([6,4]);
+      c.beginPath();c.moveTo(ca.left,y);c.lineTo(ca.right,y);c.stroke();
+      c.setLineDash([]);c.font=`600 10.5px ${ff}`;c.fillStyle=col;c.textAlign='left';
+      c.textBaseline=name==='Objectif'?'bottom':'top';
+      c.fillText(`${name}, ${fmtUSD(lvl,false,0)}`,ca.left+4,name==='Objectif'?y-3:y+3);
+      c.restore();
+    });
+  }};
+  // Échelle : les seuils restent visibles (on voit la distance qui reste)
+  const _gLv=goals?[goals.tgtLvl,goals.mlLvl].filter(v=>v!==null):[];
+  const _yAll=[...cv,...cvR,..._gLv],_yPad=(Math.max(..._yAll)-Math.min(..._yAll))*.06||1;
 
   // Étiquettes directes en bout de courbe (remplacent la légende)
   const capEndPlugin={id:'capEnd',afterDatasetsDraw(chart){
@@ -1230,7 +1362,7 @@ function renderCharts(f){
 
   charts['cCapital']=new Chart(ctx,{
     type:'line',
-    plugins:[capRefPlugin,capGradPlugin,capEndPlugin],
+    plugins:[capRefPlugin,capGoalPlugin,capGradPlugin,capEndPlugin],
     data:{labels:cl,datasets:[
       {label:'Courbe Réelle',data:cv,
        borderColor:isUp?_cct.win:_cct.loss,borderWidth:2,tension:0.3,
@@ -1265,6 +1397,7 @@ function renderCharts(f){
       scales:{
         x:{grid:{display:false},border:{display:false},ticks:{font:{size:10},maxTicksLimit:7,padding:4}},
         y:{
+          ...(_gLv.length?{suggestedMin:Math.min(..._yAll)-_yPad,suggestedMax:Math.max(..._yAll)+_yPad}:{}),
           grid:{color:_cct.grid,lineWidth:1},border:{display:false},
           ticks:{font:{size:10},padding:6,maxTicksLimit:5,
             callback:v=>{const a=Math.abs(v);return(v<0?'-':'')+'$'+(a>=1000?(a/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+'k':a.toFixed(0));}}
@@ -2712,16 +2845,6 @@ function jgApply(t,k,v){
   return '';
 }
 function jgRestore(t,snap){Object.keys(t).forEach(x=>{if(!(x in snap))delete t[x];});Object.assign(t,snap);}
-// Upsert groupé ; renvoie les trades dont l'enregistrement a échoué
-async function sbSaveTrades(list){
-  const failed=[],now=new Date().toISOString();
-  for(let i=0;i<list.length;i+=200){
-    const chunk=list.slice(i,i+200);
-    const{error}=await sb.from('trades').upsert(chunk.map(t=>({id:t.id,data:t,updated_at:now})));
-    if(error){failed.push(...chunk);console.error('sbSaveTrades:',error.message);}
-  }
-  return failed;
-}
 // Après modification : sauvegarde locale + synthèse + mise à jour ciblée des lignes (pas de re-rendu complet)
 function jgRefresh(ids){saveDB();renderJSummary();jgUpdateRows(ids);}
 async function jgCommit(id,k,v){
@@ -2730,8 +2853,8 @@ async function jgCommit(id,k,v){
   const err=jgApply(t,k,v);
   if(err){jgRestore(t,snap);toast(err,'warning');jgUpdateRows([id]);return;}
   jgRefresh([id]);
-  const failed=await sbSaveTrades([t]);
-  if(failed.length){jgRestore(t,snap);jgRefresh([id]);toast('Échec de l\'enregistrement sur Supabase — modification annulée','error');}
+  // Échec : la modif reste en local et dans la file de synchro (renvoyée plus tard)
+  if(!await sbUpsertTrade(t))syncToast(false);
 }
 async function jgBulkApply(){
   const c=_jgCol(jgBulkK),inp=document.getElementById('jgBulkVal');if(!c||!inp)return;
@@ -2748,21 +2871,17 @@ async function jgBulkApply(){
   jgRefresh(list.map(t=>t.id));
   toast(`Enregistrement de ${list.length} trade${list.length>1?'s':''}…`,'info');
   const failed=await sbSaveTrades(list);
-  if(failed.length){
-    failed.forEach(t=>jgRestore(t,snaps.get(t.id)));jgRefresh(failed.map(t=>t.id));
-    toast(`${failed.length}/${list.length} non enregistrés sur Supabase — annulés`,'error');
-  }else toast(`${list.length} trade${list.length>1?'s':''} mis à jour ✓`,'success');
+  syncToast(!failed.length,`${list.length} trade${list.length>1?'s':''} mis à jour ✓`);
 }
 async function jgBulkDelete(){
   const ids=[...jgSel];if(!ids.length)return;
   if(!confirm(`Supprimer définitivement ${ids.length} trade${ids.length>1?'s':''} ?`))return;
-  // Serveur d'abord : en cas d'échec rien n'est supprimé localement
-  const{error}=await sb.from('trades').delete().in('id',ids);
-  if(error){console.error('jgBulkDelete:',error.message);toast('Échec de la suppression sur Supabase — aucun trade supprimé','error');return;}
+  // Local d'abord ; la suppression serveur passe par la file de synchro (renvoyée en cas d'échec)
   const del=new Set(ids);
   DB.trades=DB.trades.filter(t=>!del.has(t.id));
   jgSel.clear();saveDB();renderJournal();
-  toast(`${ids.length} trade${ids.length>1?'s':''} supprimé${ids.length>1?'s':''}`,'info');
+  const failed=await sbWrite('trades',ids,'delete');
+  syncToast(!failed.length,`${ids.length} trade${ids.length>1?'s':''} supprimé${ids.length>1?'s':''}`);
 }
 
 // ── TRADE MODAL ───────────────────────────────────────────────────────────
@@ -3022,8 +3141,7 @@ async function saveTrade(){
   saveDB();closeModal('tradeModal');
   if(instrMissing)toast('⚠️ Instrument non renseigné','warning');
   else toast('Enregistrement…','info');
-  await sbUpsertTrade(t);
-  toast('Trade sauvegardé ✓','success');
+  syncToast(await sbUpsertTrade(t),'Trade sauvegardé ✓');
   if(curPage==='journal')renderJournal();if(curPage==='dashboard')renderDash();if(curPage==='calendar')renderCal();if(curPage==='anomalies')renderAnomalies();
   updateAnomalyBadge();
 }
@@ -3031,7 +3149,7 @@ async function saveTrade(){
 async function delTrade(id){
   if(!confirm('Supprimer ce trade ?'))return;
   DB.trades=DB.trades.filter(t=>t.id!==id);saveDB();
-  toast('Suppression…','info');await sbDeleteTrade(id);toast('Trade supprimé','info');
+  toast('Suppression…','info');syncToast(await sbDeleteTrade(id),'Trade supprimé');
   if(curPage==='journal')renderJournal();if(curPage==='dashboard')renderDash();if(curPage==='calendar')renderCal();if(curPage==='anomalies')renderAnomalies();
   updateAnomalyBadge();
 }
@@ -3264,13 +3382,13 @@ async function saveCF(){
   if(editCFId){const i=DB.cashflow.findIndex(c=>String(c.id)===String(editCFId));if(i>=0)DB.cashflow[i]=cf;else DB.cashflow.unshift(cf);}
   else DB.cashflow.unshift(cf);
   saveDB();closeModal('cfModal');toast('Enregistrement…','info');
-  await sbUpsertCF(cf);toast('Mouvement sauvegardé ✓','success');
+  syncToast(await sbUpsertCF(cf),'Mouvement sauvegardé ✓');
   if(curPage==='cashflow')renderCashflow();
 }
 async function delCF(id){
   if(!confirm('Supprimer ce mouvement ?'))return;
   DB.cashflow=DB.cashflow.filter(c=>String(c.id)!==String(id));saveDB();toast('Suppression…','info');
-  await sbDeleteCF(id);toast('Mouvement supprimé','info');
+  syncToast(await sbDeleteCF(id),'Mouvement supprimé');
   if(curPage==='cashflow')renderCashflow();
 }
 function renderCFAccPills(){
@@ -3384,7 +3502,7 @@ function renderAccounts(){
           <span class="acc2-dot"></span>
           <div style="min-width:0">
             <div class="acc2-name">${esc(acc.name)}</div>
-            <div class="acc2-sub">${start?`Départ ${fmtUSD(start,false,0)}`:'Capital non défini'} · <button class="acc2-link" onclick="openEditCap('${acc.id}')">modifier</button></div>
+            <div class="acc2-sub">${start?`Départ ${fmtUSD(start,false,0)}`:'Capital non défini'} · <button class="acc2-link" onclick="openEditCap('${acc.id}')">configurer</button></div>
             <div class="acc2-sub">${last?'Dernier : '+fmtD(last):'Aucun trade'}</div>
           </div>
         </div>
@@ -3398,6 +3516,7 @@ function renderAccounts(){
         ${pp!==null&&at.length?`<span class="acc2-pct ${pos?'pos':'neg'}">${pos?'+':''}${pp.toLocaleString('fr-FR',{maximumFractionDigits:1})} %</span>`:''}
       </div>
       ${spark||'<div class="acc2-spark acc2-spark-empty">Pas encore assez de trades</div>'}
+      ${goalTrackHTML(getAccGoals(acc))}
       <div class="acc2-stats">
         <div><div class="acc2-lbl">Trades</div><div class="acc2-v">${s.total}</div></div>
         <div><div class="acc2-lbl">Win rate</div><div class="acc2-v">${s.total?s.winRate+'%':'—'}</div></div>
@@ -3423,21 +3542,96 @@ function viewAccount(name,page){
   else{dashFilters=new Set([name]);}
   showPage(page);
 }
-function openAccModal(){selColor=ACC_COLORS[0];document.getElementById('accName').value='';document.getElementById('accCapital').value='';buildSwatches();document.getElementById('accModal').classList.add('open');}
+// ── Objectif / perte maximale (facultatifs) ───────────────────────────────
+// acc.goals = { target:{v,u}, maxLoss:{v,u} } — u = 'pct' (du capital de départ) | 'usd'
+function accGoalAmt(acc,key){
+  const g=acc?.goals?.[key];if(!g||!(g.v>0))return null;
+  const amt=g.u==='pct'?(parseFloat(acc.startCapital)||0)*g.v/100:g.v;
+  return amt>0?amt:null;
+}
+// Où en est le compte : solde = capital de départ + P&L (hors cashflow). null si aucun objectif.
+function getAccGoals(acc){
+  if(!acc)return null;
+  const tgt=accGoalAmt(acc,'target'),ml=accGoalAmt(acc,'maxLoss');
+  if(tgt===null&&ml===null)return null;
+  const start=parseFloat(acc.startCapital)||0,bal=getAccBalance(acc),pnl=bal-start;
+  return{start,bal,pnl,tgt,ml,tgtLvl:tgt!==null?start+tgt:null,mlLvl:ml!==null?start-ml:null};
+}
+// Jauge perte max ← départ → objectif, repère au solde actuel
+function goalTrackHTML(g){
+  if(!g)return'';
+  const lo=g.mlLvl??g.start,hi=g.tgtLvl??g.start,rg=hi-lo||1;
+  const pos=v=>Math.max(0,Math.min(100,(v-lo)/rg*100));
+  const p0=pos(g.start),p1=pos(g.bal),up=g.bal>=g.start;
+  const rows=[];
+  if(g.tgt!==null){
+    const done=g.pnl>=g.tgt,pct=Math.max(0,g.pnl/g.tgt*100);
+    rows.push(`<div class="gt-row"><span>Objectif ${fmtUSD(g.tgtLvl,false,0)}</span><b class="${done?'pos':''}">${done?'Atteint ✓':`${fmtN(pct,0)} % · reste ${fmtUSD(g.tgt-g.pnl,false,0)}`}</b></div>`);
+  }
+  if(g.ml!==null){
+    const marg=g.bal-g.mlLvl,cls=marg<=0?'neg':marg<g.ml*.25?'warn':'';
+    rows.push(`<div class="gt-row"><span>Perte max ${fmtUSD(g.mlLvl,false,0)}</span><b class="${cls}">${marg<=0?'Atteinte':`marge ${fmtUSD(marg,false,0)}`}</b></div>`);
+  }
+  return`<div class="goal-track" title="Solde ${fmtUSD(g.bal,false)} (capital de départ + P&L, hors cashflow)">
+    <div class="gt-bar">
+      ${g.ml!==null?'<i class="gt-end gt-ml"></i>':''}${g.tgt!==null?'<i class="gt-end gt-tgt"></i>':''}
+      <span class="gt-fill ${up?'pos':'neg'}" style="left:${Math.min(p0,p1)}%;width:${Math.abs(p1-p0)}%"></span>
+      <span class="gt-zero" style="left:${p0}%"></span>
+      <span class="gt-dot ${up?'pos':'neg'}" style="left:${p1}%"></span>
+    </div>
+    ${rows.join('')}
+  </div>`;
+}
+// Formulaire (préfixe 'acc' = création, 'editCap' = configuration)
+function setGoalUnit(btn,prefix){
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));
+  updGoalHints(prefix);
+}
+function _goalUnit(id){return document.querySelector(`#${id} button.on`)?.dataset.u||'pct';}
+function setGoalInputs(prefix,goals){
+  [['Tgt','target'],['Ml','maxLoss']].forEach(([k,key])=>{
+    const g=goals?.[key];
+    document.getElementById(prefix+k+'Val').value=g?.v>0?g.v:'';
+    const u=g?.u||'pct';
+    document.querySelectorAll(`#${prefix}${k}Unit button`).forEach(b=>b.classList.toggle('on',b.dataset.u===u));
+  });
+  updGoalHints(prefix);
+}
+function readGoalInputs(prefix){
+  const out={};
+  [['Tgt','target'],['Ml','maxLoss']].forEach(([k,key])=>{
+    const v=parseFloat(document.getElementById(prefix+k+'Val').value);
+    if(v>0)out[key]={v,u:_goalUnit(prefix+k+'Unit')};
+  });
+  return Object.keys(out).length?out:null;
+}
+function updGoalHints(prefix){
+  const cap=parseFloat(document.getElementById(prefix==='acc'?'accCapital':'editCapVal').value)||0;
+  [['Tgt','Objectif à',1],['Ml','Plancher à',-1]].forEach(([k,lbl,sgn])=>{
+    const el=document.getElementById(prefix+k+'Hint');if(!el)return;
+    const v=parseFloat(document.getElementById(prefix+k+'Val').value),u=_goalUnit(prefix+k+'Unit');
+    if(!(v>0)){el.textContent='';return;}
+    const amt=u==='pct'?cap*v/100:v;
+    el.textContent=u==='pct'&&!cap?'Définir le capital de départ pour un objectif en %'
+      :`${u==='pct'?fmtUSD(amt,false,0)+' · ':''}${lbl} ${fmtUSD(cap+sgn*amt,false,0)}`;
+  });
+}
+function openAccModal(){selColor=ACC_COLORS[0];document.getElementById('accName').value='';document.getElementById('accCapital').value='';setGoalInputs('acc',null);buildSwatches();document.getElementById('accModal').classList.add('open');}
 function buildSwatches(){document.getElementById('accSwatches').innerHTML=ACC_COLORS.map(c=>`<div class="swatch ${c===selColor?'sel':''}" style="background:${c}" onclick="selC('${c}')"></div>`).join('');}
 function selC(c){selColor=c;buildSwatches();}
 async function saveAccount(){
   const n=document.getElementById('accName').value.trim();if(!n)return;
-  const acc={id:String(Date.now()),name:n,startCapital:parseFloat(document.getElementById('accCapital').value)||0,color:selColor};
+  const acc={id:String(Date.now()),name:n,startCapital:parseFloat(document.getElementById('accCapital').value)||0,color:selColor,goals:readGoalInputs('acc')};
   DB.accounts.push(acc);saveDB();closeModal('accModal');toast('Création…','info');
-  await sbUpsertAccount(acc);renderAccounts();toast('Compte créé ✓','success');
+  const ok=await sbUpsertAccount(acc);renderAccounts();syncToast(ok,'Compte créé ✓');
 }
-function openEditCap(id){editCapId=String(id);const acc=DB.accounts.find(a=>String(a.id)===editCapId);if(!acc)return;document.getElementById('editCapVal').value=acc.startCapital||'';document.getElementById('editCapModal').classList.add('open');}
+function openEditCap(id){editCapId=String(id);const acc=DB.accounts.find(a=>String(a.id)===editCapId);if(!acc)return;document.getElementById('editCapVal').value=acc.startCapital||'';setGoalInputs('editCap',acc.goals);document.getElementById('editCapModal').classList.add('open');}
 async function saveEditCap(){
   const acc=DB.accounts.find(a=>String(a.id)===String(editCapId));if(!acc)return;
   acc.startCapital=parseFloat(document.getElementById('editCapVal').value)||0;
+  acc.goals=readGoalInputs('editCap');
   saveDB();closeModal('editCapModal');toast('Mise à jour…','info');
-  await sbUpsertAccount(acc);renderAccounts();toast('Capital mis à jour ✓','success');
+  const ok=await sbUpsertAccount(acc);renderAccounts();syncToast(ok,'Compte mis à jour ✓');
 }
 function openRenameAcc(id){renameAccId=String(id);const acc=DB.accounts.find(a=>String(a.id)===renameAccId);if(!acc)return;document.getElementById('renameAccVal').value=acc.name;document.getElementById('renameAccModal').classList.add('open');}
 async function saveRenameAcc(){
@@ -3449,9 +3643,12 @@ async function saveRenameAcc(){
   DB.trades.forEach(t=>{if(t.compte===oldName)t.compte=newName;});
   DB.cashflow.forEach(c=>{if(c.compte===oldName)c.compte=newName;});
   saveDB();closeModal('renameAccModal');toast('Renommage…','info');
-  await sbUpsertAccount(acc);
-  await Promise.all([...DB.trades.filter(t=>t.compte===newName).map(t=>sbUpsertTrade(t)),...DB.cashflow.filter(c=>c.compte===newName).map(c=>sbUpsertCF(c))]);
-  renderAccounts();toast('Compte renommé ✓','success');
+  const res=await Promise.all([
+    sbWrite('accounts',[acc],'upsert'),
+    sbWrite('trades',DB.trades.filter(t=>t.compte===newName),'upsert'),
+    sbWrite('cashflow',DB.cashflow.filter(c=>c.compte===newName),'upsert')
+  ]);
+  renderAccounts();syncToast(res.every(f=>!f.length),'Compte renommé ✓');
 }
 
 // ── RULES ─────────────────────────────────────────────────────────────────
@@ -4332,15 +4529,10 @@ async function loadApp(){
   jFilters.dateFrom=w.from;
   jFilters.dateTo=w.to;
   try{
-    const[trades,accounts,cashflow,tags]=await Promise.all([sbLoadTrades(),sbLoadAccounts(),sbLoadCashflow(),sbLoadTags()]);
-    if(trades&&trades.length>0)DB.trades=trades;
-    if(accounts&&accounts.length>0){DB.accounts=accounts.map(a=>({id:String(a.id),name:a.name,startCapital:a.start_capital,color:a.color}));}
-    if(cashflow&&cashflow.length>0){DB.cashflow=cashflow.map(c=>({id:c.id,type:c.type,date:c.date,compte:c.compte,montantUSD:c.montant_usd,montantMUR:c.montant_mur,taux:c.taux,note:c.note}));}
-    if(tags&&tags.length>0)DB.tags=tags;
-    saveDB();
+    if(!await syncFromServer())toast(pendingCount()?`${pendingCount()} modification(s) non synchronisée(s) — gardées en local`:'Supabase indisponible — mode local','error');
   }catch(e){
     console.error('Init error:',e);
-    const sd=document.getElementById('syncDot');if(sd)sd.className='topbar-sync';if(sd)sd.style.background='var(--red)';
+    _syncError=true;updateSyncDot();
     toast('Supabase indisponible — mode local','error');
   }
   hideLoadingScreen();

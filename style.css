@@ -2989,3 +2989,32 @@ button.jg-th:hover{transform:scale(1.08);box-shadow:0 0 0 2px var(--accent)}
   .jg .jg-c-date{box-shadow:1px 0 0 var(--border)}
   .jg-ed-txt{width:260px}
 }
+
+/* ═══ SYNC — pastille d'état Supabase (vert = synchro, ambre = en attente, rouge = échec) ═══ */
+.sb-sync{cursor:pointer;background:var(--green);box-shadow:0 0 6px color-mix(in srgb,var(--green) 50%,transparent)}
+.sb-sync.pending{background:var(--amber);box-shadow:0 0 6px color-mix(in srgb,var(--amber) 50%,transparent)}
+.sb-sync.error{background:var(--red);box-shadow:0 0 6px color-mix(in srgb,var(--red) 50%,transparent);animation:none}
+
+/* ═══ COMPTES — objectif / perte maximale (jauge dashboard + cartes comptes) ═══ */
+.goal-opt{font-weight:400;color:var(--text4);margin-left:4px}
+.goal-hint{display:block;font-style:normal;font-size:11.5px;color:var(--text3);min-height:15px;margin-top:4px}
+.field .pc-inline .pc-seg{flex:0 0 76px}
+.goal-track{display:flex;flex-direction:column;gap:5px;margin-top:10px;padding-top:12px;border-top:1px solid var(--border2)}
+.gt-bar{position:relative;height:6px;border-radius:999px;background:var(--fill);margin:4px 0 6px}
+.gt-end{position:absolute;top:-3px;width:2px;height:12px;border-radius:1px}
+.gt-end.gt-ml{left:0;background:var(--chart-loss)}
+.gt-end.gt-tgt{right:0;background:var(--chart-win)}
+.gt-fill{position:absolute;top:0;height:100%;border-radius:999px;opacity:.55}
+.gt-fill.pos{background:var(--chart-win)}
+.gt-fill.neg{background:var(--chart-loss)}
+.gt-zero{position:absolute;top:-2px;width:1px;height:10px;background:var(--text4);transform:translateX(-50%)}
+.gt-dot{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--surface)}
+.gt-dot.pos{background:var(--chart-win)}
+.gt-dot.neg{background:var(--chart-loss)}
+.gt-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text3);min-width:0}
+.gt-row span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-row b{font-weight:600;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.gt-row b.pos{color:var(--green)}
+.gt-row b.warn{color:var(--amber)}
+.gt-row b.neg{color:var(--red)}
+.acc2 .goal-track{margin-top:2px;padding-top:10px}
